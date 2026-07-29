@@ -21,8 +21,13 @@ html,body{margin:0;padding:0;max-width:100%}
    culprit — `anywhere` lets it break mid-token instead of stretching its container. Media is capped
    so an image can never be wider than its column. (No overflow:hidden on html/body: that would
    break the sticky topbar.) */
-#app,#app .wrap{max-width:100%}
-#app p,#app div,#app span,#app b,#app td,#app th,#app label,#app li{overflow-wrap:anywhere}
+#app{max-width:100%}
+#app p,#app div,#app span,#app b,#app label,#app li{overflow-wrap:anywhere}
+/* Table cells get break-word, NOT anywhere. `anywhere` drops a cell's min-content width to a single
+   character, so the auto table layout happily squeezed "ORDER" into "ORDE"/"R" and a date into two
+   lines even when the row had spare space. break-word still splits a giant token (a JSON blob, a
+   Drive URL) but keeps ordinary words whole, which is what makes the columns readable on a phone. */
+#app td,#app th{overflow-wrap:break-word}
 img,svg,canvas,video{max-width:100%;height:auto}
 body{background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
   padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom))}
@@ -32,14 +37,20 @@ input,select,textarea{font:inherit;color:var(--ink)}
 .hide{display:none!important}
 
 /* layout */
-.wrap{max-width:960px;margin:0 auto;padding:14px}
+/* The cap has to be a max-width on the .wrap ITSELF — an earlier `#app .wrap{max-width:100%}`
+   out-specified this rule (id + class beats class) and silently stretched every screen edge-to-edge
+   on a desktop. 1120px so the admin console's wide tables get room without the text lines becoming
+   unreadably long. */
+.wrap{width:100%;max-width:1120px;margin:0 auto;padding:14px}
 .topbar{position:sticky;top:0;z-index:40;background:linear-gradient(180deg,var(--blue),var(--blue-m));color:#fff;
   padding:calc(10px + env(safe-area-inset-top)) 14px 10px;display:flex;align-items:center;gap:10px;box-shadow:var(--sh)}
 .topbar .brand{font-weight:800;font-size:15px;letter-spacing:.2px}
 .topbar .sub{font-size:11px;opacity:.85;font-weight:500}
 .topbar .right{margin-left:auto;display:flex;align-items:center;gap:8px}
 .avatar{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.2);display:grid;place-items:center;font-weight:700;font-size:13px}
-.chip{background:rgba(255,255,255,.18);border:0;color:#fff;border-radius:20px;padding:5px 11px;font-size:11.5px;font-weight:600}
+/* 32px is the smallest thing a thumb hits reliably — the Sync chip used to be 27px */
+.chip{background:rgba(255,255,255,.18);border:0;color:#fff;border-radius:20px;padding:5px 12px;font-size:11.5px;font-weight:600;
+  min-height:32px;display:inline-flex;align-items:center;gap:4px}
 
 /* cards */
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px;box-shadow:var(--sh)}
@@ -126,13 +137,39 @@ select.in{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xml
 .lrow>.pill,.lrow>button,.lrow>a{flex:0 0 auto}
 .pill{white-space:nowrap}
 
-/* table */
-.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -14px;padding:0 14px}
-table{border-collapse:collapse;width:100%;font-size:12.5px;min-width:520px}
+/* table
+   A table must never hide a NUMBER off the right edge. The old `min-width:520px` did exactly that:
+   it forced even the 2-column "Daily Order Target" and the 4-column EOD target-vs-achievement
+   tables to 520px, so on a 390px phone the value columns sat outside the card with no hint that
+   they existed. Tables are now their natural width — narrow ones fit the card exactly, and only a
+   genuinely wide one (9-column Team / Data) still scrolls. */
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -14px;padding:0 14px;
+  scrollbar-width:thin;scrollbar-color:#c9d2e3 transparent}
+.tw::-webkit-scrollbar{height:6px}
+.tw::-webkit-scrollbar-thumb{background:#c9d2e3;border-radius:3px}
+.tw::-webkit-scrollbar-track{background:transparent}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
 th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
 th{background:#f7f9fc;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-2);position:sticky;top:0}
 tbody tr:active{background:var(--blue-l)}
 td.num,th.num{text-align:right}
+/* phones: let the wordy columns wrap so a 4-6 column table fits, keep every number on one line,
+   and freeze the first column so a wide table still says WHICH row you are reading */
+@media(max-width:640px){
+  table{font-size:11.5px}
+  th,td{padding:7px 7px}
+  th{white-space:normal;line-height:1.25}
+  td:not(.num){white-space:normal}
+  td.num,th.num{padding-left:5px}
+  /* wrapping WITHOUT a floor turns a 9-column raw-data table into one letter per line ("S O U R C E").
+     A minimum column width means a wide table goes back to scrolling — but every column stays
+     readable, and a 4-6 column table still fits the phone. */
+  th:not(.num),td:not(.num){min-width:62px}
+  th.num,td.num{min-width:50px}
+  .tw table th:first-child,.tw table td:first-child{position:sticky;left:0;z-index:2;
+    background:var(--card);box-shadow:1px 0 0 var(--line)}
+  .tw table th:first-child{background:#f7f9fc;z-index:3}
+}
 
 /* nav */
 .nav{position:fixed;left:0;right:0;bottom:0;z-index:50;background:#fff;border-top:1px solid var(--line);
@@ -154,6 +191,7 @@ td.num,th.num{text-align:right}
 /* login */
 .login{min-height:100vh;display:grid;place-items:center;padding:20px;
   background:radial-gradient(1000px 500px at 50% -10%,#e8efff,transparent),var(--bg)}
+@supports (height:100dvh){.login{min-height:100dvh}}
 .login .box{width:100%;max-width:390px;background:#fff;border:1px solid var(--line);border-radius:20px;padding:26px;box-shadow:0 20px 50px -24px rgba(16,24,40,.28)}
 .login .logo{width:56px;height:56px;border-radius:16px;background:linear-gradient(160deg,var(--blue),var(--blue-m));color:#fff;
   display:grid;place-items:center;font-size:26px;margin:0 auto 12px}
@@ -170,7 +208,9 @@ td.num,th.num{text-align:right}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(-4px)}
 @media(min-width:900px){.toast{bottom:20px}}
 .sheet{position:fixed;inset:0;z-index:150;background:rgba(15,23,41,.45);display:flex;align-items:flex-end;justify-content:center}
-.sheet .in{background:#fff;width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:18px;max-height:88vh;overflow:auto}
+.sheet .in{background:#fff;width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:18px;max-height:88vh;overflow:auto;
+  -webkit-overflow-scrolling:touch;padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+@supports (height:100dvh){.sheet .in{max-height:88dvh}}   /* 100vh counts the phone URL bar */
 @media(min-width:700px){.sheet{align-items:center}.sheet .in{border-radius:18px}}
 .banner{border-radius:var(--r);padding:12px 14px;margin-bottom:12px;font-size:13px;font-weight:600;display:flex;gap:10px;align-items:flex-start}
 .banner.w{background:var(--warn-l);color:#7c5310;border:1px solid #f2dfae}
@@ -232,7 +272,7 @@ td.num,th.num{text-align:right}
 .ph-o .spin{border-color:rgba(255,255,255,.4);border-top-color:#fff}
 .req{color:var(--bad)}
 .pl{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:var(--blue);
-  background:var(--blue-l);border-radius:20px;padding:3px 9px;text-decoration:none}
+  background:var(--blue-l);border-radius:20px;padding:5px 10px;text-decoration:none;min-height:28px}
 .pl-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:8px}
 .pl-i{display:block;border:1px solid var(--line);border-radius:10px;overflow:hidden;text-decoration:none;background:var(--blue-l)}
 .pl-i img{width:100%;height:78px;object-fit:cover;display:block;background:var(--blue-l)}
@@ -263,6 +303,10 @@ td.num,th.num{text-align:right}
 .step{display:flex;gap:8px;margin-bottom:12px}
 .step div{flex:1;height:4px;border-radius:4px;background:var(--line)}
 .step div.on{background:var(--blue)}
+/* in-card scroll list (store finder, product finder). A fixed 230/260px box is most of a landscape
+   phone, so cap it against the REAL viewport height as well. */
+.slist{max-height:250px;overflow:auto;-webkit-overflow-scrolling:touch;margin-top:8px}
+@supports (height:100dvh){.slist{max-height:min(250px,42dvh)}}
 .empty{text-align:center;color:var(--ink-3);font-size:13px;padding:22px 10px}
 .empty .g{font-size:30px;display:block;margin-bottom:6px;opacity:.5}
 .prev{outline:3px solid var(--warn);outline-offset:-3px}
@@ -273,8 +317,12 @@ td.num,th.num{text-align:right}
 .modal.out{animation:mout .12s ease-in forwards}
 @keyframes mfade{from{opacity:0}to{opacity:1}}
 @keyframes mout{to{opacity:0}}
+/* max-height + scroll or a long dialog is unusable on a short screen (landscape phone, or a phone
+   with the keyboard open) — the buttons would sit below the fold with nothing to scroll */
 .modal-card{background:#fff;border-radius:18px;padding:22px;width:100%;max-width:400px;
+  max-height:calc(100vh - 36px);overflow:auto;-webkit-overflow-scrolling:touch;
   box-shadow:0 24px 60px -12px rgba(15,23,41,.4);animation:mpop .18s cubic-bezier(.2,.9,.3,1.2)}
+@supports (height:100dvh){.modal-card{max-height:calc(100dvh - 36px)}}
 @keyframes mpop{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
 .modal-ic{width:46px;height:46px;border-radius:14px;background:var(--blue-l);color:var(--blue);
   display:grid;place-items:center;font-size:22px;margin-bottom:12px}
@@ -311,6 +359,8 @@ td.num,th.num{text-align:right}
 #login_gate .lg-shell{width:100%}
 #login_gate img{max-width:100%;height:auto}
 #login_gate .hero-word{overflow-wrap:anywhere}
+/* the "Forgot Password?" link was a 15px-tall tap target — give it a thumb-sized hit area */
+#login_gate a{display:inline-block;padding:6px 3px}
 /* dvh = the REAL visible height on a phone; 100vh counts the URL bar and creates a phantom scroll */
 @supports (height:100dvh){ #login_gate .lg-shell{min-height:100dvh} }
 
@@ -1163,10 +1213,16 @@ var Nav = {
     var wide = window.innerWidth >= 900;
     var list = Auth.isAdmin() ? ADMIN_TABS.slice()
              : (Preview.on ? [{ v:'admin', g:'\u2699\ufe0f', t:'Console' }].concat(TABS) : TABS.slice());
-    /* on a phone only 5 fit — remember exactly which ones didn't, so "More" shows those and only
-       those (it used to slice a fixed index, which duplicated a visible tab for admins) */
-    Nav.hidden = wide ? [] : list.slice(5);
-    if (!wide) list = list.slice(0, 5).concat([{ v:'more', g:'⋯', t:'More' }]);
+    /* How many tabs fit is a function of the WIDTH, not a magic 5. A 320px phone takes 6 buttons,
+       a 740px landscape phone or a 768px tablet takes all nine — hiding four tabs behind "More"
+       on an iPad was the nav pretending to be a small phone.
+       Remember exactly which ones didn't fit, so "More" shows those and only those (it used to
+       slice a fixed index, which duplicated a visible tab for admins). */
+    var slots = wide ? list.length : Math.min(list.length, Math.max(6, Math.floor(window.innerWidth / 82)));
+    /* when they do NOT all fit, the last visible slot becomes "More", so everything from slots-1
+       onwards is what More has to offer — off-by-one here would drop a tab entirely */
+    Nav.hidden = slots >= list.length ? [] : list.slice(slots - 1);
+    if (Nav.hidden.length) list = list.slice(0, slots - 1).concat([{ v:'more', g:'⋯', t:'More' }]);
     /* anything hidden under "More" still has to be noticeable, so its count rolls up onto More */
     var moreN = 0;
     Nav.hidden.forEach(function (x) { moreN += Nav.badge(x.v); });
@@ -1558,6 +1614,338 @@ var Share = {
   }
 };
 
+/* ═══════════════ TODAY-PLAN CARD (the morning WhatsApp image) ═══════════════
+   The rep's start-of-day message has to be a PICTURE in one fixed format: a picture cannot be edited
+   on its way to the group, and the whole team already reads that layout. Drawn with the Canvas 2D
+   API on purpose — html2canvas would be a ~200 KB CDN dependency inside a file that must keep
+   working offline, and it renders differently on every browser. Here every pixel is ours.
+   Design units are 520px wide; the PNG is 2x that (1040px), which is what WhatsApp shows sharp. */
+var Card = {
+  W:520, S:2, M:12, R:16,          /* canvas width, 2x scale, white margin, card corner radius */
+  F:'"Segoe UI",Roboto,Arial,Helvetica,sans-serif',
+  C:{ dark:'#0f2e1d', head2:'#cfe6d6', code:'#7a8b7e', meta:'#5a6b5e', ink:'#1a2b1e',
+      tile:'#f0f6f1', line:'#e3ece5', row:'#eef2ee', band:'#edf5ef', green:'#2f7048',
+      foot:'#8a9b8e', dash:'#cfe0d4', warnBg:'#fff6e6', warnInk:'#8a5a00' },
+  _png:null,                       /* { key, blob, url } — warmed by the preview */
+
+  /* ---------- helpers ---------- */
+  fnt: function (g, w, s) { g.font = w + ' ' + s + 'px ' + Card.F; },
+  rr: function (g, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    g.beginPath();
+    g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
+    g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
+  },
+  /* wrap on words, and only split a token that cannot fit on a line by itself */
+  wrap: function (g, s, max) {
+    var words = String(s == null ? '' : s).split(/\s+/), out = [], cur = '';
+    words.forEach(function (w) {
+      var t = cur ? cur + ' ' + w : w;
+      if (g.measureText(t).width <= max || !cur) {
+        if (g.measureText(t).width > max && !cur) {                 /* one huge word */
+          var part = '';
+          for (var i = 0; i < w.length; i++) {
+            if (g.measureText(part + w[i]).width > max && part) { out.push(part); part = ''; }
+            part += w[i];
+          }
+          cur = part; return;
+        }
+        cur = t;
+      } else { out.push(cur); cur = w; }
+    });
+    if (cur) out.push(cur);
+    return out.length ? out : [''];
+  },
+
+  /* the HONASA wordmark already sits in the login gate as a data: URL, so drawing it never taints
+     the canvas and needs no network */
+  logo: function () {
+    if (Card._logo !== undefined) return Promise.resolve(Card._logo);
+    var el = document.querySelector('#login_gate .lg-toprow > div:first-child img') ||
+             document.querySelector('#login_gate img');
+    if (!el || !el.src) { Card._logo = null; return Promise.resolve(null); }
+    if (el.complete && el.naturalWidth) { Card._logo = el; return Promise.resolve(el); }
+    return new Promise(function (res) {
+      var i = new Image();
+      i.onload = function () { Card._logo = i; res(i); };
+      i.onerror = function () { Card._logo = null; res(null); };
+      i.src = el.src;
+    });
+  },
+
+  /* ---------- what goes on the card ---------- */
+  data: function () {
+    var t = today(), r = Plan.row(), pjp = DB.pjpFor(DB.me.code, t), e = DB.emp(DB.me.code) || {};
+    var s = Auth.session() || {};
+    var ww = r.WorkingWith || (pjp ? Pjp.ww(pjp.Ww) : 'Self Working');
+    var fld = Pjp.isField(ww);
+    var tg = Plan.tgt();
+    var tdc = tg.slice(0, 6).reduce(function (a, x) { return a + x[1]; }, 0);
+    var tot = tg.reduce(function (a, x) { return a + x[1]; }, 0);
+    return {
+      date:t, time:r.PlanAt || new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }),
+      name:DB.me.name || s.name || '', code:DB.me.code || s.code || '',
+      week:(r.Week || (pjp ? pjp.Week : '') || ''),
+      zone:(e.Zone || s.zone || ''), hq:(e.HQ || s.hq || ''),
+      ww:ww, field:fld,
+      town:r.Town || (pjp ? pjp.Town : '') || '—',
+      beat:r.Beat || (pjp ? pjp.Beat : '') || '—',
+      focus:r.Focus || (pjp ? pjp.Focus : '') || '',
+      offPjp:r.OffPjp ? (r.Approval || 'Pending') : '',
+      /* an off day carries no counters — showing "7 SC Call" next to "aaj field day nahi" is the
+         card contradicting itself */
+      sc:fld ? (num(r.ScTarget) || num(DB.cfg('SC_Call_Target', 7)) || 7) : 0,
+      nso:fld ? num(r.NsoTarget) : 0, posm:fld ? num(r.PosmTarget) : 0,
+      rows:tg, tdc:tdc, tot:tot,
+      mtd:num(DB.cfg('MTD @24 Days - Working', Math.round(tot * 24 * 100) / 100)),
+      group:DB.cfg('Group_Name', 'Honasa Emerging Brands')
+    };
+  },
+
+  /* ---------- ONE draw routine, run twice ----------
+     Pass 1 measures with dry=true (measureText still works, nothing is painted) so the canvas can be
+     created at exactly the right height; pass 2 paints. One routine ⇒ the measured height and the
+     painted height can never disagree. */
+  draw: function (g, d, dry) {
+    /* drawn from the CARD's own origin — png() translates by the white margin and clips the rounded
+       corners, so the card can be a rounded panel without the maths knowing about it */
+    var W = Card.W - Card.M * 2, P = 17, iw = W - P * 2, C = Card.C, y = 0;
+    var fill = function (col, x, yy, w, h, r) {
+      if (dry) return; g.fillStyle = col;
+      if (r) { Card.rr(g, x, yy, w, h, r); g.fill(); } else g.fillRect(x, yy, w, h);
+    };
+    var put = function (s, x, yy, col, align) {
+      if (dry) return; g.fillStyle = col; g.textAlign = align || 'left'; g.textBaseline = 'alphabetic';
+      g.fillText(String(s), x, yy);
+    };
+
+    /* ── header band ── */
+    var hh = 68;
+    fill(C.dark, 0, 0, W, hh);
+    var lx = P;
+    if (Card._logo) {
+      var ih = 34, iwd = Math.round(ih * (Card._logo.naturalWidth || 476) / (Card._logo.naturalHeight || 133));
+      var tw = iwd + 12, th = ih + 10;
+      fill('#ffffff', P, (hh - th) / 2, tw, th, 8);
+      if (!dry) g.drawImage(Card._logo, P + 6, (hh - ih) / 2, iwd, ih);
+      lx = P + tw + 12;
+    }
+    Card.fnt(g, '800', 16);
+    put('Honasa Consumer Limited', lx, 30, '#ffffff');
+    Card.fnt(g, '800', 13.5);
+    put('Emerging Brand · Today Plan', lx, 49, '#ffffff');
+    Card.fnt(g, '800', 13);
+    put(dmy(d.date), W - P, 28, '#ffffff', 'right');
+    Card.fnt(g, '400', 11);
+    put(d.time, W - P, 45, C.head2, 'right');
+    y = hh + 22;
+
+    /* ── who / where ── */
+    Card.fnt(g, '800', 19);
+    put(d.name, P, y, C.dark);
+    var nw = dry ? g.measureText(d.name).width : g.measureText(d.name).width;
+    Card.fnt(g, '600', 13);
+    put('(' + d.code + ')', P + nw + 7, y, C.code);
+    y += 19;
+    Card.fnt(g, '400', 12.5);
+    put([dmy(d.date), d.week, (d.zone ? d.zone + ' / ' + d.hq : d.hq)].filter(Boolean).join(' · '), P, y, C.meta);
+    y += 20;
+
+    [['Working With: ', d.ww], ['Town/City: ', d.town], ['Beat/Market: ', d.beat]]
+      .concat(d.focus ? [['Focus: ', d.focus]] : [])
+      .forEach(function (pair) {
+        Card.fnt(g, '800', 13);
+        var lw = g.measureText(pair[0]).width;
+        put(pair[0], P, y, C.ink);
+        Card.fnt(g, '400', 13);
+        var lines = Card.wrap(g, pair[1], iw - lw);
+        put(lines[0], P + lw, y, C.ink);
+        for (var i = 1; i < lines.length; i++) { y += 18; put(lines[i], P, y, C.ink); }
+        y += 22;
+      });
+    if (d.offPjp) {
+      Card.fnt(g, '700', 12);
+      put('Off-PJP: ' + d.offPjp, P, y, '#b4432f'); y += 20;
+    }
+
+    /* ── the three counters ── */
+    var th2 = 50, gap = 7, tw2 = (iw - gap * 2) / 3;
+    [[d.sc, 'SC Call'], [d.nso, 'NSO'], [d.posm, 'Display MSL']].forEach(function (k, i) {
+      var x = P + i * (tw2 + gap);
+      fill(C.tile, x, y, tw2, th2, 9);
+      Card.fnt(g, '800', 18);
+      put(k[0], x + tw2 / 2, y + 25, C.dark, 'center');
+      Card.fnt(g, '600', 10.5);
+      put(k[1], x + tw2 / 2, y + 40, C.meta, 'center');
+    });
+    y += th2 + 22;
+
+    /* ── the target block ── */
+    if (d.field) {
+      Card.fnt(g, '800', 13);
+      put('Daily Order Target', P, y, C.dark);
+      var hw = g.measureText('Daily Order Target').width;
+      Card.fnt(g, '600', 11);
+      put('(fixed · ₹L / Day)', P + hw + 6, y, C.code);
+      y += 10;
+
+      var top = y, x0 = P, bw = iw, ry = y;
+      /* the box height is arithmetic, so the rounded clip can be set BEFORE the rows are painted —
+         otherwise the dark TOTAL band and the green MTD band square off the bottom corners */
+      var boxH = 6 * 24 + 26 + Math.max(0, d.rows.length - 6) * 26 + 30 + 30;
+      if (!dry) { g.save(); Card.rr(g, x0, top, bw, boxH, 9); g.clip(); }
+      var line = function (yy) { if (dry) return; g.strokeStyle = C.row; g.lineWidth = 1;
+        g.beginPath(); g.moveTo(x0, yy + .5); g.lineTo(x0 + bw, yy + .5); g.stroke(); };
+      var row = function (label, val, o) {
+        o = o || {};
+        var h = o.h || 24;
+        if (o.bg) fill(o.bg, x0, ry, bw, h);
+        Card.fnt(g, o.lw || '400', o.fs || 12.5);
+        put(label, x0 + 12, ry + h / 2 + 4.5, o.col || C.sub);
+        Card.fnt(g, o.vw || '700', o.fs || 12.5);
+        put(o.raw ? val : num(val).toFixed(2), x0 + bw - 12, ry + h / 2 + 4.5, o.col || C.sub, 'right');
+        ry += h;
+        if (!o.last) line(ry);
+      };
+      d.rows.forEach(function (x, i) {
+        if (i < 6) row(x[0], x[1], { fs:12, vw:'500' });
+        else row(x[0], x[1], { fs:13, lw:'600', col:C.ink, h:26 });
+        if (i === 5) row('TDC — Total', d.tdc, { fs:13, lw:'800', vw:'800', col:C.dark, bg:C.band, h:26 });
+      });
+      row('TOTAL ORDER / DAY', d.tot, { fs:13.5, lw:'800', vw:'800', col:'#ffffff', bg:C.dark, h:30 });
+      row('MTD @24 Working Days', d.mtd, { fs:13, lw:'800', vw:'800', col:'#ffffff', bg:C.green, h:30,
+                                           raw:true, last:true });
+      if (!dry) {
+        g.restore();                                       /* end the rounded clip */
+        g.strokeStyle = C.line; g.lineWidth = 1;
+        Card.rr(g, x0 + .5, top + .5, bw - 1, (ry - top) - 1, 9); g.stroke();
+      }
+      y = ry + 16;
+    } else {
+      var bh = 46;
+      fill(C.warnBg, P, y, iw, bh, 9);
+      Card.fnt(g, '700', 13);
+      put('Aaj field day nahi — ' + d.ww, P + 13, y + 20, C.warnInk);
+      Card.fnt(g, '600', 11.5);
+      put('Order target 0. SC / NSO / MSL bhi 0.', P + 13, y + 36, C.warnInk);
+      y += bh + 16;
+    }
+
+    /* ── footer ── */
+    if (!dry) {
+      g.strokeStyle = C.dash; g.lineWidth = 1;
+      if (g.setLineDash) g.setLineDash([4, 4]);
+      g.beginPath(); g.moveTo(P, y + .5); g.lineTo(W - P, y + .5); g.stroke();
+      if (g.setLineDash) g.setLineDash([]);
+    }
+    y += 16;
+    Card.fnt(g, '600', 11);
+    put(d.group + ' · Daily Plan · ' + dmy(d.date), P, y, C.foot);
+    return y + 14;
+  },
+
+  /* ---------- canvas → PNG ---------- */
+  png: function () {
+    var d = Card.data();
+    var key = JSON.stringify(d);
+    if (Card._png && Card._png.key === key) return Promise.resolve(Card._png);
+    return Card.logo().then(function () {
+      var c = document.createElement('canvas'), S = Card.S, M = Card.M, CW = Card.W - M * 2;
+      c.width = Card.W * S; c.height = 10;
+      var g = c.getContext('2d');
+      g.setTransform(S, 0, 0, S, 0, 0);
+      var h = Card.draw(g, d, true);                       /* measure — nothing is painted */
+      var H = h + M * 2;
+      c.height = Math.ceil(H * S);                         /* resizing clears the canvas */
+      g = c.getContext('2d');
+      g.setTransform(S, 0, 0, S, 0, 0);
+      /* an opaque white page, never transparency: WhatsApp's dark mode paints a PNG's transparent
+         corners BLACK, which would frame the card in black notches */
+      g.fillStyle = '#ffffff'; g.fillRect(0, 0, Card.W, H);
+      g.save();
+      g.translate(M, M);
+      Card.rr(g, 0, 0, CW, h, Card.R); g.clip();           /* rounds the dark header too */
+      Card.draw(g, d, false);                              /* paint */
+      g.restore();
+      g.strokeStyle = Card.C.line; g.lineWidth = 1;
+      Card.rr(g, M + .5, M + .5, CW - 1, h - 1, Card.R); g.stroke();
+      return new Promise(function (res, rej) {
+        var done = function (b) {
+          if (!b) return rej(new Error('blob fail'));
+          if (Card._png && Card._png.url) URL.revokeObjectURL(Card._png.url);
+          Card._png = { key:key, blob:b, url:URL.createObjectURL(b), data:c.toDataURL('image/png'),
+                        name:'plan-' + d.code + '-' + d.date + '.png' };
+          res(Card._png);
+        };
+        if (c.toBlob) c.toBlob(done, 'image/png');
+        else done(null);
+      });
+    });
+  },
+
+  /* the preview both shows the rep what will be sent AND warms the blob, so the Send tap can call
+     navigator.share inside its own user gesture (a share fired after a long async gap is refused) */
+  preview: function () {
+    var box = $('pl_card'); if (!box) return;
+    Card.png().then(function (o) {
+      var b = $('pl_card'); if (!b) return;
+      b.innerHTML = '<img src="' + o.data + '" alt="Today Plan" ' +
+        'style="width:100%;display:block;border:1px solid var(--line);border-radius:12px">';
+    }).catch(function () {
+      var b = $('pl_card'); if (b) b.innerHTML = '<div class="hint">Preview nahi ban paya — image ab bhi bhej sakte ho.</div>';
+    });
+  },
+
+  /* ---------- share ---------- */
+  send: function (el) {
+    var r = Plan.row();
+    if (!r.PlanAt) { toast('Pehle plan save karo'); return null; }
+    return Busy.run('planimg_' + today(), el, 'Image bhej rahe hain…', function () {
+      return Card.png().then(function (o) {
+        var cap = Plan.msg();
+        var f = null;
+        try { f = new File([o.blob], o.name, { type:'image/png' }); } catch (e) {}
+        var mark = function () { return Plan.markNotified(); };
+        if (f && navigator.canShare && navigator.canShare({ files:[f] }) && navigator.share) {
+          return navigator.share({ files:[f], title:'Emerging Brand — Today Plan', text:cap })
+            .then(function () { toast('📲 Image bhej di — Field khul gaya', 3000); return mark(); })
+            .catch(function (e) {
+              /* the rep closed the share sheet — nothing was sent, so nothing is marked */
+              if (e && (e.name === 'AbortError' || /abort|cancel/i.test(e.message || ''))) {
+                toast('Bhejna cancel ho gaya'); return null;
+              }
+              return Card.fallback(o, cap).then(mark);
+            });
+        }
+        return Card.fallback(o, cap).then(mark);
+      }).catch(function () {
+        toast('⚠️ Image nahi ban payi — text bhej rahe hain');
+        Share.wa(Plan.msg());
+        return Plan.markNotified();
+      });
+    });
+  },
+  /* desktop / older browsers cannot attach a file to the share sheet: download it and open WhatsApp
+     with the caption ready, then tell the rep in one line what to do */
+  fallback: function (o, cap) {
+    var a = document.createElement('a');
+    a.href = o.url; a.download = o.name;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    Share.wa(cap);
+    return UI.alert({ icon:'🖼️', title:'Image download ho gayi',
+      msg:'Is device par app seedha image share nahi kar sakta.<br><b>' + esc(o.name) + '</b> download ho gayi hai ' +
+          'aur WhatsApp khul gaya hai — wahan <b>attach</b> karke bhej do.' });
+  },
+  /* full-size look before sending */
+  zoom: function () {
+    Card.png().then(function (o) {
+      UI.dialog({ icon:'🖼️', title:'Aisi image jayegi',
+        msg:'<img src="' + o.data + '" style="width:100%;display:block;border-radius:10px;border:1px solid var(--line)">',
+        ok:'Theek hai', cancel:false });
+    });
+  }
+};
+
 /* ═══════════════ HOME ═══════════════ */
 var Home = {
   html: function () {
@@ -1883,15 +2271,32 @@ var Plan = {
         '<tr><td><b>TOTAL</b></td><td class="num"><b>' + Plan.tgt().reduce(function (a, x) { return a + x[1]; }, 0).toFixed(2) + '</b></td></tr>' +
         '</tbody></table></div></div>';
 
-      h += '<div class="card"><div class="btns">' +
-        '<button class="btn" onclick="Plan.save(false,this)">💾 Plan save karo</button>' +
-        '<button class="btn ok" onclick="Plan.notify(this)" ' + (r.PlanAt ? '' : 'disabled') + '>' + (r.NotifiedAt ? '✅ Notified — dobara bhejo' : '📲 HOD ko notify karo') + '</button></div>' +
+      h += '<div class="card"><div class="btns" style="margin-top:0">' +
+        '<button class="btn" onclick="Plan.save(false,this)">💾 Plan save karo</button></div>' +
         (r.PlanAt ? '<div class="hint" style="margin-top:8px">Save: ' + esc(r.PlanAt) + (r.NotifiedAt ? ' · Notified: ' + esc(r.NotifiedAt) : ' · notify pending') + '</div>' : '') +
         '</div>';
     }
+
+    /* ── the morning WhatsApp image ── the rep sees exactly what will go out, then sends it ── */
+    h += '<div class="card"><h3><span class="ic">📲</span>Din ki shuruaat — WhatsApp image</h3>' +
+      '<div class="sub">Yahi image group me jaati hai — <b>edit nahi ho sakti</b>. Bhejne ke baad Field tab khul jayega.</div>' +
+      (r.PlanAt ? '<div id="pl_card" style="margin-top:12px"><div class="skel" style="height:150px;border-radius:12px"></div></div>'
+                : '<div class="banner w" style="margin-top:10px"><span>💾</span><div>Pehle <b>plan save</b> karo — uske baad image ban jayegi.</div></div>') +
+      '<div class="btns">' +
+      '<button class="btn ok" onclick="Card.send(this)" ' + (r.PlanAt ? '' : 'disabled') + '>' +
+        (r.NotifiedAt ? '✅ Bhej diya — dobara bhejo' : '📲 WhatsApp par image bhejo') + '</button>' +
+      '<button class="btn ghost" onclick="Card.zoom()" ' + (r.PlanAt ? '' : 'disabled') + '>🔍 Bada karke dekho</button>' +
+      '</div>' +
+      '<div class="btns" style="margin-top:8px"><button class="btn ghost sm" onclick="Plan.notify(this)" ' +
+        (r.PlanAt ? '' : 'disabled') + '>✍️ Text bhejna hai (image ke bajaye)</button></div>' +
+      '</div>';
     return h;
   },
-  after: function () { Flush.reg('plan', function () { return Plan.row().PlanAt ? Plan.save(true) : null; }); },
+  after: function () {
+    Flush.reg('plan', function () { return Plan.row().PlanAt ? Plan.save(true) : null; });
+    /* draws the card and caches the PNG, so the Send tap can share inside its own user gesture */
+    if (Plan.row().PlanAt) Card.preview();
+  },
   tgt: function () {
     return [['TDC – Face Wash', num(DB.cfg('TDC_FW', .3))], ['TDC – Sunscreen', num(DB.cfg('TDC_SUNSCREEN', .1))],
       ['TDC – Serum', num(DB.cfg('TDC_SERUM', .15))], ['TDC – FMDC / Moisturisers', num(DB.cfg('TDC_FMDC/MOISTURISERS', .15))],
@@ -1915,15 +2320,27 @@ var Plan = {
       if (!quiet) { Log.add('Plan', 'Saved', t, town + ' / ' + beat); toast('✅ Plan save ho gaya'); render(); Nav.build(); }
     });
   },
+  /* text-only send, kept as the escape hatch when the image cannot go (very old phone, or the rep
+     just wants text) */
   notify: function (el) {
     var r = Plan.row();
     if (!r.PlanAt) return toast('Pehle plan save karo');
     Share.wa(Plan.msg());
     return Busy.run('notify_' + today(), el, 'Bhej raha hai…', function () {
-      return DB.save('DayPlan', Object.assign({}, r, { NotifiedAt:new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }) }))
-        .then(function () { Log.add('Plan', 'Notified', today(), ''); render(); Nav.build();
-          toast('📲 Plan bhej diya — Field khul gaya'); });
+      return Plan.markNotified();
     });
+  },
+  /* Notifying the HOD is what unlocks the Field tab, so the stamp lives in ONE place — both the image
+     share and the text share go through it and can never disagree. */
+  markNotified: function () {
+    var r = Plan.row();
+    if (!r.PlanAt) return Promise.resolve(null);
+    return DB.save('DayPlan', Object.assign({}, r, { NotifiedAt:new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }) }))
+      .then(function () {
+        Log.add('Plan', 'Notified', today(), '');
+        render(); Nav.build();
+        toast('📲 Plan bhej diya — Field khul gaya');
+      });
   },
   msg: function () {
     var r = Plan.row(), t = today();
@@ -2030,7 +2447,7 @@ var Field = {
     var stores = DB.myStores();
     var h = '<div class="card"><h3><span class="ic">1</span>Store select karo</h3>' +
       '<input class="in" id="f_search" placeholder="🔍 Store name ya code" oninput="Field.filterStores()" style="margin-top:10px">' +
-      '<div id="f_stores" style="max-height:230px;overflow:auto;margin-top:8px"></div>';
+      '<div id="f_stores" class="slist"></div>';
     if (Field.store) h += '<div class="banner g" style="margin-top:10px"><span>✓</span><div><b>' + esc(Field.store.StoreName) + '</b><br>' +
       '<span style="font-weight:500">' + esc(Field.store.City || '') + ' · ' + esc(Field.store.CompanyCode || '') +
       ' · DB: ' + esc(Field.store.DbName || '—') + '</span></div></div>';
@@ -2054,7 +2471,7 @@ var Field = {
         '<select class="in" id="f_msl" onchange="Field.renderProds()"><option value="">All SKU</option><option>MSL</option><option>Non-MSL</option></select>' +
       '</div>' +
       '<input class="in" id="f_psearch" placeholder="🔍 Product name ya code" oninput="Field.renderProds()" style="margin-top:10px">' +
-      '<div id="f_prods" style="max-height:260px;overflow:auto;margin-top:8px"></div></div>';
+      '<div id="f_prods" class="slist"></div></div>';
 
     h += '<div class="card"><h3><span class="ic">4</span>Order lines' + (Field.lines.length ? ' (' + Field.lines.length + ')' : '') + '</h3><div id="f_lines"></div></div>';
 
@@ -2882,7 +3299,7 @@ var Sec = {
   addOpen: function (po) {
     Sec.addPo = po; Sec.addQ = '';
     UI.sheet('Product add karo', '<input class="in" id="sec_q" placeholder="Naam ya code se dhoondho…" ' +
-      'oninput="Sec.addQ=this.value;Sec.addList()"><div id="sec_list" style="max-height:52vh;overflow:auto;margin-top:10px"></div>');
+      'oninput="Sec.addQ=this.value;Sec.addList()"><div id="sec_list" class="slist" style="margin-top:10px"></div>');
     Sec.addList();
     var q = $('sec_q'); if (q) q.focus();
   },
