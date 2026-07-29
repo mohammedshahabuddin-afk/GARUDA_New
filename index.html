@@ -314,6 +314,26 @@ td.num,th.num{text-align:right}
 .ph{width:100%;aspect-ratio:4/3;border:1.5px dashed var(--line);border-radius:var(--r-s);display:grid;place-items:center;color:var(--ink-3);
   font-size:12px;background:#fafbff;overflow:hidden}
 .ph img{width:100%;height:100%;object-fit:cover}
+/* ── an editable order line: name on the left, a small "Remove" at the TOP RIGHT (it used to be a
+      full-width button that wrapped to its own line), then the numbers with Save beside them ── */
+.oline{border-bottom:1px solid var(--line);padding:10px 0}
+.oline:last-child{border-bottom:0}
+.oline-h{display:flex;align-items:flex-start;gap:8px}
+.oline-h .m{flex:1;min-width:0}
+.oline-h .t{font-weight:600;font-size:13px}
+/* small to LOOK at, but the hit area is padded out to a thumb-sized 30px */
+.oline-x{flex:0 0 auto;border:0;background:0;color:var(--bad);font-size:11.5px;font-weight:700;
+  /* no NEGATIVE right margin: it pulled the hit area 6px outside the card's padding box */
+  padding:6px 8px;margin:-4px 0 0 0;min-height:30px;text-decoration:underline}
+.oline-n{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.oline-n .lbl{font-size:10.5px;color:var(--ink-3);font-weight:600}
+.oline-n input{width:74px;padding:7px 8px;font-size:13px}
+.oline-n input.v{width:96px}
+.oline-n .btn{width:auto;flex:0 0 auto;padding:7px 12px;font-size:12px;min-height:34px}
+/* date / month pickers have an intrinsic width that ignores width:100% and overflowed the card */
+.in[type=month],.in[type=date],input[type=month].in,input[type=date].in{
+  min-width:0;max-width:100%;-webkit-appearance:none;appearance:none}
+
 /* ── a horizontal chip strip that LOOKS scrollable: slim permanent scrollbar + a fade on the right
       edge, so nothing important can hide off-screen unnoticed ── */
 .chips{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:2px 0 6px;
@@ -511,7 +531,9 @@ label.f i{font-style:normal;font-weight:500;color:var(--ink-3)}
               </div>
               <div style="font-size:10px;color:#64748b;margin-bottom:5px">💡 First login? Default: <b style="color:#dc2626">Honasa@123</b></div>
               <div id="gate_err" style="color:#dc2626;font-size:11px;font-weight:700;min-height:15px;margin:1px 0;text-align:center"></div>
-              <button onclick="window.__doLogin()" style="width:100%;padding:11px;background:linear-gradient(135deg,#0f2942 0%,#0ea5e9 60%,#22c55e 100%);color:white;border:0;border-radius:9px;font-weight:800;font-size:13.5px;cursor:pointer;letter-spacing:.8px;box-shadow:0 6px 16px rgba(15,41,66,0.3);transition:transform .15s" onmouseover="this.style.transform=&apos;translateY(-2px)&apos;" onmouseout="this.style.transform=&apos;&apos;">🚀 LOGIN TO GARUDA</button>
+              <!-- id is REQUIRED: Auth.login()/gateErr() drive this button's busy state through it.
+                   Without it the button never disabled and a tap looked like nothing happened. -->
+              <button id="gate_btn" onclick="window.__doLogin()" style="width:100%;padding:11px;background:linear-gradient(135deg,#0f2942 0%,#0ea5e9 60%,#22c55e 100%);color:white;border:0;border-radius:9px;font-weight:800;font-size:13.5px;cursor:pointer;letter-spacing:.8px;box-shadow:0 6px 16px rgba(15,41,66,0.3);transition:transform .15s;display:flex;align-items:center;justify-content:center;gap:8px" onmouseover="this.style.transform=&apos;translateY(-2px)&apos;" onmouseout="this.style.transform=&apos;&apos;">LOGIN TO GARUDA</button>
               <div style="margin-top:8px;text-align:center">
                 <a href="javascript:void(0)" onclick="window.__showForgot()" style="color:#0ea5e9;text-decoration:none;font-weight:700;font-size:11px">🔓 Forgot Password?</a>
               </div>
@@ -1486,7 +1508,34 @@ I18n.D.en = I18n.EN = {
   'Aaj:':'Today:',
   'Preview':'Preview',
   'Console':'Console',
+  /* login gate */
+  'Logging in…':'Logging in…',
+  'LOGIN TO GARUDA':'LOGIN TO GARUDA',
+  'Email bharo':'Enter your email',
+  'Password bharo':'Enter your password',
+  'Poora email likho (jaise name@mamaearth.in)':'Enter the full email (e.g. name@mamaearth.in)',
+  'Ye email register nahi hai — spelling check karo ya admin se poochho':
+    'This email is not registered — check the spelling or ask your admin',
+  'Password galat hai — dobara try karo':'Wrong password — please try again',
   /* longest-first matching means this wins over the shorter 'Order punch' key */
+  'change ho chuke hain — kal se naya din':'changes are already used — tomorrow is a new day',
+  'change ho chuke hain':'changes used',
+  'bacha hai.':'left.',
+  'limit poori.':'limit reached.',
+  'Change limit over':'Change limit over',
+  'Order kaise aa raha hai?':'How is the order coming in?',
+  'Store visit':'Store visit',
+  'Telephonic':'Telephonic',
+  'Shop me ja rahe ho — photo lagega':'Going to the shop — a photo is needed',
+  'Phone par order — photo aur POSM skip':'Order by phone — photo and POSM skipped',
+  '— shop ka photo aur POSM dono skip ho jayenge. Sirf product aur status bharo.':'— the shop photo and POSM are both skipped. Just fill the product and status.',
+  '— badalna ho to upar step 2 me jao.':'— to change it, go up to step 2.',
+  'Order source:':'Order source:',
+  'Kuch change nahi hua':'Nothing changed',
+  'update ho gaya':'updated',
+  'Submit & aage badho':'Submit & continue',
+  'Submit &amp; aage badho':'Submit &amp; continue',
+  'Store select karo':'Pick a store',
   'Order punch karo':'Punch the order',
   /* live updates + the read-only plan / waiting screen */
   'HOD ne approve kar diya — aage badho':'The HOD approved it — carry on',
@@ -1847,22 +1896,42 @@ var Auth = {
   session: function () { return Store.get(K.sess, null); },
   users: function () { return Store.get(K.users, []) || []; },
 
+  /* ── the login button's two states, in one place ──
+     `busy` is what makes one tap enough: the button says "Logging in…" with a spinner and refuses a
+     second tap, instead of sitting there looking untouched while an Apps Script cold start takes
+     three seconds. `gateErr` is the only way back out of that state. */
+  BTN:'LOGIN TO GARUDA',
+  busy:false,
+  gateBusy: function (on) {
+    Auth.busy = !!on;
+    var b = $('gate_btn'); if (!b) return;
+    b.disabled = !!on;
+    b.style.opacity = on ? '.75' : '';
+    b.style.cursor = on ? 'default' : 'pointer';
+    b.innerHTML = on ? '<span class="spin" style="border-color:rgba(255,255,255,.45);border-top-color:#fff"></span> ' +
+      esc(I18n.s('Logging in…')) : esc(I18n.s(Auth.BTN));
+  },
   gateErr: function (m) {
-    var e = $('gate_err'); if (e) e.textContent = m || '';
-    var b = $('gate_btn'); if (b) { b.disabled = false; b.textContent = b._t || 'Sign In Securely'; }
+    var e = $('gate_err'); if (e) e.textContent = I18n.s(m || '');
+    Auth.gateBusy(false);
   },
   login: function () {
+    if (Auth.busy) return;                       /* a second tap while the first is still in flight */
     var em = String(($('gate_email') || {}).value || '').trim().toLowerCase();
     var pw = String(($('gate_pwd') || {}).value || '');
-    if (!em || !pw) return Auth.gateErr('Email aur password dono bharo');
+    if (!em) return Auth.gateErr('Email bharo');
+    if (!pw) return Auth.gateErr('Password bharo');
+    if (em.indexOf('@') < 0) return Auth.gateErr('Poora email likho (jaise name@mamaearth.in)');
     Auth.gateErr('');
-    var b = $('gate_btn'); if (b) { b._t = b.textContent; b.disabled = true; b.textContent = 'Checking…'; }
+    Auth.gateBusy(true);
     var done = function (users) {
       Store.set(K.users, users);
-      var u = (users || []).filter(function (x) { return String(x.Email).toLowerCase() === em; })[0];
-      if (!u) return Auth.gateErr('Ye email register nahi hai');
-      if (String(u.Status).toLowerCase() !== 'active') return Auth.gateErr('Account inactive hai — admin se baat karo');
-      if (String(u.Password) !== pw) return Auth.gateErr('Password galat hai');
+      /* trim BOTH sides: a stray space in the sheet's Email cell used to read as "not registered" */
+      var u = (users || []).filter(function (x) {
+        return String(x.Email || '').trim().toLowerCase() === em; })[0];
+      if (!u) return Auth.gateErr('Ye email register nahi hai — spelling check karo ya admin se poochho');
+      if (String(u.Status || '').trim().toLowerCase() !== 'active') return Auth.gateErr('Account inactive hai — admin se baat karo');
+      if (String(u.Password) !== pw) return Auth.gateErr('Password galat hai — dobara try karo');
       /* first login → force a password change before entering the app */
       if (!u.PwdChanged || u.PwdChanged === 'FALSE' || u.PwdChanged === false) {
         if ($('pwd_change_email')) $('pwd_change_email').value = em;
@@ -1871,6 +1940,7 @@ var Auth = {
         Auth.gateErr('');
         return;
       }
+      Auth.gateBusy(false);
       Auth.enter(u, em);
     };
     if (!Api.online()) { var c = Auth.users(); return c.length ? done(c) : Auth.gateErr('Offline ho — pehli baar login ke liye internet chahiye'); }
@@ -3495,9 +3565,13 @@ var Plan = {
 
     /* ── ONE card, and it is READ-ONLY. This is what the HOD approved; the only way to alter any of it
           — including Working With — is the Change PJP button, which opens a request. ── */
+    var left = Plan.left(dev);
     h += '<div class="card"><div class="c-h"><h3>PJP approved</h3>' +
-      '<button class="btn ghost xs" onclick="Plan.changeOpen()">Change PJP</button></div>' +
-      '<div class="hint">*Approved by HOD — kuch bhi badalna ho to <b>Change PJP</b> dabao, sidha edit nahi hota.</div>';
+      '<button class="btn ghost xs" onclick="Plan.changeOpen()"' + (left ? '' : ' disabled') + '>' +
+        (left ? 'Change PJP' : 'Change limit over') + '</button></div>' +
+      '<div class="hint">*Approved by HOD — kuch bhi badalna ho to <b>Change PJP</b> dabao, sidha edit nahi hota.' +
+      (dev && num(dev.TryCount) ? ' Aaj ' + num(dev.TryCount) + '/' + Plan.MAXCHG + ' change ho chuke hain' +
+        (left ? ' — ' + left + ' bacha hai.' : ' — limit poori.') : '') + '</div>';
 
     var shTown = (r.OffPjp && r.Town) || (pjp ? pjp.Town : '') || '';
     var shBeat = (r.OffPjp && r.Beat) || (pjp ? pjp.Beat : '') || '';
@@ -3571,12 +3645,18 @@ var Plan = {
       ['Dr. Sheth\'s (DRS)', num(DB.cfg('DRS', .1))], ['ME Color Care (CC)', num(DB.cfg('CC', .1))]];
   },
 
+  /* A day can be re-planned TWICE. The first version refused a second change once the first was
+     approved, which is wrong: a market can shut after the rep has already moved. The cap is on the
+     number of requests (TryCount), not on the outcome of the first one. */
+  MAXCHG:2,
+  left: function (dev) { return Math.max(0, Plan.MAXCHG - num(dev && dev.TryCount)); },
+
   /* ── Change PJP: a popup, not a second form on the page ── */
   changeOpen: function () {
     var t = today(), pjp = DB.pjpFor(DB.me.code, t), r = Plan.row();
     var ex = Plan.dev();
     if (ex && /pending/i.test(ex.Status || '')) return toast('Request already sent — HOD approval ka wait karo');
-    if (ex && /approved/i.test(ex.Status || '')) return toast('HOD ne aaj ka change approve kar diya hai — ab dobara request nahi');
+    if (!Plan.left(ex)) return toast('Aaj ' + Plan.MAXCHG + ' change ho chuke hain — kal se naya din', 4200);
     var curTw = (r.OffPjp && r.Town) || (pjp ? pjp.Town : '') || '';
     var curSt = r.State || Plan.stateOf(curTw) || (Plan.states()[0] || '');
     var curWw = Plan.ww();
@@ -3753,14 +3833,18 @@ var Plan = {
     var ex = Plan.dev();
     /* already waiting → never queue a second request (this is what used to fire 3 times) */
     if (ex && /pending/i.test(ex.Status || '')) { render(); return toast('Request already sent — HOD approval ka wait karo'); }
-    /* already approved for today → don't let a re-send silently flip it back to Pending */
-    if (ex && /approved/i.test(ex.Status || '')) { render(); return toast('HOD ne aaj ka change approve kar diya hai — ab dobara request nahi'); }
+    /* two changes a day, whatever the outcome of the first */
+    if (!Plan.left(ex)) { render(); return toast('Aaj ' + Plan.MAXCHG + ' change ho chuke hain — kal se naya din', 4200); }
     /* HOD rejected this exact beat → must propose a different one */
     if (Plan.isRejected(ex, town, beat))
       return toast('Ye beat HOD ne reject kiya tha — koi dusra beat chuno', 4200);
     return Busy.run('dev_' + t, el, 'Bhej raha hai\u2026', function () {
+      var r0 = Plan.row();
       return DB.save('Deviation', { Id:DB.me.code + '_' + t, Date:t,
-        PlannedTown:pjp ? pjp.Town : '', PlannedBeat:pjp ? pjp.Beat : '',
+        /* "from where I am now", not "from the original master row" — on a SECOND change of the day the
+           original is no longer where the rep is, and the HOD needs to see the real move */
+        PlannedTown:(r0.OffPjp && r0.Town) || (pjp ? pjp.Town : ''),
+        PlannedBeat:(r0.OffPjp && r0.Beat) || (pjp ? pjp.Beat : ''),
         NewTown:town, NewBeat:beat, NewWw:nw, Reason:reason, Status:'Pending',
         TryCount:num(ex && ex.TryCount) + 1, RejectedJson:JSON.stringify(Plan.rejectedList(ex)),
         UpdatedAt:Date.now(), Ts:new Date().toISOString() }).then(function () {
@@ -3814,7 +3898,9 @@ var Field = {
   /* ---------- order punch ---------- */
   orderHtml: function () {
     var stores = DB.myStores();
-    var h = '<div class="card"><h3><span class="ic">1</span>Store select karo</h3>' +
+    var sN = 0;                       /* step numbers are counted, not written, because the photo
+                                     step disappears for a telephonic order */
+    var h = '<div class="card"><h3><span class="ic">' + (++sN) + '</span>Store select karo</h3>' +
       '<input class="in" id="f_search" placeholder=" Store name ya code" oninput="Field.filterStores()" style="margin-top:10px">' +
       '<div id="f_stores" class="slist"></div>';
     if (Field.store) h += '<div class="banner g" style="margin-top:10px"><span></span><div><b>' + esc(Field.store.StoreName) + '</b><br>' +
@@ -3823,9 +3909,24 @@ var Field = {
     h += '</div>';
     if (!Field.store) return h;
 
-    /* STEP 2 — dukaan me ghusne se pehle shop ka photo. Live camera only, and it gates the rest of
+    /* STEP 2 — how the order is coming in. Asked here, before the photo, so a telephonic order can
+       skip the photo entirely instead of being blocked by it. */
+    h += '<div class="card" id="f_step2"><h3><span class="ic">' + (++sN) + '</span>Order kaise aa raha hai?</h3>' +
+      '<div class="seg" style="margin-top:8px">' +
+      '<button type="button" class="' + (Field.phone() ? '' : 'on') + '" onclick="Field.setSrc(\'Store Visit\')">Store visit</button>' +
+      '<button type="button" class="' + (Field.phone() ? 'on' : '') + '" onclick="Field.setSrc(\'Telephonic Call\')">Telephonic</button>' +
+      '</div><div class="seg-n"><span>Shop me ja rahe ho — photo lagega</span>' +
+      '<span class="w">Phone par order — photo aur POSM skip</span></div></div>';
+
+    if (Field.phone()) {
+      /* telephonic: no shop to photograph and no shelf to audit */
+      h += '<div class="banner b"><span></span><div><b>Telephonic order</b> — shop ka photo aur POSM ' +
+        'dono skip ho jayenge. Sirf product aur status bharo.</div></div>';
+    } else {
+
+    /* STEP 3 — dukaan me ghusne se pehle shop ka photo. Live camera only, and it gates the rest of
        the visit: no products, no submit until the photo is taken. */
-    h += '<div class="card"><h3><span class="ic">2</span>Shop ka photo</h3>' +
+    h += '<div class="card"><h3><span class="ic">' + (++sN) + '</span>Shop ka photo</h3>' +
       '<div class="sub">Dukaan me andar jaane se <b>pehle</b> shop ke bahar ka ek photo lo — board aur entry ' +
       'dono dikhne chahiye. ' + (Bypass.on() ? 'Aapke liye ye <b>optional</b> hai (bypass ON) — gallery se bhi chalega.'
                                              : 'Ye <b>live camera</b> se hi hoga, gallery se nahi.') + '</div>' +
@@ -3838,9 +3939,10 @@ var Field = {
         ? '<div class="btns"><button class="btn" onclick="Field.entryDone()">Order punch karo</button></div>'
         : '') +
       '</div>';
-    if (!Cam.ok('entry') && !Bypass.on()) return h;
+      if (!Cam.ok('entry') && !Bypass.on()) return h;
+    }                                        /* end of the "not telephonic" branch */
 
-    h += '<div class="card"><h3><span class="ic">3</span>Product add karo</h3>' +
+    h += '<div class="card"><h3><span class="ic">' + (++sN) + '</span>Product add karo</h3>' +
       '<div class="row two" style="margin-top:10px">' +
         '<select class="in" id="f_brand" onchange="Field.onBrand()"><option value="">Sab brand</option>' +
           Field.uniq('Brand').map(function (b) { return '<option>' + esc(b) + '</option>'; }).join('') + '</select>' +
@@ -3856,12 +3958,16 @@ var Field = {
       '<input class="in" id="f_psearch" placeholder=" Product name ya code" oninput="Field.renderProds()" style="margin-top:10px">' +
       '<div id="f_prods" class="slist"></div></div>';
 
-    h += '<div class="card"><h3><span class="ic">4</span>Order lines' + (Field.lines.length ? ' (' + Field.lines.length + ')' : '') + '</h3><div id="f_lines"></div></div>';
+    Field.lineStep = ++sN;
+    h += '<div class="card"><h3><span class="ic">' + Field.lineStep + '</span>Order lines' + (Field.lines.length ? ' (' + Field.lines.length + ')' : '') + '</h3><div id="f_lines"></div></div>';
 
-    h += '<div class="card"><h3><span class="ic">5</span>Status &amp; submit</h3>' +
-      '<div class="row two"><div><label class="f">Order source</label><select class="in" id="f_src"><option>Store Visit</option><option>Telephonic Call</option></select></div>' +
-      '<div><label class="f">Status</label><select class="in" id="f_status" onchange="Field.renderReason()">' +
-        ['Order in Process','Billing Done','No Order','Cancel Order'].map(function (o) { return '<option>' + o + '</option>'; }).join('') + '</select></div></div>' +
+    /* the source moved to step 2; it is carried here as a hidden field so Field.submit still reads it
+       from one place */
+    h += '<div class="card"><h3><span class="ic">' + (++sN) + '</span>Status &amp; submit</h3>' +
+      '<input type="hidden" id="f_src" value="' + esc(Field.src) + '">' +
+      '<div class="hint">Order source: <b>' + esc(Field.src) + '</b> — badalna ho to upar step 2 me jao.</div>' +
+      '<label class="f">Status</label><select class="in" id="f_status" onchange="Field.renderReason()">' +
+        ['Order in Process','Billing Done','No Order','Cancel Order'].map(function (o) { return '<option>' + o + '</option>'; }).join('') + '</select>' +
       '<div id="f_reason"></div>' +
       '<label class="f">Remarks</label><textarea class="in" id="f_remarks" rows="2"></textarea>' +
       '<div class="btns"><button class="btn" onclick="Field.submit(this)"> Submit &amp; aage badho</button></div></div>';
@@ -3891,7 +3997,19 @@ var Field = {
     Cam.clear(['entry']);                       /* new store = new visit photo */
     Field.lines = [];
     render();
+    /* the store list is long; after picking, put the NEXT step in front of the rep instead of leaving
+       them at the top of a list they have finished with */
+    setTimeout(function () {
+      var el = $('f_step2') || $('f_prods');
+      var card = el && el.closest ? el.closest('.card') : el;
+      if (card && card.scrollIntoView) card.scrollIntoView({ behavior:'smooth', block:'start' });
+    }, 80);
   },
+  /* Order source is asked BEFORE the photo, because a telephonic order has no shop to photograph —
+     choosing it must skip the whole photo gate rather than fail it at the end. */
+  src:'Store Visit', lineStep:5,
+  phone: function () { return Field.src === 'Telephonic Call'; },
+  setSrc: function (v) { Field.src = v; render(); },
   /* The shop photo GATES the visit, so filling it has to open the rest of the screen. Cam.paint only
      redraws the tile, which is why the order steps stayed hidden until the rep left the tab and came
      back. Called from the tile's own cb and from the "Order punch karo" button. */
@@ -3976,7 +4094,7 @@ var Field = {
     var box = $('f_lines'); if (!box) return;
     var card = box.closest ? box.closest('.card') : null;
     var h3 = card && card.querySelector('h3');
-    if (h3) h3.innerHTML = '<span class="ic">4</span>' + I18n.s('Order lines') +
+    if (h3) h3.innerHTML = '<span class="ic">' + (Field.lineStep || 5) + '</span>' + I18n.s('Order lines') +
       (Field.lines.length ? ' (' + Field.lines.length + ')' : '');
     if (card && card.scrollIntoView) card.scrollIntoView({ behavior:'smooth', block:'center' });
   },
@@ -3986,13 +4104,18 @@ var Field = {
     var tu = 0, tv = 0;
     box.innerHTML = I18n.tr(Field.lines.map(function (l, i) {
       tu += num(l.Units); tv += num(l.Value);
-      return '<div class="lrow"><div class="m"><div class="t">' + esc(l.SkuName) + '</div>' +
-        '<div class="s">' + esc(l.Brand || '') + ' · MRP ' + inr(l.Mrp) + '</div>' +
-        '<div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">' +
-          '<input class="in" style="width:78px;padding:7px" type="number" min="0" value="' + num(l.Units) + '" onchange="Field.setLine(' + i + ',\'Units\',this.value)">' +
-          '<input class="in" style="width:110px;padding:7px" type="number" min="0" value="' + num(l.Value) + '" onchange="Field.setLine(' + i + ',\'Value\',this.value)">' +
-        /* this button used to be a lone bin emoji; without it the button was an empty 18px target */
-        '</div></div><button class="btn ghost sm" onclick="Field.del(' + i + ')">Remove</button></div>';
+      return '<div class="oline"><div class="oline-h"><div class="m">' +
+          '<div class="t">' + esc(l.SkuName) + '</div>' +
+          '<div class="hint">' + esc(l.Brand || '') + ' · MRP ' + inr(l.Mrp) + '</div></div>' +
+          /* small, top-right — it used to be a full-width button that wrapped onto its own line */
+          '<button class="oline-x" onclick="Field.del(' + i + ')">Remove</button></div>' +
+        '<div class="oline-n">' +
+          '<span class="lbl">Units</span>' +
+          '<input class="in" id="fl_u' + i + '" type="number" min="0" value="' + num(l.Units) + '">' +
+          '<span class="lbl">Value</span>' +
+          '<input class="in v" id="fl_v' + i + '" type="number" min="0" value="' + num(l.Value) + '">' +
+          '<button class="btn ok" onclick="Field.saveLine(' + i + ')">Save</button>' +
+        '</div></div>';
     }).join('') + '<div class="lrow" style="border:0"><div class="m"><b>' + Field.lines.length + ' SKU · ' + tu + ' units</b></div>' +
       '<div style="text-align:right"><b>' + inr(tv) + '</b><div class="s">NSV ' + lakh(tv * .6 / 1e5) + ' L</div></div></div>');
   },
@@ -4001,6 +4124,16 @@ var Field = {
     l[k] = num(v);
     if (k === 'Units') l.Value = num(v) * num(l.Mrp);
     Field.renderLines();
+  },
+  /* Save beside the numbers — on a phone the rep taps Submit without the input ever losing focus, so
+     relying on onchange alone silently dropped the last thing they typed. */
+  saveLine: function (i) {
+    var l = Field.lines[i]; if (!l) return;
+    var u = num(val('fl_u' + i)), v = num(val('fl_v' + i));
+    l.Units = u;
+    l.Value = (v && v !== num(l.Value)) ? v : u * num(l.Mrp);   /* a hand-typed value wins */
+    Field.renderLines();
+    toast(l.SkuName + ' — ' + u + ' units · ' + inr(l.Value));
   },
   del: function (i) { Field.lines.splice(i, 1); Field.renderLines(); },
   renderReason: function () {
@@ -4019,8 +4152,8 @@ var Field = {
   submit: function (el) {
     if (Busy.busy('order')) return toast('Ruko — order save ho raha hai');
     if (!Field.store) return toast('Store select karo');
-    /* never trust the disabled button — but a bypassed user is allowed through */
-    if (!Cam.ok('entry') && !Bypass.on()) return toast('Pehle shop ka photo lo');
+    /* never trust the disabled button — but a bypassed user, and a telephonic order, are allowed through */
+    if (!Cam.ok('entry') && !Bypass.on() && !Field.phone()) return toast('Pehle shop ka photo lo');
     var st = val('f_status'), src = val('f_src'), rem = val('f_remarks');
     var noOrder = st === 'No Order' || st === 'Cancel Order';
     if (!noOrder && !Field.lines.length) return toast('Product add karo (ya No Order select karo)');
@@ -4696,15 +4829,19 @@ var Sec = {
     lines.forEach(function (l) { tu += num(l.Units); tv += num(l.Value); });
     return '<div style="border-top:1px dashed var(--line);padding-top:10px">' +
       (lines.length ? lines.map(function (l, i) {
-        return '<div class="lrow"><div class="m"><div class="t" style="font-size:12.5px">' + esc(l.SkuName) + '</div>' +
-        '<div class="hint">' + esc(l.Brand || '') + ' · MRP ' + inr(l.Mrp) + '</div>' +
-        '<div style="display:flex;gap:8px;margin-top:5px;align-items:center;flex-wrap:wrap">' +
-        '<span class="hint">Units</span>' +
-        '<input class="in" style="width:72px;padding:6px" type="number" min="0" value="' + num(l.Units) + '" onchange="Sec.setLine(\'' + po + '\',' + i + ',\'Units\',this.value)">' +
-        '<span class="hint">Value</span>' +
-        '<input class="in" style="width:100px;padding:6px" type="number" min="0" value="' + num(l.Value) + '" onchange="Sec.setLine(\'' + po + '\',' + i + ',\'Value\',this.value)">' +
-        '</div></div>' +
-        '<button class="btn bad sm" style="flex:0 0 auto" title="Is product ko hatao" onclick="Sec.delLine(\'' + po + '\',' + i + ')"></button></div>';
+        return '<div class="oline"><div class="oline-h"><div class="m">' +
+          '<div class="t">' + esc(l.SkuName) + '</div>' +
+          '<div class="hint">' + esc(l.Brand || '') + ' · MRP ' + inr(l.Mrp) + '</div></div>' +
+          '<button class="oline-x" onclick="Sec.delLine(\'' + po + '\',' + i + ')">Remove</button></div>' +
+          '<div class="oline-n">' +
+            '<span class="lbl">Units</span>' +
+            '<input class="in" id="sl_u' + i + '" type="number" min="0" value="' + num(l.Units) + '">' +
+            '<span class="lbl">Value</span>' +
+            '<input class="in v" id="sl_v' + i + '" type="number" min="0" value="' + num(l.Value) + '">' +
+            /* one explicit Save writes BOTH numbers in a single sheet write — the old per-field
+               onchange fired twice and only when the field happened to lose focus */
+            '<button class="btn ok" onclick="Sec.saveLine(\'' + po + '\',' + i + ',this)">Save</button>' +
+          '</div></div>';
       }).join('') : UI.empty('', 'Is order me koi product nahi — neeche se add karo')) +
       '<div class="lrow"><div class="m"><div class="t">' + lines.length + ' SKU · ' + tu + ' units</div>' +
         '<div class="s">Total ' + inr(tv) + '</div></div>' +
@@ -4723,6 +4860,21 @@ var Sec = {
     lines[i][k] = num(v);
     if (k === 'Units') lines[i].Value = num(v) * num(lines[i].Mrp);
     return Sec.commit(o, lines);
+  },
+  /* Save next to the numbers: reads BOTH boxes and writes once. Units alone still recomputes the value
+     from MRP, but a value the rep typed by hand wins — that is the whole point of the second box. */
+  saveLine: function (po, i, el) {
+    var o = DB.find('SecOrders', po); if (!o) return;
+    var lines = JSON.parse(o.LinesJson || '[]');
+    if (!lines[i]) return;
+    var u = num(val('sl_u' + i)), v = num(val('sl_v' + i));
+    var was = num(lines[i].Units), wasV = num(lines[i].Value);
+    if (u === was && v === wasV) return toast('Kuch change nahi hua');
+    lines[i].Units = u;
+    lines[i].Value = (v && v !== wasV) ? v : u * num(lines[i].Mrp);
+    return Busy.run('line_' + po + '_' + i, el, 'Save…', function () {
+      return Sec.commit(o, lines, lines[i].SkuName + ' update ho gaya');
+    });
   },
 
   /* one place that writes an edited order: header totals + every line row, always in step */
