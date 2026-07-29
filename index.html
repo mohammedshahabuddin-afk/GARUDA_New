@@ -303,6 +303,24 @@ td.num,th.num{text-align:right}
 .ph{width:100%;aspect-ratio:4/3;border:1.5px dashed var(--line);border-radius:var(--r-s);display:grid;place-items:center;color:var(--ink-3);
   font-size:12px;background:#fafbff;overflow:hidden}
 .ph img{width:100%;height:100%;object-fit:cover}
+/* ── segmented control + locked field + focus box: the previous app's Plan layout ── */
+.seg{display:flex;gap:6px;background:#eef1f6;border-radius:12px;padding:4px;margin-top:10px}
+.seg button{flex:1;border:0;background:0;border-radius:9px;padding:9px 8px;font-size:12.5px;font-weight:700;
+  color:var(--ink-2);min-height:38px}
+.seg button.on{background:#fff;color:var(--blue);box-shadow:var(--sh)}
+.seg button:disabled{opacity:.45}
+.seg-n{display:flex;gap:6px;margin-top:5px}
+.seg-n span{flex:1;font-size:10.5px;font-weight:600;color:var(--ink-3);text-align:center}
+.seg-n span.w{color:var(--warn)}
+.in.lk{background:#f5f7fb;color:var(--ink-2);border-style:dashed}
+.fbox{margin-top:10px;background:var(--blue-l);border:1px solid #cfdcff;border-radius:var(--r-s);
+  padding:9px 11px;font-size:12px;font-weight:600;color:var(--blue-d)}
+label.f i{font-style:normal;font-weight:500;color:var(--ink-3)}
+/* a button that names its recipients on a second line without growing tall.
+   Scoped to .btn.two — putting flex-direction:column on every .btn would stack the icon above
+   the label on every button in the app. */
+.btn.two{flex-direction:column;gap:0;line-height:1.2;padding-top:9px;padding-bottom:9px}
+.btn.two .who{display:block;font-size:10px;font-weight:600;opacity:.72;margin-top:2px;letter-spacing:.02em}
 .step{display:flex;gap:8px;margin-bottom:12px}
 .step div{flex:1;height:4px;border-radius:4px;background:var(--line)}
 .step div.on{background:var(--blue)}
@@ -584,6 +602,8 @@ td.num,th.num{text-align:right}
       <div class="sub" id="tb_sub">—</div>
     </div>
     <div class="right">
+      <!-- language is one tap from every screen: the topbar is always there -->
+      <button class="chip" id="tb_lang" onclick="I18n.toggle()" title="Language">🌐 EN</button>
       <button class="chip" onclick="Sync.now(true)">↻ Sync</button>
       <div class="avatar" id="tb_av" onclick="UI.profile()">–</div>
     </div>
@@ -640,14 +660,699 @@ function toISO(v) {
   var d = new Date(s);
   return isNaN(d.getTime()) ? s : iso(d);
 }
-function toast(m, ms) { var t = $('toast'); t.textContent = m; t.classList.add('on');
+function toast(m, ms) { var t = $('toast'); t.textContent = I18n.s(m); t.classList.add('on');
   clearTimeout(t._t); t._t = setTimeout(function () { t.classList.remove('on'); }, ms || 2600); }
 /* the chip carries a live spinner while the message is a "still working" one (⏳ or a trailing …) */
 function syncChip(m, on) { var s = $('sync');
-  s.innerHTML = (/⏳|…/.test(m) ? '<span class="spin"></span> ' : '') + esc(m);
+  s.innerHTML = (/⏳|…/.test(m) ? '<span class="spin"></span> ' : '') + esc(I18n.s(m));
   s.classList.toggle('on', on !== false);
   clearTimeout(s._t); if (on !== false) s._t = setTimeout(function () { s.classList.remove('on'); }, 2800); }
 function togglePwd(id, b) { var e = $(id); e.type = e.type === 'password' ? 'text' : 'password'; b.textContent = e.type === 'password' ? '👁' : '🙈'; }
+
+/* ═══════════════ LANGUAGE ═══════════════
+   The app is written in Hinglish, and **English is the default** — so the screens are translated on
+   the way out rather than every literal being wrapped at its call site.
+
+   HOW: one pass over the rendered HTML, replacing only the TEXT RUNS between tags (plus the
+   placeholder / title / value attributes a user reads). Nothing inside a tag is touched, so markup,
+   ids and the JS in an onclick can never be corrupted. All the phrases are compiled into ONE regex,
+   longest first, so a render costs a single scan instead of 400 string passes, and a short phrase can
+   never eat a longer one it is part of.
+   Interpolated values fall out naturally: "29-07-2026 · plan save karke…" matches the sentence and
+   leaves the date alone. */
+var I18n = {
+  lang:'en',                                          /* default English; 'hi' = Hinglish */
+  EN:{},                                              /* filled just below — Hinglish → English */
+  _re:null,
+  boot: function () {
+    var v = null;
+    try { v = localStorage.getItem('g2_lang'); } catch (e) {}
+    I18n.lang = v === 'hi' ? 'hi' : 'en';
+  },
+  set: function (l) {
+    I18n.lang = l === 'hi' ? 'hi' : 'en';
+    try { localStorage.setItem('g2_lang', I18n.lang); } catch (e) {}
+    if (typeof Nav !== 'undefined') Nav.build();
+    if (typeof render === 'function') render();
+    if (typeof Auth !== 'undefined' && Auth.session()) Auth.chrome();
+    toast(I18n.lang === 'en' ? '🌐 English' : '🌐 Hinglish');
+  },
+  toggle: function () { I18n.set(I18n.lang === 'en' ? 'hi' : 'en'); },
+  re: function () {
+    if (I18n._re) return I18n._re;
+    var keys = Object.keys(I18n.EN).sort(function (a, b) { return b.length - a.length; });
+    var esc2 = keys.map(function (k) { return k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); });
+    I18n._re = esc2.length ? new RegExp(esc2.join('|'), 'g') : null;
+    return I18n._re;
+  },
+  /* "12 din", "4 store" — a count and its unit are built by concatenation, so the unit alone is the
+     only translatable part. Only ever applied right after a number, which is what makes it safe:
+     a bare "din" inside another word or sentence is never touched. */
+  RX:[[/(\d+)\s+din\b/g, '$1 days'], [/(\d+)\s+DIN\b/g, '$1 DAYS'],
+      [/(\d+)\s+store\b/g, '$1 stores'], [/(\d+)\s+audit\b/g, '$1 audits'],
+      [/(\d+)\s+dukaan\b/g, '$1 shops'], [/(\d+)\s+request\b/g, '$1 requests'],
+      [/(\d+)\s+photo\b/g, '$1 photos'], [/(\d+)\s+user\b/g, '$1 users']],
+  /* translate a plain string (a toast, a dialog title, a canvas label) */
+  s: function (str) {
+    if (I18n.lang !== 'en' || str == null) return str;
+    var re = I18n.re(); if (!re) return str;
+    var out = String(str).replace(re, function (m) { return I18n.EN[m] != null ? I18n.EN[m] : m; });
+    for (var i = 0; i < I18n.RX.length; i++) out = out.replace(I18n.RX[i][0], I18n.RX[i][1]);
+    return out;
+  },
+  /* translate an HTML fragment: text runs and reader-facing attributes only */
+  tr: function (html) {
+    if (I18n.lang !== 'en' || html == null) return html;
+    var re = I18n.re(); if (!re) return html;
+    var out = String(html).replace(/>([^<]+)</g, function (all, txt) { return '>' + I18n.s(txt) + '<'; });
+    out = out.replace(/(placeholder|title)="([^"]*)"/g, function (all, a, v) { return a + '="' + I18n.s(v) + '"'; });
+    return out;
+  }
+};
+
+/* Hinglish → English. Keys are the phrases as they appear in the rendered text, longest matched
+   first. Sentence fragments are here too (a phrase split by <b>…</b> arrives as two runs). */
+I18n.EN = {
+  /* ── sync / network / auth ── */
+  'Load ho raha hai…':'Loading…',
+  'Sheet se data aa raha hai…':'Fetching data from the sheet…',
+  '⏳ Sheet se data aa raha hai…':'⏳ Fetching data from the sheet…',
+  '✅ Sheet se sync ho gaya':'✅ Synced with the sheet',
+  '⚠️ Sync fail — offline data':'⚠️ Sync failed — showing offline data',
+  '⚠️ Offline — local data':'⚠️ Offline — local data',
+  '📥 Queue me — internet aane par jayega':'📥 Queued — will send when you are online',
+  '✅ Sheet me save':'✅ Saved to the sheet',
+  '📥 Offline — queue me save':'📥 Offline — saved to the queue',
+  'pending sync ho gaya':'pending item(s) synced',
+  'pending sync':'pending sync',
+  '⏳ Ruko — pehla request chal raha hai':'⏳ Wait — the first request is still running',
+  'Bhej raha hai…':'Sending…',
+  'Email aur password dono bharo':'Enter both email and password',
+  'Ye email register nahi hai':'This email is not registered',
+  'Account inactive hai — admin se baat karo':'Account is inactive — talk to your admin',
+  'Password galat hai':'Wrong password',
+  'Offline ho — pehli baar login ke liye internet chahiye':'You are offline — the first login needs internet',
+  'Server se connect nahi hua — API_URL check karo':'Could not reach the server — check API_URL',
+  'Network error — dobara try karo':'Network error — please try again',
+  'Naya password kam se kam 6 character ka ho':'The new password must be at least 6 characters',
+  'Dono password match nahi kar rahe':'The two passwords do not match',
+  'Naya password purane se different hona chahiye':'The new password must be different from the old one',
+  'Save ho raha hai…':'Saving…',
+  'Save nahi hua — dobara try karo':'Not saved — please try again',
+  '✅ Password change ho gaya':'✅ Password changed',
+  'Email bharo':'Enter your email',
+  'Registered mobile number bharo':'Enter your registered mobile number',
+  'Check ho raha hai…':'Checking…',
+  'Reset nahi hua':'Reset failed',
+  '✅ Password reset ho gaya — ab login karo':'✅ Password reset — you can log in now',
+  'Employee nahi mila':'Employee not found',
+  '⚠️ API_URL set karo (index.html me) — backend se connect nahi hoga':'⚠️ Set API_URL in index.html — the backend cannot be reached',
+
+  /* ── preview / bypass ── */
+  '— unka aaj ka live status. Kuch bhi save nahi hoga.':'— their live status for today. Nothing will be saved.',
+  'Preview band':'Preview closed',
+  'Preview band karo':'Close preview',
+  '📷 Photo compulsory nahi rahegi (gallery se bhi chalega)':'📷 Photos are no longer compulsory (gallery upload allowed)',
+  '🔓 Tab ka order (PJP → Plan → Notify → Field) nahi rokega':'🔓 The tab order (PJP → Plan → Notify → Field) will not block',
+  '🗺️ PJP adhoora bhi bhej sakte ho, window ke bahar bhi':'🗺️ PJP can be sent incomplete, and outside the window',
+  '· photo aur tab-order optional hain':'· photos and tab order are optional',
+  'Kya kya?':'What exactly?',
+  'Bypass ON hai':'Bypass is ON',
+  'Aapke liye ye restrictions hata di gayi hain:':'These restrictions have been lifted for you:',
+  'Baaki sab wahi hai — store, distributor, town/beat, order status aur remarks':'Everything else stays — store, distributor, town/beat, order status and remarks',
+  'bharna zaroori hai.':'are still required.',
+  'Kisne di:':'Granted by:',
+
+  /* ── gate messages ── */
+  '⏳ PJP HOD ke paas hai (':'⏳ Your PJP is with the HOD (',
+  ') — approve hone ke baad Plan khulega. Aapka bhara hua plan safe hai.':') — Plan opens once it is approved. What you filled is safe.',
+  '❌ PJP reject hua — PJP tab me reason dekho aur dobara bhejo':'❌ PJP was rejected — see the reason in the PJP tab and resend',
+  '🔒 Pehle is month ka PJP banao aur HOD se approve karwao':'🔒 First build this month’s PJP and get the HOD to approve it',
+  '🔒 Plan HOD ko bhejo (Notify) — tabhi Field khulega':'🔒 Send the plan to your HOD — Field opens after that',
+  '🔒 Pehle aaj ka Plan save karo':'🔒 Save today’s plan first',
+  '🔒 Pehle Field me ek store ka kaam save karo':'🔒 Save at least one store in Field first',
+  '🔒 Locked':'🔒 Locked',
+
+  /* ── shell / dialogs ── */
+  'Aur options':'More options',
+  'Ye field bharna zaroori hai':'This field is required',
+  'Nahi':'No',
+  'Haan':'Yes',
+  'Bhejo':'Send',
+  'Theek hai':'OK',
+  'Abhi nahi':'Not now',
+  'Data load ho raha hai…':'Loading data…',
+  '· sheet se aa raha hai':'· coming from the sheet',
+  'tab download ho gaye':'tabs downloaded',
+  '.csv download ho gaya':'.csv downloaded',
+  'Last sync':'Last sync',
+  'Sync now':'Sync now',
+
+  /* ── the WhatsApp card ── */
+  'Aaj field day nahi —':'Not a field day today —',
+  'Order target 0. SC / NSO / MSL bhi 0.':'Order target 0. SC / NSO / MSL are 0 too.',
+  'Preview nahi ban paya — image ab bhi bhej sakte ho.':'Preview could not be built — you can still send the image.',
+  'Pehle plan save karo':'Save the plan first',
+  'Image bhej rahe hain…':'Sending the image…',
+  '📲 Image bhej di — Field khul gaya':'📲 Image sent — Field is now open',
+  'Bhejna cancel ho gaya':'Sending was cancelled',
+  '⚠️ Image nahi ban payi — text bhej rahe hain':'⚠️ Could not build the image — sending text instead',
+  'Image download ho gayi':'Image downloaded',
+  'Is device par app seedha image share nahi kar sakta.':'This device cannot share the image directly from the app.',
+  'download ho gayi hai':'has been downloaded',
+  'aur WhatsApp khul gaya hai — wahan':'and WhatsApp is open — ',
+  'karke bhej do.':'it there and send.',
+  'Aisi image jayegi':'This is what will be sent',
+
+  /* ── home ── */
+  'PJP HOD ke paas hai':'PJP is with the HOD',
+  'ka plan bheja hua hai — aapka bhara hua data safe hai, approval ka wait karo':'plan has been sent — your data is safe, wait for approval',
+  'PJP tab me reason dekho aur dusra plan bhejo':'See the reason in the PJP tab and send a different plan',
+  'PJP adhoora hai':'PJP is incomplete',
+  'Bhara hua plan wahin hai — poora karke HOD ko bhejo':'What you filled is still there — complete it and send to the HOD',
+  'PJP banao':'Build your PJP',
+  'Is month ka beat plan banao aur HOD ko bhejo':'Build this month’s beat plan and send it to the HOD',
+  'Plan HOD ko bhejo':'Send the plan to your HOD',
+  'Notify karo — tabhi Field khulega':'Notify — Field opens after that',
+  'Aaj ka Plan save karo':'Save today’s plan',
+  'Town, beat aur target confirm karo':'Confirm town, beat and target',
+  'Field shuru karo':'Start field work',
+  'Store select karke order punch karo':'Pick a store and punch the order',
+  'Kaam chalu hai':'Work in progress',
+  'Store complete karke EOD close karo':'Finish the stores and close EOD',
+  'Namaste,':'Hello,',
+  'Aaj ka PJP:':'Today’s PJP:',
+  'Aaj ka PJP master me nahi mila':'Today’s PJP was not found in the master',
+  '🔒 Din lock hai — EOD tab se dobara khol sakte ho':'🔒 The day is locked — you can reopen it from the EOD tab',
+  'Visits':'Visits',
+  'Order mila':'Orders won',
+  'Naye outlet':'New outlets',
+  'request HOD ke paas hai':'request(s) with the HOD',
+  'request par decision aa gaya':'request(s) decided',
+  'Dekho →':'View →',
+  'Chalo →':'Go →',
+  'aur':'more',
+  'Pending orders — ASM se follow-up':'Pending orders — follow up with your ASM',
+  'din purana':'days old',
+  'Sab dekho':'View all',
+  'Aaj ka kaam':'Today’s work',
+  'Field visits':'Field visits',
+  'EOD close':'Close EOD',
+  'Notified':'Notified',
+  'Notify pending':'Notify pending',
+  'Pending':'Pending',
+  'Done':'Done',
+  'store':'stores',
+  'audit':'audits',
+
+  /* ── PJP ── */
+  'Poore month ka beat plan — har din ka town aur beat bharo.':'The whole month’s beat plan — fill town and beat for every day.',
+  ', duplicate nahi banega.':', no duplicates are created.',
+  '💾 Har change turant':'💾 Every change is saved straight into',
+  'tab me save hota hai (ek hi row per month — duplicate nahi banti). Approve hone par har din ki alag row':'(one row per month — never a duplicate). Once approved, one row per day goes into',
+  'me chali jayegi.':'.',
+  'Ye plan':'This plan',
+  'Master_PJP me publish':'published to Master_PJP',
+  'ho chuka hai (':'already (',
+  'din).':'days).',
+  '📅 Joining':'📅 Joined',
+  '— usse pehle ke din plan me count nahi hote.':'— days before that are not counted in the plan.',
+  'Submit window band hai. PJP':'The submit window is closed. A PJP goes between the',
+  'tarikh ke beech bhejna hota hai.':'of the month.',
+  'din pehle se bhare hue hain':'days were already filled',
+  '— wahi wapas load kiye hain, dobara bharne ki zaroorat nahi.':'— they are loaded back, no need to fill them again.',
+  'din pending hai (':'day(s) still pending (',
+  '). Har working day me City + Beat bharo ya Off karo.':'). Fill City + Beat on every working day, or mark it Off.',
+  'Poora month plan ho gaya — ab HOD ko bhej sakte ho.':'The whole month is planned — you can send it to the HOD now.',
+  'Ye PJP':'This PJP is',
+  '. Change karna ho to HOD se baat karo.':'. Talk to your HOD if it needs changing.',
+  '✨ PJP se auto-fill':'✨ Auto-fill from PJP',
+  '⏳ Already sent — HOD ke paas hai':'⏳ Already sent — with the HOD',
+  '📤 Adhoora hi bhej do (bypass)':'📤 Send it incomplete (bypass)',
+  '📤 HOD ko bhejo':'📤 Send to HOD',
+  'Din-wise plan':'Day-wise plan',
+  'Joining se pehle — plan required nahi':'Before joining — no plan needed',
+  '⚠️ Town aur Beat dono bharo — tabhi ye din complete hoga.':'⚠️ Fill both Town and Beat — only then is this day complete.',
+  'Master_PJP me is month ka (joining ke baad ka) data nahi hai':'Master_PJP has no data for this month (after your joining date)',
+  'din Master PJP se fill ho gaye':'days filled from the master PJP',
+  '(joining ke baad ke)':'(the ones after joining)',
+  'Kam se kam ek field day plan karo':'Plan at least one field day',
+  'Pehle poora month plan karo':'Complete the whole month first',
+  'Submit window band hai (27–1)':'The submit window is closed (27th–1st)',
+  'PJP HOD ko bhejna hai?':'Send this PJP to the HOD?',
+  'ka plan —':'plan —',
+  'field din':'field days',
+  'bhare hue hain.':'are filled.',
+  'Bhejne ke baad aap edit nahi kar paoge.':'You will not be able to edit it after sending.',
+  'Haan, bhej do':'Yes, send it',
+  '📤 Bhej raha hai…':'📤 Sending…',
+  '📤 PJP HOD ko chala gaya':'📤 PJP has gone to the HOD',
+  'Field days filled':'Field days filled',
+  'Off / Leave':'Off / Leave',
+  'Status':'Status',
+  'Complete':'Complete',
+
+  /* ── plan (today) ── */
+  'Aaj ka Plan':'Today’s Plan',
+  '· plan save karke HOD ko notify karo — tabhi Field khulega.':'· save the plan and notify your HOD — Field opens after that.',
+  'PJP approved':'PJP approved',
+  '*Approved by HOD — ye master se aata hai, edit nahi hota.':'*Approved by HOD — this comes from the master and cannot be edited.',
+  'me nahi mila — apne code':'has no entry for your code',
+  'ke liye. Admin se master update karwao, ya niche':'. Ask your admin to update the master, or use',
+  'karke HOD approval lo.':'below to get the HOD’s approval.',
+  'Change PJP':'Change PJP',
+  '*PJP cannot be changed without approval — kuch bhi badla to HOD ko request jayegi.':'*PJP cannot be changed without approval — any change sends a request to the HOD.',
+  'Working With':'Working With',
+  '(aaj kya kar rahe ho?)':'(what are you doing today?)',
+  'Self Working':'Self Working',
+  'With ME Sales Team':'With ME Sales Team',
+  'With BA Supervisor':'With BA Supervisor',
+  'Meeting / Activity':'Meeting / Activity',
+  'Weekly Off':'Weekly Off',
+  'Leave':'Leave',
+  'Sick Leave':'Sick Leave',
+  'HO Holiday':'HO Holiday',
+  'Sales person ka naam':'Sales person’s name',
+  'BA Supervisor ka naam':'BA Supervisor’s name',
+  'Type chuno…':'Choose a type…',
+  'Duration':'Duration',
+  'Remark':'Remark',
+  'Reason':'Reason',
+  'Leave ka reason':'Reason for the leave',
+  'Short remark':'Short remark',
+  'Town / City & Beat':'Town / City & Beat',
+  '✅ Approved PJP':'✅ Approved PJP',
+  '✎ Change PJP':'✎ Change PJP',
+  '*Approved by HOD':'*Approved by HOD',
+  '*Approval ke bina change nahi':'*No change without approval',
+  'State':'State',
+  '(PJP mapping)':'(PJP mapping)',
+  '(as per PJP)':'(as per PJP)',
+  '(master se)':'(from the master)',
+  'Town / City':'Town / City',
+  'Beat / Market':'Beat / Market',
+  '— master me kuch nahi mila —':'— nothing found in the master —',
+  '➕ Add new…':'➕ Add new…',
+  'Ye HOD approval ke baad master me add hoga.':'This is added to the master after the HOD approves.',
+  '⚠️ PJP se different town/beat = HOD approval zaroori.':'⚠️ A town/beat different from the PJP needs the HOD’s approval.',
+  'HOD approval pending':'HOD approval pending',
+  '— aapne plan change kiya hai (':'— you changed the plan (',
+  '). Approve hone ke baad target khulega.':'). The target opens once it is approved.',
+  'HOD ne change reject kiya':'The HOD rejected the change',
+  '. Dobara bhejo ya PJP wala beat karo.':'. Send again, or work the PJP beat.',
+  'Koi order / SC / NSO target nahi. Plan save karke HOD ko bhej do.':'No order / SC / NSO target. Save the plan and send it to your HOD.',
+  'Aaj ka target':'Today’s target',
+  'SC (calls)':'SC (calls)',
+  'NSO (naye outlet)':'NSO (new outlets)',
+  'Target ₹L / din':'Target ₹L / day',
+  '💾 Plan save karo':'💾 Save plan',
+  'Din ki shuruaat — WhatsApp image':'Start of day — WhatsApp image',
+  'Yahi image group me jaati hai —':'This exact image goes to the group —',
+  'edit nahi ho sakti':'it cannot be edited',
+  '. Bhejne ke baad Field tab khul jayega.':'. The Field tab opens once it is sent.',
+  'Pehle':'First',
+  'plan save':'save the plan',
+  'karo — uske baad image ban jayegi.':'— the image is built after that.',
+  '✅ Bhej diya — dobara bhejo':'✅ Sent — send again',
+  '📲 WhatsApp par image bhejo':'📲 Send the image on WhatsApp',
+  '🔍 Bada karke dekho':'🔍 View it full size',
+  'Sales person ka naam bharo':'Enter the sales person’s name',
+  'BA Supervisor ka naam bharo':'Enter the BA Supervisor’s name',
+  'Meeting / Activity type chuno':'Choose the meeting / activity type',
+  'Remark likho':'Write a remark',
+  'Leave ka reason likho':'Write the reason for the leave',
+  'Town / City chuno':'Choose a town / city',
+  'Beat / Market chuno':'Choose a beat / market',
+  '✅ Plan save ho gaya':'✅ Plan saved',
+  '📲 Plan bhej diya — Field khul gaya':'📲 Plan sent — Field is now open',
+  '❌ Reject ho chuke hain:':'❌ Already rejected:',
+  '— inme se koi dobara nahi bhej sakte, naya beat likho.':'— none of these can be sent again, pick a new beat.',
+  '⏳ Request already sent — HOD approval pending':'⏳ Request already sent — HOD approval pending',
+  'ke liye request bheji hui hai. HOD approve / reject karega tabhi aage badhega.':'has a request pending. It moves once the HOD approves or rejects it.',
+  '✅ HOD ne approve kar diya':'✅ The HOD approved it',
+  '📨 Change ke liye approval bhejo':'📨 Send the change for approval',
+  '⏳ Request already sent — HOD approval ka wait karo':'⏳ Request already sent — wait for the HOD',
+  '✅ HOD ne aaj ka change approve kar diya hai — ab dobara request nahi':'✅ The HOD already approved today’s change — no second request',
+  '❌ Ye beat HOD ne reject kiya tha — koi dusra beat chuno':'❌ The HOD rejected this beat — choose a different one',
+  'Plan change — reason?':'Plan change — reason?',
+  'PJP me':'The PJP had',
+  'tha, aap':', you want to go to',
+  'jaana chahte ho.':'.',
+  'Reason (HOD ko dikhega)':'Reason (the HOD will see it)',
+  'Reason likhna zaroori hai':'A reason is required',
+  'HOD ko bhejo':'Send to HOD',
+  '📨 Bhej raha hai…':'📨 Sending…',
+  '📨 HOD ko request chali gayi — ab wait karo':'📨 The request has gone to the HOD — please wait',
+
+  /* ── field ── */
+  'Field — store visit':'Field — store visit',
+  'Store select karo → product add karo → submit. Ek store ke baad POSM.':'Pick a store → add products → submit. POSM comes after each store.',
+  '🧾 Order punch':'🧾 Punch order',
+  '🆕 Naya outlet':'🆕 New outlet',
+  'Aaj ka din lock hai':'Today is locked',
+  'EOD save ho gaya tha':'EOD was saved',
+  'Close Day dabaya gaya tha':'Close Day was pressed',
+  ', isliye naya order save nahi hoga.':', so a new order will not be saved.',
+  'Aur stores karne hain? Din dobara khol lo — baad me EOD phir save karna hoga.':'More stores to do? Reopen the day — you will have to save EOD again afterwards.',
+  '🔓 Din dobara kholo':'🔓 Reopen the day',
+  'Din dobara kholna hai?':'Reopen the day?',
+  'Aap aage stores punch kar paoge.':'You will be able to punch more stores.',
+  'Dhyan rahe:':'Note:',
+  'baaki stores add karne ke baad EOD dobara Save karna hoga — figures phir se calculate honge.':'after adding the remaining stores you must save EOD again — the figures are recalculated.',
+  'Haan, kholo':'Yes, reopen',
+  '🔓 Din khul gaya — aage kaam karo':'🔓 The day is open — carry on',
+  'Store select karo':'Pick a store',
+  '🔍 Store name ya code':'🔍 Store name or code',
+  'Shop ka photo':'Photo of the shop',
+  'Dukaan me andar jaane se':'Before you step',
+  'pehle':'inside',
+  'shop ke bahar ka ek photo lo — board aur entry':'take one photo of the shop front — the board and the entrance',
+  'dono dikhne chahiye.':'must both be visible.',
+  'Aapke liye ye':'For you this is',
+  'optional':'optional',
+  'hai (bypass ON) — gallery se bhi chalega.':'(bypass ON) — the gallery works too.',
+  'live camera':'live camera',
+  'se hi hoga, gallery se nahi.':'only — not from the gallery.',
+  '📷 Photo lene ke baad hi product add kar paoge.':'📷 You can add products only after the photo is taken.',
+  'Product add karo':'Add products',
+  'Sab brand':'All brands',
+  'All SKU':'All SKUs',
+  '🔍 Product name ya code':'🔍 Product name or code',
+  'Koi store nahi mila':'No store found',
+  'Aapke naam par koi store mapped nahi hai':'No store is mapped to your name',
+  '— brand/search se narrow karo':'— narrow it with brand / search',
+  'Koi product nahi mila':'No product found',
+  'Order lines':'Order lines',
+  'Abhi koi product add nahi kiya':'No product added yet',
+  '⏳ Ruko — order save ho raha hai':'⏳ Wait — the order is saving',
+  '📷 Pehle shop ka photo lo':'📷 Take the shop photo first',
+  'Product add karo (ya No Order select karo)':'Add a product (or select No Order)',
+  'Reason select karo':'Select a reason',
+  'Har product ki units bharo':'Enter units for every product',
+  'Status & submit':'Status & submit',
+  'Order source':'Order source',
+  'Store Visit':'Store visit',
+  'Remarks':'Remarks',
+  '✅ Submit & aage badho':'✅ Submit & continue',
+  '📞 Telephonic — POSM ki zaroorat nahi':'📞 Telephonic — no POSM needed',
+  'Naya outlet':'New outlet',
+  'Kyun add kar rahe ho?':'Why are you adding it?',
+  'Shop ke bahar ka photo':'Photo of the shop front',
+  'Andar ka photo':'Photo inside',
+  '✅ Outlet save karo':'✅ Save outlet',
+  'Distributor select karo':'Select a distributor',
+  'Store name bharo':'Enter the store name',
+  'Town bharo':'Enter the town',
+  'Reason likho':'Write the reason',
+  '✅ Outlet save ho gaya —':'✅ Outlet saved —',
+  'Camera kholo':'Open the camera',
+  'Photo chuno / camera':'Pick a photo / camera',
+  '✅ Drive me save':'✅ Saved to Drive',
+  '⚠️ Upload fail — dobara tap karo':'⚠️ Upload failed — tap to retry',
+  'Upload…':'Uploading…',
+
+  /* ── orders ── */
+  'Mere orders':'My orders',
+  'GARUDA — Mere orders':'GARUDA — My orders',
+  'Yahan se units/value/status change kar sakte ho — same row update hoti hai, duplicate nahi banti.':'You can change units / value / status here — the same row is updated, never duplicated.',
+  'Aaj':'Today',
+  'Aaj NSV ₹L':'Today NSV ₹L',
+  'Total':'Total',
+  'ka POSM pending hai.':'still needs POSM.',
+  'POSM karo →':'Do POSM →',
+  'Orders':'Orders',
+  'Abhi koi order nahi':'No orders yet',
+  'Is order me koi product nahi — neeche se add karo':'This order has no products — add them below',
+  '+ Product add':'+ Add product',
+  'Ye product hata dein?':'Remove this product?',
+  'Order ka total dobara calculate ho jayega.':'The order total will be recalculated.',
+  'Haan, hatao':'Yes, remove',
+  'hata diya':'removed',
+  '— search se narrow karo':'— narrow it with search',
+  'Order share karo':'Share the order',
+  'Close':'Close',
+  'Edit':'Edit',
+  'Share':'Share',
+
+  /* ── POSM ── */
+  'Aage ki date nahi chal sakti':'A future date is not allowed',
+  '📷 Aaj ka beat — live camera':'📷 Today’s beat — live camera',
+  '🖼️ Purana beat — gallery se upload allowed':'🖼️ Older beat — gallery upload allowed',
+  'Kis din ka POSM?':'POSM for which day?',
+  '📷 Aaj ka beat hai — photo':'📷 This is today’s beat — the photo must be from the',
+  'se hi lena hoga.':'.',
+  'Purana beat (':'Older beat (',
+  'Visit pehle ho gayi thi, isliye gallery se photo upload kar sakte ho.':'The visit already happened, so you can upload from the gallery.',
+  'Store me POSM laga hai ya nahi — dono case me entry karo.':'Whether or not POSM is installed — record it either way.',
+  'Field tab me store ka order/visit save karo — wahi store yahan aa jayega.':'Save a store’s order / visit in the Field tab — that store then shows up here.',
+  'Field pe jao':'Go to Field',
+  'Is store me POSM laga hai?':'Is POSM installed in this store?',
+  '✅ Haan — audit karo':'✅ Yes — audit it',
+  '❌ Nahi — requirement bhejo':'❌ No — raise a requirement',
+  'Aaj koi POSM entry nahi':'No POSM entry today',
+  'POSM ka close-up':'Close-up of the POSM',
+  'Poori shelf jisme POSM dikhe':'The full shelf with the POSM visible',
+  'Ek aur photo':'One more photo',
+  'shelf par POSM lagana hai':'POSM is needed on the shelf',
+  'uska photo lo — jagah saaf dikhni chahiye.':'photograph it — the spot must be clearly visible.',
+  'POSM ki zaroorat nahi hai, to':'If no POSM is needed, take',
+  'poore shop ka':'one photo of the whole shop',
+  'ek photo lo —':'—',
+  'counter aur shelf dono frame me aane chahiye.':'the counter and the shelf must both be in frame.',
+  'Poore shop ka photo':'Photo of the whole shop',
+  'Shelf ka photo':'Photo of the shelf',
+  'Honasa brand':'Honasa brand',
+  'Dono compulsory photo lo':'Take both compulsory photos',
+  'POSM ka close-up aur poori shelf —':'a close-up of the POSM and the full shelf —',
+  'tabhi save hoga.':'only then can it be saved.',
+  '✅ Audit save karo':'✅ Save audit',
+  '↩ Wapas':'↩ Back',
+  '⏳ Ruko — POSM save ho raha hai':'⏳ Wait — POSM is saving',
+  '📷 POSM ke 2 photo compulsory hain':'📷 Both POSM photos are compulsory',
+  'POSM element select karo':'Select the POSM element',
+  'Brand select karo':'Select a brand',
+  'Condition select karo':'Select the condition',
+  '✅ POSM audit save — next store karo':'✅ POSM audit saved — on to the next store',
+  'Kya POSM chahiye?':'Is POSM needed?',
+  'Poore shop ka photo lo':'Take a photo of the whole shop',
+  'Shelf ka photo lo':'Take a photo of the shelf',
+  'Ye compulsory hai — tabhi save hoga.':'This is compulsory — only then can it be saved.',
+  '✅ Requirement save karo':'✅ Save requirement',
+  '⏳ Ruko — save ho raha hai':'⏳ Wait — saving',
+  'Remarks likho':'Write remarks',
+  '📷 Poore shop ka photo compulsory hai':'📷 A photo of the whole shop is compulsory',
+  '📷 Shelf ka photo compulsory hai':'📷 A photo of the shelf is compulsory',
+  '✅ Requirement save — next store karo':'✅ Requirement saved — on to the next store',
+
+  /* ── EOD ── */
+  'Aaj ka din close karein?':'Close the day?',
+  'ka kaam save hua hai.':'has been saved.',
+  'Close karne ke baad naya order / POSM save nahi hoga — lekin zaroorat pade to din dobara khol sakte ho.':'After closing, no new order / POSM can be saved — but you can reopen the day if you need to.',
+  'Haan, close karo':'Yes, close it',
+  '🏁 Din close — EOD save karo':'🏁 Day closed — now save EOD',
+  'EOD — din close karo':'EOD — close the day',
+  'Sab figures automatic hain. Check karke save karo, phir report bhejo.':'All the figures are automatic. Check them, save, then send the report.',
+  'Din close ho gaya':'The day is closed',
+  '🔓 Dobara kholo':'🔓 Reopen',
+  '💾 EOD save & din close':'💾 Save EOD & close the day',
+  '💾 Save ho raha hai…':'💾 Saving…',
+  '🌙 EOD save — din close ho gaya':'🌙 EOD saved — the day is closed',
+  'GARUDA — Din ka report (EOD)':'GARUDA — Day report (EOD)',
+  'Din ka Report':'Day report',
+  'Aaj ka plan':'Today’s plan',
+  'HOD ko notify':'Notified to HOD',
+  'nahi bheja':'not sent',
+  'Din close':'Day closed',
+  'abhi nahi':'not yet',
+  'Kya':'What',
+  'Naye outlet (NSO)':'New outlets (NSO)',
+  'ORDER STATUS — kitne store kis stage par':'ORDER STATUS — how many stores at each stage',
+  'Mere total store':'My total stores',
+  'Aaj visit kiye':'Visited today',
+  'Visit nahi kiya':'Not visited',
+  'Calls (TC/SC)':'Calls (TC/SC)',
+  'POSM audit':'POSM audit',
+  'POSM req':'POSM req',
+  'MSL lines':'MSL lines',
+  'Order value':'Order value',
+  'Remarks (optional)':'Remarks (optional)',
+  'Target vs achievement (₹ lakh)':'Target vs achievement (₹ lakh)',
+  'Order status':'Order status',
+
+  /* ── summary ── */
+  'GARUDA — Mera performance':'GARUDA — My performance',
+  'Mera performance':'My performance',
+  '· month-to-date':'· month to date',
+  'Working days (order wale)':'Working days (with orders)',
+  'Working days':'Working days',
+  'Total visits':'Total visits',
+  'MTD ach':'MTD ach',
+  'EOD filed':'EOD filed',
+  'Billed':'Billed',
+  'Is month koi order nahi':'No orders this month',
+  'Din-wise':'Day-wise',
+  'Brand-wise NSV (₹ lakh)':'Brand-wise NSV (₹ lakh)',
+  'Month data download':'Download month data',
+
+  /* ── requests / approvals ── */
+  'kuch second':'a few seconds',
+  '⏳ HOD ke paas':'⏳ With the HOD',
+  '✏️ Bheja nahi':'✏️ Not sent',
+  '✅ Approved':'✅ Approved',
+  '❌ Rejected':'❌ Rejected',
+  'Field din bhare':'field days filled',
+  'din Master_PJP me':'days in Master_PJP',
+  'Ye abhi draft hai — PJP tab se HOD ko bhejo.':'This is still a draft — send it to the HOD from the PJP tab.',
+  'Approved plan Master_PJP me chala gaya — Plan tab me roz dikhega.':'The approved plan has gone into Master_PJP — it shows in the Plan tab each day.',
+  'PJP me tha':'The PJP had',
+  'Aapka reason':'Your reason',
+  'Ye beat dobara request nahi kar sakte — koi dusra beat chuno.':'You cannot request this beat again — choose a different one.',
+  'Naya outlet —':'New outlet —',
+  'Kyun chahiye':'Why it is needed',
+  'Rep ka remark':'Rep’s remark',
+  'Meri requests':'My requests',
+  'Jo bhi approval ke liye bheja hai — kab bheja, kab decide hua, sab yahan. Kisi bhi request par tap karo.':'Everything you sent for approval — when it went, when it was decided. Tap any request.',
+  'HOD ke paas':'With the HOD',
+  'Is filter me kuch nahi hai':'Nothing in this filter',
+  'Abhi tak koi request nahi bheji. PJP ya plan change bhejoge to yahan dikhega.':'No request sent yet. A PJP or plan change will show up here.',
+  '↻ Refresh karo':'↻ Refresh',
+  'Time record nahi hua':'Time was not recorded',
+  '· bheja:':'· sent:',
+  'Request bheja':'Request sent',
+  'HOD ko bheja nahi':'Not sent to the HOD',
+  'PJP tab se submit karo':'Submit it from the PJP tab',
+  'me decision aaya':'to decide',
+  'HOD ke decision ka wait':'Waiting on the HOD’s decision',
+  'se pending hai':'pending since',
+  'Pending hai':'Pending',
+  'HOD ka message':'Message from the HOD',
+  '✅ Approve karo':'✅ Approve',
+  '❌ Reject karo':'❌ Reject',
+  'Sab':'All',
+  'Plan change':'Plan change',
+  'Store opening':'Store opening',
+  'POSM request':'POSM request',
+  'Order':'Order',
+
+  /* ── admin console ── */
+  'console':'console',
+  'Overview aur approvals ke liye. Har employee ka kaam, PJP aur photo yahin se dekho —':'For overview and approvals. See every employee’s work, PJP and photos right here —',
+  'sheet kholne ki zaroorat nahi.':'no need to open the sheet.',
+  'Employees':'Employees',
+  'Aaj plan':'Plans today',
+  'Aaj visits':'Visits today',
+  'Aaj EOD':'EOD today',
+  'Month visits':'Month visits',
+  'Month NSO':'Month NSO',
+  'Pending orders':'Pending orders',
+  'Aaj kaun kaam par hai':'Who is working today',
+  'employee wise':'employee wise',
+  '· master me':'· in the master',
+  '⏳ HOD ko bheja':'⏳ Sent to the HOD',
+  'Approval ke liye bheja hua hai':'Sent for approval',
+  'Reject hua — theek karke dobara bhejna hai':'Rejected — fix it and send again',
+  '✅ PJP defined':'✅ PJP defined',
+  'din Master_PJP me live':'days live in Master_PJP',
+  'Approve ho gaya — master me publish hona pending hai':'Approved — publishing to the master is pending',
+  'Abhi HOD ko bheja hi nahi':'Not sent to the HOD yet',
+  'din Master_PJP me publish':'days published to Master_PJP',
+  'Master_PJP me live hain — master me plan approval ke baad hi aata hai. Is month ka':'are live in Master_PJP — a plan only reaches the master after approval. This month’s',
+  'draft row app me nahi hai (sheet me seedha load hua tha).':'draft row is not in the app (it was loaded straight into the sheet).',
+  '⏳ Naya submission HOD ke paas hai. Filhaal master me purane':'⏳ A new submission is with the HOD. For now the master still holds the old',
+  'live hain — approve karne par overwrite ho jayenge.':'— approving will overwrite them.',
+  '‹ Sab employee':'‹ All employees',
+  'Is month ka koi PJP nahi — na draft, na master me':'No PJP for this month — neither a draft nor anything in the master',
+  'Master me':'In the master',
+  'Din':'Day',
+  'Working with':'Working with',
+  'Employee → date → shop. Har photo Drive me isi tarah rakha hai.':'Employee → date → shop. Every photo sits in Drive exactly like this.',
+  'Abhi koi photo upload nahi hui':'No photo uploaded yet',
+  'Sab employee':'All employees',
+  'ko koi photo nahi':'has no photos',
+  'Naya outlet approve karein?':'Approve the new outlet?',
+  'Approve ke baad ye store enrol ho jayega.':'Once approved, the store is enrolled.',
+  'Outlet reject karein?':'Reject the outlet?',
+  '— rep ko reason dikhega.':'— the rep will see the reason.',
+  'Reject karo':'Reject',
+  '✅ Outlet approve ho gaya':'✅ Outlet approved',
+  '❌ Outlet reject — rep ko dikh jayega':'❌ Outlet rejected — the rep will see it',
+  'POSM request approve karein?':'Approve the POSM request?',
+  'Approve ke baad dispatch ke liye bhej sakte ho.':'Once approved you can send it for dispatch.',
+  'POSM request reject karein?':'Reject the POSM request?',
+  'TA/DA reject karein?':'Reject the TA/DA?',
+  '⏳ Master_PJP me publish ho raha hai…':'⏳ Publishing to Master_PJP…',
+  '✅ Approve + publish — Master_PJP me':'✅ Approved and published — in Master_PJP',
+  '⚠️ Approve ho gaya par publish fail:':'⚠️ Approved but publishing failed:',
+  '⚠️ Publish nahi hua — dobara approve dabao':'⚠️ Not published — press approve again',
+  'PJP reject karna hai?':'Reject this PJP?',
+  '. Reason rep ko dikhega.':'. The rep will see the reason.',
+  'e.g. beats repeat ho rahe hain':'e.g. the beats are repeating',
+  '✖ Reject ho gaya — rep ko dikh jayega':'✖ Rejected — the rep will see it',
+  'Plan change reject karein?':'Reject the plan change?',
+  'Maanga tha:':'Asked for:',
+  'Reject ke baad rep yahi beat dobara nahi bhej payega.':'After rejection the rep cannot send this beat again.',
+  'e.g. PJP wala beat hi karo':'e.g. work the PJP beat instead',
+  '❌ Rejected — rep ko dusra beat chunna padega':'❌ Rejected — the rep must pick a different beat',
+  'Koi data nahi':'No data',
+  'Password reset karne se sab logins':'Resetting passwords makes every login',
+  'ho jayenge aur pehli login par change maangega.':'and forces a change on first login.',
+  'Reset all passwords':'Reset all passwords',
+  'Bypass — per user':'Bypass — per user',
+  'Kisi ek user ke liye app ki':'For one user, lift the app’s',
+  'restrictions hata do':'restrictions',
+  '— sirf zaroori cheezein bharni padengi.':'— only the essentials stay compulsory.',
+  'hai: X aur Y par ON, Z par OFF. Kya hatta hai:':': ON for X and Y, OFF for Z. What is lifted:',
+  'Data phir bhi zaroori hai — store, distributor, town/beat,':'Data is still required — store, distributor, town/beat,',
+  'order status, remarks. Master tabs read-only rehte hain.':'order status, remarks. Master tabs stay read-only.',
+  'user par bypass ON hai':'user(s) have bypass ON',
+  'Abhi kisi par bypass ON nahi hai.':'Nobody has bypass ON right now.',
+  'Bypass OFF karo':'Turn bypass OFF',
+  'Bypass ON karo':'Turn bypass ON',
+  'Bypass ON karein?':'Turn bypass ON?',
+  'ke liye ye restrictions hat jayengi:':'— these restrictions will be lifted:',
+  'Sirf inhi par lagu hoga, baaki team par nahi.':'It applies only to them, not to the rest of the team.',
+  'Reason (sheet me save hoga)':'Reason (saved in the sheet)',
+  'e.g. camera kharab hai, mid-month joining':'e.g. broken camera, mid-month joining',
+  'Haan, ON karo':'Yes, turn it ON',
+  'Bypass OFF karein?':'Turn bypass OFF?',
+  'par app ki poori restrictions wapas lag jayengi — photo compulsory,':'gets every restriction back — photos compulsory,',
+  'tab ka order, poora PJP.':'tab order, the whole PJP.',
+  'Haan, OFF karo':'Yes, turn it OFF',
+  'ON kar rahe hain…':'Turning it ON…',
+  'OFF kar rahe hain…':'Turning it OFF…',
+  'Nahi ho paya':'Could not do it',
+  'Server se jawab nahi aaya':'No answer from the server',
+  'Backend purana ho to':'If the backend is out of date,',
+  'dobara paste karke deploy karo.':'paste it again and redeploy.',
+  'Sab passwords reset karein?':'Reset every password?',
+  'Har login ka password':'Every login’s password becomes',
+  'ho jayega aur pehli login par change maanga jayega.':'and a change is forced at first login.',
+  'Ye sabhi users par lagu hoga.':'This applies to all users.',
+  'Haan, reset karo':'Yes, reset',
+  'Reset ho gaya':'Reset done',
+  'users ka password':'users now have the password',
+  'Master tabs':'Master tabs',
+  'hain — app kabhi inme likhta nahi. Sheet me change karo, app':'— the app never writes to them. Change the sheet and the app picks it up on',
+  'par utha lega.':'.',
+  '↻ Master refresh karo':'↻ Refresh masters',
+  'Plan nahi bana':'No plan made',
+  '🏁 EOD ho gaya':'🏁 EOD done',
+  'abhi shuru nahi kiya':'not started yet',
+  '— employee ka aaj ka':'— the employee’s live status for',
+  'Aaj:':'Today:',
+  'Preview':'Preview',
+  'Console':'Console',
+  /* the source writes &amp; in the markup, so that is what a text run contains */
+  '💾 EOD save &amp; din close':'💾 Save EOD &amp; close the day',
+  '— employee ka aaj ka':'— see an employee’s',
+  'screen dekho, jaisa unhe abhi dikh raha hai (beech din ka status bhi). Preview me kuch bhi sheet me save nahi hota.':
+    'screen for today, exactly as they see it right now (mid-day state included). Nothing is ever saved to the sheet while previewing.',
+  'live screen dekho':'live screen',
+  'Aaj ka kaam save karo':'Save today’s work',
+  '· in the master':'· in the master',
+  '· master me din:':'· days in master:',
+  'Din:':'Days:'
+};
 
 /* ═══════════════ STORE — cache + offline queue ═══════════════ */
 var K = { sess:'g2_session', cache:'g2_cache', queue:'g2_queue', users:'g2_users', pulled:'g2_pulled', lock:'g2_lock' };
@@ -906,7 +1611,7 @@ var Busy = {
     /* spinner INSIDE the button — every guarded action gets it for free, so no screen has to
        remember to show progress on its own submit button */
     if (el) { txt = el.textContent; el.disabled = true;
-      el.innerHTML = '<span class="spin"></span> ' + esc(label || 'Bhej raha hai…'); }
+      el.innerHTML = I18n.tr('<span class="spin"></span> ' + esc(label || 'Bhej raha hai…')); }
     var done = function () {
       delete Busy.on[key];
       if (el) { el.disabled = false; if (txt !== null) el.textContent = txt; }
@@ -985,13 +1690,20 @@ var Auth = {
   start: function () {
     var g = $('login_gate'); if (g) g.style.display = 'none';
     $('app').classList.remove('hide');
-    var s = Auth.session();
-    $('tb_av').textContent = (s.name || '?').slice(0, 1);
-    $('tb_sub').textContent = s.name + ' · ' + (String(s.rights).toLowerCase() === 'employee' ? (s.hq || '') : s.rights);
+    Auth.chrome();
     Nav.build();
     Router.go(Auth.isAdmin() ? 'admin' : 'home');
     DB.pull(true).then(function () { Nav.build(); render(); });
     Queue.drain();
+  },
+  /* the bits of the topbar that are not part of a screen render — refreshed on login and whenever
+     the language changes */
+  chrome: function () {
+    var s = Auth.session(); if (!s) return;
+    var av = $('tb_av'); if (av) av.textContent = (s.name || '?').slice(0, 1);
+    var sub = $('tb_sub');
+    if (sub) sub.textContent = s.name + ' · ' + (String(s.rights).toLowerCase() === 'employee' ? (s.hq || '') : s.rights);
+    var lg = $('tb_lang'); if (lg) lg.textContent = I18n.lang === 'en' ? '🌐 EN' : '🌐 HI';
   },
   showGate: function () {
     var g = $('login_gate'); if (g) g.style.display = 'block';
@@ -1313,16 +2025,17 @@ function render() {
   var f = ({ home:Home, pjp:Pjp, plan:Plan, field:Field, sec:Sec, posm:Posm, eod:Eod, sum:Sum,
              appr:Appr, admin:Admin })[Router.cur];
   /* first ever paint and the data is still on its way — show a skeleton, never blank cards */
-  if (f && !DB.pulledAt && Api.n > 0) { $('view').innerHTML = UI.skel(); return; }
-  if (f) { try { $('view').innerHTML = f.html(); if (f.after) f.after(); } catch (e) { $('view').innerHTML =
+  /* every screen leaves through here, so ONE call translates the whole app */
+  if (f && !DB.pulledAt && Api.n > 0) { $('view').innerHTML = I18n.tr(UI.skel()); return; }
+  if (f) { try { $('view').innerHTML = I18n.tr(f.html()); if (f.after) f.after(); } catch (e) { $('view').innerHTML =
     '<div class="card"><h3>⚠️ Screen error</h3><div class="sub">' + esc(e.message) + '</div></div>'; } }
 }
 
 /* ═══════════════ UI kit ═══════════════ */
 var UI = {
   sheet: function (title, body) {
-    $('sheet').innerHTML = '<div class="sheet" onclick="if(event.target===this)UI.close()"><div class="in">' +
-      '<h3 style="margin-bottom:10px">' + esc(title) + '</h3>' + body + '</div></div>';
+    $('sheet').innerHTML = I18n.tr('<div class="sheet" onclick="if(event.target===this)UI.close()"><div class="in">' +
+      '<h3 style="margin-bottom:10px">' + esc(title) + '</h3>' + body + '</div></div>');
   },
   close: function () { $('sheet').innerHTML = ''; },
 
@@ -1339,7 +2052,7 @@ var UI = {
     return new Promise(function (resolve) {
       var wrap = document.createElement('div');
       wrap.className = 'modal';
-      wrap.innerHTML =
+      wrap.innerHTML = I18n.tr(
         '<div class="modal-card" role="dialog" aria-modal="true">' +
           (o.icon ? '<div class="modal-ic ' + (o.danger ? 'bad' : '') + '">' + o.icon + '</div>' : '') +
           '<h3 class="modal-t">' + esc(o.title || '') + '</h3>' +
@@ -1353,7 +2066,7 @@ var UI = {
             (o.cancel === false ? '' : '<button class="btn ghost" id="dlg_no">' + esc(o.cancel || 'Cancel') + '</button>') +
             '<button class="btn ' + (o.danger ? 'bad' : '') + '" id="dlg_yes">' + esc(o.ok || 'OK') + '</button>' +
           '</div>' +
-        '</div>';
+        '</div>');
       document.body.appendChild(wrap);
       UI._dlg = wrap;
       var fin = function (v) {
@@ -1739,9 +2452,13 @@ var Card = {
       name:DB.me.name || s.name || '', code:DB.me.code || s.code || '',
       week:(r.Week || (pjp ? pjp.Week : '') || ''),
       zone:(e.Zone || s.zone || ''), hq:(e.HQ || s.hq || ''),
-      ww:ww, field:fld,
-      town:r.Town || (pjp ? pjp.Town : '') || '—',
-      beat:r.Beat || (pjp ? pjp.Beat : '') || '—',
+      /* the composed form — "With ME Sales Team — RAHUL", "Leave — medical · back at Monday".
+         Translated HERE, not at paint time, so the width used for wrapping is the width of the text
+         that actually gets drawn. */
+      ww:I18n.s(Plan.wwFull(r) || ww), field:fld,
+      /* an off day has no beat: showing the PJP's town next to "Leave" would be a lie */
+      town:fld ? (r.Town || (pjp ? pjp.Town : '') || '—') : '—',
+      beat:fld ? (r.Beat || (pjp ? pjp.Beat : '') || '—') : '—',
       focus:r.Focus || (pjp ? pjp.Focus : '') || '',
       offPjp:r.OffPjp ? (r.Approval || 'Pending') : '',
       /* an off day carries no counters — showing "7 SC Call" next to "aaj field day nahi" is the
@@ -1766,9 +2483,11 @@ var Card = {
       if (dry) return; g.fillStyle = col;
       if (r) { Card.rr(g, x, yy, w, h, r); g.fill(); } else g.fillRect(x, yy, w, h);
     };
+    /* the card is an image, so its labels must be translated here too — measure and paint use the
+       SAME translated text, or the two passes would disagree on the width */
     var put = function (s, x, yy, col, align) {
       if (dry) return; g.fillStyle = col; g.textAlign = align || 'left'; g.textBaseline = 'alphabetic';
-      g.fillText(String(s), x, yy);
+      g.fillText(I18n.s(String(s)), x, yy);
     };
 
     /* ── header band ── */
@@ -1795,7 +2514,7 @@ var Card = {
     /* ── who / where ── */
     Card.fnt(g, '800', 19);
     put(d.name, P, y, C.dark);
-    var nw = dry ? g.measureText(d.name).width : g.measureText(d.name).width;
+    var nw = g.measureText(d.name).width;
     Card.fnt(g, '600', 13);
     put('(' + d.code + ')', P + nw + 7, y, C.code);
     y += 19;
@@ -1941,10 +2660,10 @@ var Card = {
     var box = $('pl_card'); if (!box) return;
     Card.png().then(function (o) {
       var b = $('pl_card'); if (!b) return;
-      b.innerHTML = '<img src="' + o.data + '" alt="Today Plan" ' +
-        'style="width:100%;display:block;border:1px solid var(--line);border-radius:12px">';
+      b.innerHTML = I18n.tr('<img src="' + o.data + '" alt="Today Plan" ' +
+        'style="width:100%;display:block;border:1px solid var(--line);border-radius:12px">');
     }).catch(function () {
-      var b = $('pl_card'); if (b) b.innerHTML = '<div class="hint">Preview nahi ban paya — image ab bhi bhej sakte ho.</div>';
+      var b = $('pl_card'); if (b) b.innerHTML = I18n.tr('<div class="hint">Preview nahi ban paya — image ab bhi bhej sakte ho.</div>');
     });
   },
 
@@ -2297,17 +3016,204 @@ var Plan = {
   id: function () { return DB.me.code + '_' + today(); },
   row: function () { return DB.find('DayPlan', Plan.id()) || {}; },
   dev: function () { return DB.find('Deviation', DB.me.code + '_' + today()); },
+
+  /* ── Working-With options, labelled the way the previous app labelled them ── */
+  WW:[['Self Working','Self Working'], ['ME Sales Team','With ME Sales Team'],
+      ['BA Supervisor','With BA Supervisor'], ['Meeting / Activity','Meeting / Activity'],
+      ['Weekly Off','Weekly Off'], ['Leave','Leave'], ['Sick Leave','Sick Leave'],
+      ['HO Holiday','HO Holiday']],
+  ACT:['Zero Day Meeting','Gate Meeting','HO Meeting','Market Activity','Exhibition',
+       'KNOP Activity','Virtual Meeting','HR Meeting'],
+  DUR:['Full Day','Half Day','1 hr','2 hrs','3 hrs','4 hrs','5 hrs','6 hrs'],
+
+  /* The rep's choice is sticky for the day. It is NOT re-derived on every render — that was the
+     R61/R62 bug class, where a re-render read the last saved copy back over a fresh choice. */
+  wwSel:'', mode:'', dayKey:'',
+  /* a new day (or a different rep in preview) must not inherit yesterday's transient choice */
+  sync: function () {
+    var k = (DB.me.code || '') + '_' + today();
+    if (Plan.dayKey !== k) { Plan.dayKey = k; Plan.wwSel = ''; Plan.mode = ''; }
+  },
+  ww: function () {
+    Plan.sync();
+    if (Plan.wwSel) return Plan.wwSel;
+    var r = Plan.row(), pjp = DB.pjpFor(DB.me.code, today());
+    return Pjp.ww(r.WorkingWith || (pjp ? pjp.Ww : '') || 'Self Working');
+  },
+  setWw: function (v) { Plan.sync(); Plan.wwSel = v; render(); },
+  /* PJP mode is only possible when an approved PJP exists for today */
+  fieldMode: function (pjp, r) {
+    Plan.sync();
+    if (Plan.mode) return Plan.mode;
+    if (!pjp) return 'other';
+    if (r.OffPjp || Plan.dev()) return 'other';
+    return 'pjp';
+  },
+  setMode: function (m) { Plan.sync(); Plan.mode = m; render(); },
+
+  /* ── master-driven geography ── every dropdown is built from the sheet, and always offers
+     "➕ Add new" so a rep is never stuck when the master has nothing for them ── */
+  ADD:'__add__',
+  uniq: function (a) { var s = {}, o = []; a.forEach(function (x) {
+    x = String(x == null ? '' : x).trim(); if (x && !s[x.toUpperCase()]) { s[x.toUpperCase()] = 1; o.push(x); } });
+    return o.sort(); },
+  states: function () {
+    return Plan.uniq(DB.myStores().map(function (s) { return s.State; })); },
+  towns: function (state) {
+    var st = String(state || '').toUpperCase().trim();
+    var fromStores = DB.myStores().filter(function (s) {
+      return !st || String(s.State || '').toUpperCase().trim() === st; }).map(function (s) { return s.City; });
+    /* the rep's own PJP towns count as master data too — that is where a beat's town comes from */
+    var fromPjp = (DB.m.Master_PJP || []).filter(function (p) {
+      return String(p.Code).toUpperCase() === String(DB.me.code).toUpperCase() &&
+             (!st || !Plan.stateOf(p.Town) || String(Plan.stateOf(p.Town)).toUpperCase() === st); })
+      .map(function (p) { return p.Town; });
+    return Plan.uniq(fromStores.concat(fromPjp).filter(function (x) {
+      return !/^(leave|sunday|off day|weekly off|holiday|meeting.*)$/i.test(String(x || '').trim()); })); },
+  beats: function (town) {
+    var tw = String(town || '').toUpperCase().trim();
+    return Plan.uniq((DB.m.Master_PJP || []).filter(function (p) {
+      return String(p.Code).toUpperCase() === String(DB.me.code).toUpperCase() &&
+             (!tw || String(p.Town || '').toUpperCase().trim() === tw); })
+      .map(function (p) { return p.Beat; })
+      .filter(function (b) { return !/^(leave|sunday|off day|weekly off|holiday|meeting.*)$/i.test(String(b || '').trim()); })); },
+  stateOf: function (town) {
+    var t = String(town || '').toUpperCase().trim(); if (!t) return '';
+    var hit = DB.myStores().filter(function (s) { return String(s.City || '').toUpperCase().trim() === t; })[0];
+    return hit ? (hit.State || '') : ''; },
+
+  /* a select built from the master, with the escape hatch as the last option */
+  pickSel: function (kind, list, cur, onch) {
+    var isNew = cur && list.indexOf(cur) < 0;
+    return '<select class="in" id="pl_' + kind + '_sel" onchange="Plan.other(\'' + kind + '\',this)">' +
+      (list.length ? '' : '<option value="">— master me kuch nahi mila —</option>') +
+      list.map(function (x) { return '<option' + (x === cur ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') +
+      '<option value="' + Plan.ADD + '"' + (isNew ? ' selected' : '') + '>➕ Add new…</option>' +
+      '</select>' +
+      '<div id="pl_' + kind + '_add" style="display:' + (isNew || !list.length ? '' : 'none') + ';margin-top:6px">' +
+        '<input class="in" id="pl_' + kind + '_new" placeholder="Naya ' + esc(kind) + ' likho" value="' +
+        (isNew ? esc(cur) : '') + '">' +
+        '<div class="hint" style="margin-top:4px">Ye HOD approval ke baad master me add hoga.</div></div>';
+  },
+  /* show/hide the "new value" box without a re-render — a render here would throw away the other
+     two half-made choices */
+  other: function (kind, el) {
+    var box = $('pl_' + kind + '_add');
+    if (box) box.style.display = el.value === Plan.ADD ? '' : 'none';
+    if (kind === 'state') Plan.reTown(el.value);
+    if (kind === 'town') Plan.reBeat(el.value);
+  },
+  reTown: function (state) {
+    var sel = $('pl_town_sel'); if (!sel) return;
+    var list = Plan.towns(state);
+    sel.innerHTML = I18n.tr((list.length ? '' : '<option value="">— master me kuch nahi mila —</option>') +
+      list.map(function (x) { return '<option>' + esc(x) + '</option>'; }).join('') +
+      '<option value="' + Plan.ADD + '">➕ Add new…</option>');
+    if (!list.length) sel.value = Plan.ADD;
+    Plan.other('town', sel);
+  },
+  reBeat: function (town) {
+    var sel = $('pl_beat_sel'); if (!sel) return;
+    var list = Plan.beats(town);
+    sel.innerHTML = I18n.tr((list.length ? '' : '<option value="">— master me kuch nahi mila —</option>') +
+      list.map(function (x) { return '<option>' + esc(x) + '</option>'; }).join('') +
+      '<option value="' + Plan.ADD + '">➕ Add new…</option>');
+    if (!list.length) sel.value = Plan.ADD;
+    var box = $('pl_beat_add'); if (box) box.style.display = sel.value === Plan.ADD ? '' : 'none';
+  },
+  /* one reader for both modes: readonly input (approved PJP) or select + "add new" box (change) */
+  pickVal: function (kind) {
+    var sel = $('pl_' + kind + '_sel');
+    if (sel) return sel.value === Plan.ADD ? val('pl_' + kind + '_new') : String(sel.value || '').trim();
+    return val('pl_' + kind);
+  },
+
+  /* ── the extra fields each Working-With opens, like the previous app ── */
+  wwBracket: function (ww, r) {
+    var d = Plan.detail(r);
+    if (ww === 'ME Sales Team' || ww === 'BA Supervisor')
+      return '<label class="f">' + (ww === 'ME Sales Team' ? 'Sales person ka naam' : 'BA Supervisor ka naam') +
+        ' <span class="req">*</span></label><input class="in" id="pl_wwname" value="' + esc(d.name || '') +
+        '" placeholder="' + (ww === 'ME Sales Team' ? 'Sales person name' : 'BA Supervisor name') + '">';
+    if (ww === 'Meeting / Activity')
+      return '<label class="f">Meeting / Activity type <span class="req">*</span></label>' +
+        '<select class="in" id="pl_act"><option value="">Type chuno…</option>' +
+        Plan.ACT.map(function (a) { return '<option' + (d.act === a ? ' selected' : '') + '>' + esc(a) + '</option>'; }).join('') +
+        '</select>' +
+        '<div class="row two"><div><label class="f">Duration</label><select class="in" id="pl_dur">' +
+        Plan.DUR.map(function (x) { return '<option' + (d.dur === x ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') +
+        '</select></div>' +
+        '<div><label class="f">Remark <span class="req">*</span></label>' +
+        '<input class="in" id="pl_rmk" value="' + esc(d.rmk || '') + '" placeholder="Short remark"></div></div>';
+    if (ww === 'Leave' || ww === 'Sick Leave')
+      return '<label class="f">Reason <span class="req">*</span></label>' +
+        '<input class="in" id="pl_reason" value="' + esc(d.reason || '') + '" placeholder="Leave ka reason">' +
+        '<label class="f">Remark <span class="req">*</span></label>' +
+        '<input class="in" id="pl_rmk" value="' + esc(d.rmk || '') + '" placeholder="Short remark">';
+    return '';
+  },
+  /* WwDetail is stored as JSON so a bracket field can be read back exactly as it was typed */
+  detail: function (r) {
+    try { return JSON.parse((r || Plan.row()).WwDetail || '{}') || {}; } catch (e) { return {}; }
+  },
+  /* the one-line human form, used on the WhatsApp card and in messages */
+  wwFull: function (r) {
+    r = r || Plan.row();
+    var base = Pjp.ww(r.WorkingWith || 'Self Working'), d = Plan.detail(r);
+    if (d.name) return base + ' — ' + d.name;
+    if (base === 'Meeting / Activity')
+      return base + (d.act ? ' — ' + d.act : '') + (d.dur ? ' (' + d.dur + ')' : '') + (d.rmk ? ' · ' + d.rmk : '');
+    if (/leave/i.test(base)) return base + (d.reason ? ' — ' + d.reason : '') + (d.rmk ? ' · ' + d.rmk : '');
+    return base;
+  },
+
+  /* ── field work: Approved PJP vs Change PJP ── */
+  fieldBlock: function (pjp, r) {
+    var mode = Plan.fieldMode(pjp, r);
+    var h = '<label class="f" style="margin-top:14px">Town / City &amp; Beat</label>' +
+      '<div class="seg">' +
+      '<button type="button" class="' + (mode === 'pjp' ? 'on' : '') + '"' + (pjp ? '' : ' disabled') +
+        ' onclick="Plan.setMode(\'pjp\')">✅ Approved PJP</button>' +
+      '<button type="button" class="' + (mode === 'other' ? 'on' : '') + '" onclick="Plan.setMode(\'other\')">✎ Change PJP</button>' +
+      '</div><div class="seg-n"><span>*Approved by HOD</span><span class="w">*Approval ke bina change nahi</span></div>';
+
+    if (mode === 'pjp') {
+      h += '<label class="f">State</label><input class="in lk" readonly value="' + esc(Plan.stateOf(pjp.Town) || '—') + '">' +
+        '<div class="row two"><div><label class="f">Town / City</label>' +
+          '<input class="in lk" id="pl_town" readonly value="' + esc(pjp.Town || '') + '"></div>' +
+          '<div><label class="f">Beat / Market</label>' +
+          '<input class="in lk" id="pl_beat" readonly value="' + esc(pjp.Beat || '') + '"></div></div>' +
+        (pjp.Focus ? '<div class="fbox">Focus: ' + esc(pjp.Focus) + '</div>' : '');
+      return h;
+    }
+    /* Change mode STARTS from what was approved — the rep changes the one thing that moved, and the
+       beat list stays filtered to the chosen town instead of showing another town's beats */
+    var curTw = r.OffPjp ? (r.Town || '') : (pjp ? (pjp.Town || '') : '');
+    var curBt = r.OffPjp ? (r.Beat || '') : (pjp ? (pjp.Beat || '') : '');
+    var curSt = r.State || Plan.stateOf(curTw) || (Plan.states()[0] || '');
+    h += '<label class="f">State <i>(master se)</i></label>' + Plan.pickSel('state', Plan.states(), curSt) +
+      '<label class="f">Town / City <i>(master se)</i></label>' + Plan.pickSel('town', Plan.towns(curSt), curTw) +
+      '<label class="f">Beat / Market <i>(master se)</i></label>' + Plan.pickSel('beat', Plan.beats(curTw), curBt) +
+      '<div class="hint" style="margin-top:8px">⚠️ PJP se different town/beat = HOD approval zaroori.</div>';
+    return h;
+  },
   html: function () {
     var t = today(), pjp = DB.pjpFor(DB.me.code, t), r = Plan.row(), dev = Plan.dev();
     var h = UI.head('📋', 'Aaj ka Plan', dmy(t) + ' · plan save karke HOD ko notify karo — tabhi Field khulega.');
 
-    h += '<div class="card"><h3><span class="ic">📍</span>PJP (master se)</h3>';
-    if (pjp) h += '<div class="row two" style="margin-top:10px">' +
-        '<div><div class="hint">Town / City</div><div class="t" style="font-weight:700">' + esc(pjp.Town || '—') + '</div></div>' +
-        '<div><div class="hint">Beat / Market</div><div class="t" style="font-weight:700">' + esc(pjp.Beat || '—') + '</div></div></div>' +
-        '<div class="sub">' + esc(pjp.Week || '') + (pjp.Focus ? ' · Focus: ' + esc(pjp.Focus) : '') + '</div>';
+    /* ── 1. what the HOD already approved — read-only, exactly like the previous app ── */
+    h += '<div class="card"><h3><span class="ic">✅</span>PJP approved</h3>' +
+      '<div class="hint">*Approved by HOD — ye master se aata hai, edit nahi hota.</div>';
+    if (pjp) h += '<div style="margin-top:10px"><label class="f">State <i>(PJP mapping)</i></label>' +
+        '<input class="in lk" readonly value="' + esc(Plan.stateOf(pjp.Town) || '—') + '"></div>' +
+        '<div class="row two"><div><label class="f">Town / City <i>(as per PJP)</i></label>' +
+        '<input class="in lk" readonly value="' + esc(pjp.Town || '—') + '"></div>' +
+        '<div><label class="f">Beat / Market <i>(as per PJP)</i></label>' +
+        '<input class="in lk" readonly value="' + esc(pjp.Beat || '—') + '"></div></div>' +
+        '<div class="fbox">' + esc(pjp.Week || '') + (pjp.Focus ? ' · Focus: ' + esc(pjp.Focus) : '') +
+        (pjp.Ww ? ' · ' + esc(Pjp.ww(pjp.Ww)) : '') + '</div>';
     else h += '<div class="banner w" style="margin-top:8px"><span>⚠️</span><div>Aaj (' + dmy(t) + ') ka PJP <b>Master_PJP</b> me nahi mila — apne code <b>' +
-      esc(DB.me.code) + '</b> ke liye. Admin se master update karwao, ya niche "PJP change" karke HOD approval lo.</div></div>';
+      esc(DB.me.code) + '</b> ke liye. Admin se master update karwao, ya niche <b>Change PJP</b> karke HOD approval lo.</div></div>';
     h += '</div>';
 
     if (dev && /pending/i.test(dev.Status))
@@ -2317,18 +3223,25 @@ var Plan = {
       h += '<div class="banner r"><span>✖</span><div>HOD ne change reject kiya' + (dev.HodRemarks ? ': ' + esc(dev.HodRemarks) : '') + '. Dobara bhejo ya PJP wala beat karo.</div></div>';
 
     var blocked = dev && !/approved/i.test(dev.Status || '');
-    h += '<div class="card"><h3><span class="ic">🧭</span>Kahan kaam karoge?</h3>' +
-      '<label class="f">Working With</label><select class="in" id="pl_ww">' +
-      ['Self Working','ME Sales Team','BA Supervisor','Meeting / Activity','Leave','Sick Leave','HO Holiday']
-        .map(function (o) { return '<option' + ((r.WorkingWith || (pjp ? Pjp.ww(pjp.Ww) : 'Self Working')) === o ? ' selected' : '') + '>' + o + '</option>'; }).join('') +
-      '</select>' +
-      '<div class="row two"><div><label class="f">Town / City</label>' +
-        '<input class="in" id="pl_town" value="' + esc(r.Town || (pjp ? pjp.Town : '')) + '"></div>' +
-        '<div><label class="f">Beat / Market</label><input class="in" id="pl_beat" value="' + esc(r.Beat || (pjp ? pjp.Beat : '')) + '"></div></div>' +
-      '<div class="hint" style="margin-top:8px">PJP se different town/beat likha to HOD approval lagegi.</div>' +
+    var ww = Plan.ww();
+    var field = Pjp.isField(ww);
+    h += '<div class="card"><h3><span class="ic">✎</span>Change PJP</h3>' +
+      '<div class="hint">*PJP cannot be changed without approval — kuch bhi badla to HOD ko request jayegi.</div>' +
+      '<label class="f">Working With <i>(aaj kya kar rahe ho?)</i></label>' +
+      '<select class="in" id="pl_ww" onchange="Plan.setWw(this.value)">' +
+      Plan.WW.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (ww === o[0] ? ' selected' : '') + '>' +
+        esc(o[1]) + '</option>'; }).join('') + '</select>' +
+      Plan.wwBracket(ww, r) +
+      (field ? Plan.fieldBlock(pjp, r) : '') +
       Plan.devBtn(dev) + '</div>';
 
-    if (!blocked) {
+    /* an off day has no target — the previous app replaced the whole block with a notice, and a
+       target table next to "Leave" is just noise */
+    if (!field)
+      h += '<div class="banner w"><span>🌙</span><div><b>Aaj field day nahi — ' + esc(ww) + '</b><br>' +
+        '<span style="font-weight:500">Koi order / SC / NSO target nahi. Plan save karke HOD ko bhej do.</span></div></div>';
+
+    if (!blocked && field) {
       var sc = num(r.ScTarget) || num(DB.cfg('SC_Call_Target', 7)) || 7;
       h += '<div class="card"><h3><span class="ic">🎯</span>Aaj ka target</h3>' +
         '<div class="row three"><div><label class="f">SC (calls)</label><input class="in" id="pl_sc" type="number" value="' + sc + '"></div>' +
@@ -2338,12 +3251,15 @@ var Plan = {
         Plan.tgt().map(function (x) { return '<tr><td>' + esc(x[0]) + '</td><td class="num">' + x[1].toFixed(2) + '</td></tr>'; }).join('') +
         '<tr><td><b>TOTAL</b></td><td class="num"><b>' + Plan.tgt().reduce(function (a, x) { return a + x[1]; }, 0).toFixed(2) + '</b></td></tr>' +
         '</tbody></table></div></div>';
+    }
 
+    /* Save lives OUTSIDE the target block: a Leave / Meeting day still has to be saved and sent, and
+       when it sat inside `field` an off day had no save button at all. */
+    if (!blocked)
       h += '<div class="card"><div class="btns" style="margin-top:0">' +
         '<button class="btn" onclick="Plan.save(false,this)">💾 Plan save karo</button></div>' +
         (r.PlanAt ? '<div class="hint" style="margin-top:8px">Save: ' + esc(r.PlanAt) + (r.NotifiedAt ? ' · Notified: ' + esc(r.NotifiedAt) : ' · notify pending') + '</div>' : '') +
         '</div>';
-    }
 
     /* ── the morning WhatsApp image ── the rep sees exactly what will go out, then sends it ── */
     h += '<div class="card"><h3><span class="ic">📲</span>Din ki shuruaat — WhatsApp image</h3>' +
@@ -2351,12 +3267,11 @@ var Plan = {
       (r.PlanAt ? '<div id="pl_card" style="margin-top:12px"><div class="skel" style="height:150px;border-radius:12px"></div></div>'
                 : '<div class="banner w" style="margin-top:10px"><span>💾</span><div>Pehle <b>plan save</b> karo — uske baad image ban jayegi.</div></div>') +
       '<div class="btns">' +
-      '<button class="btn ok" onclick="Card.send(this)" ' + (r.PlanAt ? '' : 'disabled') + '>' +
-        (r.NotifiedAt ? '✅ Bhej diya — dobara bhejo' : '📲 WhatsApp par image bhejo') + '</button>' +
+      '<button class="btn ok two" onclick="Card.send(this)" ' + (r.PlanAt ? '' : 'disabled') + '>' +
+        (r.NotifiedAt ? '✅ Bhej diya — dobara bhejo' : '📲 WhatsApp par image bhejo') +
+        '<span class="who">' + esc(Plan.recips()) + '</span></button>' +
       '<button class="btn ghost" onclick="Card.zoom()" ' + (r.PlanAt ? '' : 'disabled') + '>🔍 Bada karke dekho</button>' +
       '</div>' +
-      '<div class="btns" style="margin-top:8px"><button class="btn ghost sm" onclick="Plan.notify(this)" ' +
-        (r.PlanAt ? '' : 'disabled') + '>✍️ Text bhejna hai (image ke bajaye)</button></div>' +
       '</div>';
     return h;
   },
@@ -2372,24 +3287,61 @@ var Plan = {
       ['BBlunt (BB)', num(DB.cfg('BB', .25))], ['Aqualogica (AQ)', num(DB.cfg('AQ', .15))],
       ['Dr. Sheth\'s (DRS)', num(DB.cfg('DRS', .1))], ['ME Color Care (CC)', num(DB.cfg('CC', .1))]];
   },
+  /* who the morning image is meant for — named on the send button in small light text, built from
+     the rep's own hierarchy so it never advertises a role the master doesn't have */
+  recips: function () {
+    var e = DB.emp(DB.me.code) || {};
+    var out = [];
+    if (e.HodName) out.push('HOD');
+    if (e.ZmName)  out.push('ZM');
+    if (e.RsmName) out.push('RSM');
+    if (e.AsmName) out.push('ASM');
+    return out.length ? out.join(' · ') : 'HOD · ZM · RSM · ASM';
+  },
+  /* the bracket fields are required exactly where the previous app required them */
+  check: function (ww) {
+    if (ww === 'ME Sales Team' || ww === 'BA Supervisor')
+      return val('pl_wwname') ? '' : (ww === 'ME Sales Team' ? 'Sales person ka naam bharo' : 'BA Supervisor ka naam bharo');
+    if (ww === 'Meeting / Activity')
+      return !val('pl_act') ? 'Meeting / Activity type chuno' : (!val('pl_rmk') ? 'Remark likho' : '');
+    if (ww === 'Leave' || ww === 'Sick Leave')
+      return !val('pl_reason') ? 'Leave ka reason likho' : (!val('pl_rmk') ? 'Remark likho' : '');
+    return '';
+  },
   save: function (quiet, el) {
     var t = today(), pjp = DB.pjpFor(DB.me.code, t), e = DB.emp(DB.me.code) || {};
-    var town = val('pl_town'), beat = val('pl_beat');
-    if (!town && !quiet) { toast('Town bharo'); return null; }
-    var off = pjp ? (String(town).toUpperCase() !== String(pjp.Town || '').toUpperCase() ||
-                     String(beat).toUpperCase() !== String(pjp.Beat || '').toUpperCase()) : true;
+    var ww = val('pl_ww') || Plan.ww(), field = Pjp.isField(ww);
+    var town = field ? Plan.pickVal('town') : '';
+    var beat = field ? Plan.pickVal('beat') : '';
+    var state = field ? (Plan.pickVal('state') || Plan.stateOf(town)) : '';
+    if (!quiet) {
+      var bad = Plan.check(ww);
+      if (bad) { toast(bad); return null; }
+      if (field && !town) { toast('Town / City chuno'); return null; }
+      if (field && !beat) { toast('Beat / Market chuno'); return null; }
+    }
+    /* the bracket answers travel as JSON so they can be read back into the same inputs */
+    var d = {};
+    if (ww === 'ME Sales Team' || ww === 'BA Supervisor') d.name = val('pl_wwname');
+    if (ww === 'Meeting / Activity') { d.act = val('pl_act'); d.dur = val('pl_dur'); d.rmk = val('pl_rmk'); }
+    if (ww === 'Leave' || ww === 'Sick Leave') { d.reason = val('pl_reason'); d.rmk = val('pl_rmk'); }
+    /* off-PJP = a different beat OR a different Working-With than the approved plan */
+    var same = function (a, b) { return String(a || '').toUpperCase().trim() === String(b || '').toUpperCase().trim(); };
+    var off = !pjp || !same(town, pjp.Town) || !same(beat, pjp.Beat) || !same(ww, Pjp.ww(pjp.Ww));
     var r = Plan.row();
     return DB.save('DayPlan', { Id:Plan.id(), Date:t, Zone:e.Zone || '', Hq:e.HQ || '',
-      WorkingWith:val('pl_ww'), Town:town, Beat:beat, Focus:pjp ? (pjp.Focus || '') : '', Week:pjp ? (pjp.Week || '') : '',
+      WorkingWith:ww, WwDetail:JSON.stringify(d), Town:town, Beat:beat, State:state,
+      Focus:pjp ? (pjp.Focus || '') : '', Week:pjp ? (pjp.Week || '') : '',
       Station:'HQ', OffPjp:off ? 'Yes' : '', Approval:off ? (Plan.dev() ? Plan.dev().Status : 'Pending') : 'PJP',
-      ScTarget:num(val('pl_sc')) || 7, NsoTarget:num(val('pl_nso')), PosmTarget:num(val('pl_posm')),
+      ScTarget:field ? (num(val('pl_sc')) || 7) : 0, NsoTarget:field ? num(val('pl_nso')) : 0,
+      PosmTarget:field ? num(val('pl_posm')) : 0,
       PlanJson:JSON.stringify({ tgt:Plan.tgt() }), PlanAt:r.PlanAt || new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }),
       NotifiedAt:r.NotifiedAt || '' }, { quiet:!!quiet }).then(function () {
-      if (!quiet) { Log.add('Plan', 'Saved', t, town + ' / ' + beat); toast('✅ Plan save ho gaya'); render(); Nav.build(); }
+      if (!quiet) { Log.add('Plan', 'Saved', t, (town || ww) + (beat ? ' / ' + beat : '')); toast('✅ Plan save ho gaya'); render(); Nav.build(); }
     });
   },
-  /* text-only send, kept as the escape hatch when the image cannot go (very old phone, or the rep
-     just wants text) */
+  /* text-only send. The Plan screen no longer offers it (the morning message is the image) — it stays
+     as the automatic fallback inside Card.send for a device that cannot attach a file. */
   notify: function (el) {
     var r = Plan.row();
     if (!r.PlanAt) return toast('Pehle plan save karo');
@@ -2413,7 +3365,7 @@ var Plan = {
   msg: function () {
     var r = Plan.row(), t = today();
     var L = ['*GARUDA — Daily Plan*', dmy(t) + ' · ' + DB.me.name + ' (' + DB.me.code + ')', ''];
-    L.push('Working With : ' + (r.WorkingWith || '—'));
+    L.push('Working With : ' + (Plan.wwFull(r) || '—'));
     L.push('Town / Beat  : ' + (r.Town || '—') + ' / ' + (r.Beat || '—'));
     if (r.Focus) L.push('Focus        : ' + r.Focus);
     L.push('');
@@ -2449,8 +3401,10 @@ var Plan = {
   },
   sendDev: function (el) {
     var t = today(), pjp = DB.pjpFor(DB.me.code, t);
-    var town = val('pl_town'), beat = val('pl_beat');
-    if (!town) return toast('Town bharo');
+    /* read through pickVal — in "Change PJP" mode these are selects (+ an "Add new" box), not inputs */
+    var town = Plan.pickVal('town'), beat = Plan.pickVal('beat');
+    if (!town) return toast('Town / City chuno');
+    if (!beat) return toast('Beat / Market chuno');
     var ex = Plan.dev();
     /* already waiting → never queue a second request (this is what used to fire 3 times) */
     if (ex && /pending/i.test(ex.Status || '')) { render(); return toast('⏳ Request already sent — HOD approval ka wait karo'); }
@@ -2564,11 +3518,11 @@ var Field = {
     var q = val('f_search').toUpperCase(), box = $('f_stores'); if (!box) return;
     var list = DB.myStores().filter(function (s) {
       return !q || String(s.StoreName).toUpperCase().indexOf(q) >= 0 || String(s.CompanyCode).toUpperCase().indexOf(q) >= 0; });
-    box.innerHTML = list.length ? list.slice(0, 60).map(function (s, i) {
+    box.innerHTML = I18n.tr(list.length ? list.slice(0, 60).map(function (s, i) {
       return '<div class="lrow" onclick="Field.pick(' + DB.myStores().indexOf(s) + ')" style="cursor:pointer">' +
         '<div class="m"><div class="t">' + esc(s.StoreName) + '</div><div class="s">' + esc(s.City || '') + ' · ' +
         esc(s.StoreType || '') + ' · ' + esc(s.CompanyCode || '') + '</div></div><span class="pill p-blue">Select</span></div>';
-    }).join('') : UI.empty('🏪', q ? 'Koi store nahi mila' : 'Aapke naam par koi store mapped nahi hai');
+    }).join('') : UI.empty('🏪', q ? 'Koi store nahi mila' : 'Aapke naam par koi store mapped nahi hai'));
   },
   pick: function (i) {
     Field.store = DB.myStores()[i];
@@ -2596,12 +3550,12 @@ var Field = {
   renderProds: function () {
     var box = $('f_prods'); if (!box) return;
     var list = Field.prods();
-    box.innerHTML = '<div class="hint" style="margin-bottom:6px">' + list.length + ' SKU' + (list.length > 80 ? ' — brand/search se narrow karo' : '') + '</div>' +
+    box.innerHTML = I18n.tr('<div class="hint" style="margin-bottom:6px">' + list.length + ' SKU' + (list.length > 80 ? ' — brand/search se narrow karo' : '') + '</div>' +
       (list.length ? list.slice(0, 80).map(function (p) {
         return '<div class="lrow" onclick="Field.add(\'' + esc(p.Code) + '\')" style="cursor:pointer">' +
           '<div class="m"><div class="t">' + esc(p.Name) + '</div><div class="s">' + esc(p.Brand || '') + ' · ' + esc(p.Code) +
           ' · MRP ' + inr(p.MRP) + (/^msl$/i.test(String(p.MslStatus || '')) ? ' · <b>MSL</b>' : '') + '</div></div>' +
-          '<span class="pill p-ok">+ Add</span></div>'; }).join('') : UI.empty('📦', 'Koi product nahi mila'));
+          '<span class="pill p-ok">+ Add</span></div>'; }).join('') : UI.empty('📦', 'Koi product nahi mila')));
   },
   add: function (code) {
     var p = DB.products().filter(function (x) { return String(x.Code) === String(code); })[0];
@@ -2614,9 +3568,9 @@ var Field = {
   },
   renderLines: function () {
     var box = $('f_lines'); if (!box) return;
-    if (!Field.lines.length) { box.innerHTML = UI.empty('🧾', 'Abhi koi product add nahi kiya'); return; }
+    if (!Field.lines.length) { box.innerHTML = I18n.tr(UI.empty('🧾', 'Abhi koi product add nahi kiya')); return; }
     var tu = 0, tv = 0;
-    box.innerHTML = Field.lines.map(function (l, i) {
+    box.innerHTML = I18n.tr(Field.lines.map(function (l, i) {
       tu += num(l.Units); tv += num(l.Value);
       return '<div class="lrow"><div class="m"><div class="t">' + esc(l.SkuName) + '</div>' +
         '<div class="s">' + esc(l.Brand || '') + ' · MRP ' + inr(l.Mrp) + '</div>' +
@@ -2625,7 +3579,7 @@ var Field = {
           '<input class="in" style="width:110px;padding:7px" type="number" min="0" value="' + num(l.Value) + '" onchange="Field.setLine(' + i + ',\'Value\',this.value)">' +
         '</div></div><button class="btn ghost sm" onclick="Field.del(' + i + ')">🗑</button></div>';
     }).join('') + '<div class="lrow" style="border:0"><div class="m"><b>' + Field.lines.length + ' SKU · ' + tu + ' units</b></div>' +
-      '<div style="text-align:right"><b>' + inr(tv) + '</b><div class="s">NSV ' + lakh(tv * .6 / 1e5) + ' L</div></div></div>';
+      '<div style="text-align:right"><b>' + inr(tv) + '</b><div class="s">NSV ' + lakh(tv * .6 / 1e5) + ' L</div></div></div>');
   },
   setLine: function (i, k, v) {
     var l = Field.lines[i]; if (!l) return;
@@ -2637,10 +3591,10 @@ var Field = {
   renderReason: function () {
     var box = $('f_reason'); if (!box) return;
     var st = val('f_status');
-    box.innerHTML = (st === 'No Order' || st === 'Cancel Order')
+    box.innerHTML = I18n.tr((st === 'No Order' || st === 'Cancel Order')
       ? '<label class="f">Reason <span class="req">*</span></label><select class="in" id="f_rsn">' +
         ['Stock Issue','Transport Issue','Overdue','Collection Issue','Damage & Expiry','Official Issue','Shop Closed','Other']
-        .map(function (o) { return '<option>' + o + '</option>'; }).join('') + '</select>' : '';
+        .map(function (o) { return '<option>' + o + '</option>'; }).join('') + '</select>' : '');
   },
   photoMeta: function () {
     var s = Field.store || {};
@@ -2839,7 +3793,7 @@ var Cam = {
   paint: function (slot) {
     var box = $('ph_' + slot); if (!box) return;
     var b = box.querySelector('.ph-b');
-    if (b) b.innerHTML = Cam.inner(slot, b.getAttribute('data-live') !== '0');
+    if (b) b.innerHTML = I18n.tr(Cam.inner(slot, b.getAttribute('data-live') !== '0'));
   },
 
   /* used by the new-outlet form, which keeps its own front/inside buffer */
@@ -3383,7 +4337,7 @@ var Sec = {
     var q = String(Sec.addQ || '').toLowerCase().trim();
     var list = DB.products().filter(function (p) {
       return !q || (String(p.Name) + ' ' + String(p.Code) + ' ' + String(p.Brand)).toLowerCase().indexOf(q) >= 0; });
-    box.innerHTML = '<div class="hint" style="margin-bottom:6px">' + list.length + ' SKU' +
+    box.innerHTML = I18n.tr('<div class="hint" style="margin-bottom:6px">' + list.length + ' SKU' +
         (list.length > 60 ? ' — search se narrow karo' : '') + '</div>' +
       (list.length ? list.slice(0, 60).map(function (p) {
         var n = have[String(p.Code)];
@@ -3391,7 +4345,7 @@ var Sec = {
           '<div class="m"><div class="t">' + esc(p.Name) + '</div><div class="s">' + esc(p.Brand || '') +
           ' · MRP ' + inr(p.MRP) + (/^msl$/i.test(String(p.MslStatus || '')) ? ' · <b>MSL</b>' : '') + '</div></div>' +
           '<span class="pill ' + (n ? 'p-blue' : 'p-ok') + '">' + (n ? n + ' added' : '+ Add') + '</span></div>';
-      }).join('') : UI.empty('📦', 'Koi product nahi mila'));
+      }).join('') : UI.empty('📦', 'Koi product nahi mila')));
   },
   addLine: function (code) {
     var o = DB.find('SecOrders', Sec.addPo); if (!o) return;
@@ -4106,7 +5060,11 @@ var Admin = {
     var tabs = [['kpi','\ud83d\udcca Overview'], ['appr','\u2705 Approvals' + (pend ? ' (' + pend + ')' : '')],
       ['pjp','\ud83d\uddfa\ufe0f PJP'], ['team','\ud83d\udc54 Team'], ['pics','\ud83d\udcf7 Photos'],
       ['data','\ud83d\uddc2 Data'], ['users','\ud83d\udc65 Users'], ['prev','\ud83d\udc41 Preview']];
-    h += '<div class="card" style="padding:10px"><div style="display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px">' +
+    /* These eight are the whole console, so they must all be VISIBLE. They used to live in a
+       horizontal scroller: on a phone only "Overview · Approvals · PJP" showed and Users / Preview
+       were off-screen with no hint they existed — a feature nobody can find is a feature that isn't
+       there. They wrap onto as many lines as the width needs instead. */
+    h += '<div class="card" style="padding:10px"><div style="display:flex;flex-wrap:wrap;gap:6px">' +
       tabs.map(function (t) { return '<button class="btn ' + (Admin.tab === t[0] ? '' : 'ghost') + ' sm" style="flex:0 0 auto" onclick="Admin.go(\'' + t[0] + '\')">' + t[1] + '</button>'; }).join('') +
       '</div></div>';
     return h + (Admin[Admin.tab] ? Admin[Admin.tab]() : '');
@@ -4653,6 +5611,7 @@ var Admin = {
 
 /* ═══════════════ BOOT ═══════════════ */
 (function () {
+  I18n.boot();                     /* before the first paint, or the first screen renders Hinglish */
   DB.boot();
   Sync.init();
   var s = Auth.session();
