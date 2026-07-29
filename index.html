@@ -627,7 +627,7 @@ label.f i{font-style:normal;font-weight:500;color:var(--ink-3)}
     <div class="right">
       <!-- language is one tap from every screen: the topbar is always there -->
       <button class="chip" id="tb_lang" onclick="I18n.pick()" title="Language">EN</button>
-      <button class="chip" onclick="Sync.now(true)">↻ Sync</button>
+      <button class="chip" id="tb_sync" onclick="Sync.now(true,this)">↻ Sync</button>
       <div class="avatar" id="tb_av" onclick="UI.profile()">–</div>
     </div>
   </div>
@@ -764,6 +764,7 @@ var I18n = {
      only translatable part. Only ever applied right after a number, which is what makes it safe:
      a bare "din" inside another word or sentence is never touched. */
   RX:[[/(\d+)\s+din\b/g, '$1 days'], [/(\d+)\s+DIN\b/g, '$1 DAYS'],
+      [/(\d+)\s+ghante\b/g, '$1 hours'], [/(\d+)\s+minute\b/g, '$1 min'],
       [/(\d+)\s+store\b/g, '$1 stores'], [/(\d+)\s+audit\b/g, '$1 audits'],
       [/(\d+)\s+dukaan\b/g, '$1 shops'], [/(\d+)\s+request\b/g, '$1 requests'],
       [/(\d+)\s+photo\b/g, '$1 photos'], [/(\d+)\s+user\b/g, '$1 users']],
@@ -1485,6 +1486,30 @@ I18n.D.en = I18n.EN = {
   'Aaj:':'Today:',
   'Preview':'Preview',
   'Console':'Console',
+  /* longest-first matching means this wins over the shorter 'Order punch' key */
+  'Order punch karo':'Punch the order',
+  /* live updates + the read-only plan / waiting screen */
+  'HOD ne approve kar diya — aage badho':'The HOD approved it — carry on',
+  'HOD ne reject kiya — Requests me reason dekho':'The HOD rejected it — see the reason in Requests',
+  'nayi request aayi hai — Approvals dekho':'new request(s) — check Approvals',
+  'Sync already chal raha hai':'A sync is already running',
+  'Sheet se sync ho raha hai…':'Syncing with the sheet…',
+  'Sheet me change mila — master update kar rahe hain…':'The sheet changed — updating the masters…',
+  'HOD approval ka wait':'Waiting for HOD approval',
+  '· aapki Change PJP request HOD ke paas hai.':'· your Change PJP request is with the HOD.',
+  'Waiting for approval':'Waiting for approval',
+  'Kya maanga':'What you asked for',
+  'Approve hone par ye screen apne aap khul jayegi — reload karne ki zaroorat nahi. Tab tak target aur WhatsApp band hai.':
+    'This screen opens by itself once it is approved — no need to reload. Until then the target and WhatsApp are closed.',
+  'Check for approval':'Check for approval',
+  '*Approved by HOD — kuch bhi badalna ho to <b>Change PJP</b> dabao, sidha edit nahi hota.':
+    '*Approved by HOD — to change anything press <b>Change PJP</b>; it cannot be edited directly.',
+  'Yahi ek jagah hai jahan plan badal sakte ho. Mapping sheet se aati hai — na mile to':
+    'This is the only place the plan can be changed. The mapping comes from the sheet — if it is missing, choose',
+  'chuno, HOD approval ke baad master me add hoga.':'and it is added to the master after the HOD approves.',
+  'Ye field day nahi hai — town/beat ki zaroorat nahi.':'Not a field day — no town/beat needed.',
+  'Photo upload fail:':'Photo upload failed:',
+  'Remove':'Remove',
   /* the source writes &amp; in the markup, so that is what a text run contains */
   'EOD save &amp; din close':'Save EOD &amp; close the day',
 
@@ -1528,9 +1553,12 @@ var Api = {
   /* resolve/reject both have to release the loader, or the bar would stay up forever */
   done: function (p) { return p.then(function (r) { Api.end(); return r; },
                                      function (e) { Api.end(); throw e; }); },
-  get: function (params) {
+  /* `quiet` skips the loader entirely — used by the 25-second liveness poll, which must not flash a
+     progress bar at the rep every few seconds */
+  get: function (params, quiet) {
     params.token = API_TOKEN;
     var q = Object.keys(params).map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]); }).join('&');
+    if (quiet) return fetch(API_URL + '?' + q, { method:'GET', redirect:'follow' }).then(function (r) { return r.json(); });
     Api.begin();
     return Api.done(fetch(API_URL + '?' + q, { method:'GET', redirect:'follow' }).then(function (r) { return r.json(); }));
   },
@@ -2314,9 +2342,30 @@ var UI = {
 
 /* ═══════════════ SYNC driver ═══════════════ */
 var Sync = {
-  /* the Sync button is an explicit "get me everything" — always a FULL pull, never the light one */
-  now: function (loud) { Flush.all().then(function () { return Queue.drain(); })
-    .then(function () { return DB.pull(loud); }).then(function () { render(); Nav.build(); }); },
+  /* The Sync button is an explicit "get me everything" — always a FULL pull, never the light one.
+     It also has to LOOK like it is working: the button spins and disables itself for the duration,
+     because with the light sync the round trip can be quick enough to leave no trace at all. */
+  now: function (loud, el) {
+    if (Sync.busy) { toast('Sync already chal raha hai'); return; }
+    Sync.busy = true;
+    var btn = el || $('tb_sync'), txt = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Sync…'; }
+    syncChip('Sheet se sync ho raha hai…');
+    var done = function (msg) {
+      Sync.busy = false;
+      if (btn) { btn.disabled = false; btn.innerHTML = txt; }
+      if (msg) syncChip(msg);
+    };
+    return Flush.all().then(function () { return Queue.drain(); })
+      .then(function () { return DB.pull(loud); })
+      .then(function (r) {
+        render(); Nav.build();
+        done(r && r.ok ? 'Sheet se sync ho gaya' : '! Sync fail — offline data');
+      })
+      .catch(function () { done('! Sync fail — offline data'); });
+  },
+  busy:false,
+
   init: function () {
     /* the 3-minute background sync is transactional-only; it upgrades itself to a full pull the moment
        the sheet's fingerprint changes (see DB.pull), so nothing can drift */
@@ -2329,6 +2378,74 @@ var Sync = {
     window.addEventListener('online', function () { Queue.drain(); DB.maybe(); });
     window.addEventListener('beforeunload', function () { Flush.all(); });
     window.addEventListener('resize', function () { clearTimeout(Sync._r); Sync._r = setTimeout(Nav.build, 200); });
+    Live.start();
+  }
+};
+
+/* ═══════════════ LIVE — no reload, no Sync button ═══════════════
+   An HOD approves a request on their phone; the rep should SEE it, not go looking for it. Every 25
+   seconds (only while the tab is visible, only when online) the app asks the cheapest question in the
+   API — `action=ver`, which reads no sheet at all, just Drive's modified time. If that number has not
+   moved, nothing happens and nothing is downloaded. If it has, the app pulls and re-renders.
+   That is how an approval lands on the rep's screen, and a new request on the HOD's, on its own.
+   The poll is deliberately QUIET: no progress bar, no chip — the screen simply updates. */
+var Live = {
+  ms:25000, t:null, on:false,
+  start: function () {
+    if (Live.t) clearInterval(Live.t);
+    Live.t = setInterval(Live.tick, Live.ms);
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') Live.tick();     /* back on screen → check at once */
+    });
+  },
+  /* returns a promise and records WHY it skipped — a poller you cannot observe is a poller you cannot
+     debug when someone says "it didn't update" */
+  last:'',
+  tick: function () {
+    var skip = Live.on ? 'busy' : !Auth.session() ? 'no-session' : !Api.online() ? 'offline'
+             : document.visibilityState === 'hidden' ? 'hidden'      /* don't poll a backgrounded tab */
+             : Sync.busy ? 'syncing' : Api.n > 0 ? 'request-in-flight' : '';
+    Live.last = skip || 'checking';
+    if (skip) return Promise.resolve(skip);
+    Live.on = true;
+    return Api.get({ action:'ver' }, true).then(function (r) {
+      Live.on = false;
+      if (!r || !r.ok || !r.mver) { Live.last = 'no-answer'; return 'no-answer'; }
+      if (DB.mver && r.mver === DB.mver) { Live.last = 'unchanged'; return 'unchanged'; }
+      var before = Live.snap();
+      DB.mver = r.mver;
+      Live.last = 'pulling';
+      return DB.pull(false).then(function () {
+        render(); Nav.build();
+        Live.announce(before, Live.snap());
+        Live.last = 'updated';
+        return 'updated';
+      });
+    }).catch(function (e) { Live.on = false; Live.last = 'error'; return 'error'; });
+  },
+  /* what the user is waiting on, so the change can be announced instead of just appearing */
+  snap: function () {
+    var s = { pend:0, mine:{} };
+    try {
+      var list = Appr.list();
+      if (Auth.isAdmin()) s.pend = list.filter(function (o) { return Appr.can(o); }).length;
+      list.forEach(function (o) { s.mine[o.key] = o.status; });
+    } catch (e) {}
+    return s;
+  },
+  announce: function (a, b) {
+    if (Auth.isAdmin()) {
+      if (b.pend > a.pend) toast((b.pend - a.pend) + ' nayi request aayi hai — Approvals dekho', 4200);
+      return;
+    }
+    /* a rep only cares about their OWN request changing state */
+    var msg = '';
+    Object.keys(b.mine).forEach(function (k) {
+      if (a.mine[k] && a.mine[k] !== b.mine[k] && b.mine[k] !== 'pending')
+        msg = b.mine[k] === 'approved' ? 'HOD ne approve kar diya — aage badho'
+                                       : 'HOD ne reject kiya — Requests me reason dekho';
+    });
+    if (msg) toast(msg, 5000);
   }
 };
 
@@ -3347,15 +3464,40 @@ var Plan = {
     var t = today(), pjp = DB.pjpFor(DB.me.code, t), r = Plan.row(), dev = Plan.dev();
     var ww = Plan.ww(), field = Pjp.isField(ww);
     var pend = dev && /pending/i.test(dev.Status || '');
+
+    /* ── WAITING FOR APPROVAL ──
+       While a change is with the HOD the approved plan is no longer the truth and the requested one is
+       not yet the truth, so showing the "PJP approved" card would be showing a plan that does not
+       apply. The whole screen becomes the request and its status. ── */
+    if (pend) {
+      /* Appr.gap takes a DURATION, not two timestamps — passing the raw epoch printed "20663 days" */
+      var wait = Appr.gap(Date.now() - (Appr.ts(dev.UpdatedAt || dev.Ts) || Date.now()));
+      return UI.head('', 'HOD approval ka wait', dmy(t) + ' · aapki Change PJP request HOD ke paas hai.') +
+        '<div class="card"><div class="c-h"><h3>Waiting for approval</h3>' +
+          '<span class="pill p-warn">HOD ke paas</span></div>' +
+          '<table class="ap-t"><tr><td>Kya maanga</td><td><b>' + esc(dev.NewTown || '') + ' / ' +
+            esc(dev.NewBeat || '') + '</b></td></tr>' +
+          '<tr><td>Working With</td><td>' + esc(Pjp.ww(dev.NewWw || ww)) + '</td></tr>' +
+          '<tr><td>PJP me tha</td><td>' + esc((dev.PlannedTown || '—') + ' / ' + (dev.PlannedBeat || '—')) + '</td></tr>' +
+          '<tr><td>Aapka reason</td><td>' + esc(dev.Reason || '—') + '</td></tr>' +
+          '<tr><td>Request bheja</td><td>' + esc(Appr.when ? Appr.when(dev.UpdatedAt || dev.Ts) : '') +
+            (wait ? ' · pending: ' + esc(wait) : '') + '</td></tr></table>' +
+          '<div class="hint" style="margin-top:10px">Approve hone par ye screen apne aap khul jayegi — ' +
+          'reload karne ki zaroorat nahi. Tab tak target aur WhatsApp band hai.</div>' +
+          Plan.rejNote(dev) +
+        '</div>' +
+        '<div class="card"><div class="btns" style="margin-top:0">' +
+          '<button class="btn ghost" onclick="Sync.now(true)">Check for approval</button>' +
+          '<button class="btn ghost" onclick="Router.go(\'appr\')">Meri requests</button></div></div>';
+    }
+
     var h = UI.head('', 'Aaj ka Plan', dmy(t) + ' · plan save karke HOD ko notify karo — tabhi Field khulega.');
 
-    /* ── ONE card: what the HOD approved, the Working-With for today, and a Change PJP button on the
-          same line as the heading. Everything about "where am I working" lives here — it used to be
-          split across two cards, which read like two competing forms. ── */
+    /* ── ONE card, and it is READ-ONLY. This is what the HOD approved; the only way to alter any of it
+          — including Working With — is the Change PJP button, which opens a request. ── */
     h += '<div class="card"><div class="c-h"><h3>PJP approved</h3>' +
-      '<button class="btn ghost xs" onclick="Plan.changeOpen()"' + (pend ? ' disabled' : '') + '>' +
-        (pend ? 'Change sent' : 'Change PJP') + '</button></div>' +
-      '<div class="hint">*Approved by HOD — ye master se aata hai, edit nahi hota.</div>';
+      '<button class="btn ghost xs" onclick="Plan.changeOpen()">Change PJP</button></div>' +
+      '<div class="hint">*Approved by HOD — kuch bhi badalna ho to <b>Change PJP</b> dabao, sidha edit nahi hota.</div>';
 
     var shTown = (r.OffPjp && r.Town) || (pjp ? pjp.Town : '') || '';
     var shBeat = (r.OffPjp && r.Beat) || (pjp ? pjp.Beat : '') || '';
@@ -3369,22 +3511,12 @@ var Plan = {
     else h += '<div class="banner w" style="margin-top:8px"><span>!</span><div>Aaj (' + dmy(t) + ') ka PJP <b>Master_PJP</b> me nahi mila — apne code <b>' +
       esc(DB.me.code) + '</b> ke liye. Admin se master update karwao, ya <b>Change PJP</b> se HOD approval lo.</div></div>';
 
-    /* Working-With belongs to this card: it IS part of the approved plan for the day */
-    h += '<label class="f" style="margin-top:14px">Working With <i>(aaj kya kar rahe ho?)</i></label>' +
-      '<select class="in" id="pl_ww" onchange="Plan.setWw(this.value)"' + (pend ? ' disabled' : '') + '>' +
-      Plan.WW.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (ww === o[0] ? ' selected' : '') + '>' +
-        esc(o[1]) + '</option>'; }).join('') + '</select>' +
-      Plan.wwBracket(ww, r) +
+    /* Working With is part of the approved plan, so it is displayed, not offered as a dropdown. The
+       hidden input keeps Plan.save reading from ONE place whichever way the value was chosen. */
+    h += '<label class="f" style="margin-top:14px">Working With</label>' +
+      '<input class="in lk" readonly value="' + esc(Plan.wwFull(r) || ww) + '">' +
+      '<input type="hidden" id="pl_ww" value="' + esc(ww) + '">' +
       Plan.rejNote(dev) + '</div>';
-
-    /* ── a pending change means the day is not settled: nothing below is real yet, so nothing below is
-          shown. The rep waits for the HOD instead of filling a target that may not apply. ── */
-    if (pend) {
-      h += '<div class="banner w"><span></span><div><b>HOD approval pending</b> — aapne plan change kiya hai (' +
-        esc(dev.NewTown || '') + ' · ' + esc(dev.NewBeat || '') + ').<br>' +
-        '<span style="font-weight:500">Approve hone ke baad target aur WhatsApp bhejna khulega.</span></div></div>';
-      return h;
-    }
     if (dev && /rejected/i.test(dev.Status))
       h += '<div class="banner r"><span></span><div>HOD ne change reject kiya' +
         (dev.HodRemarks ? ': ' + esc(dev.HodRemarks) : '') + '. Dobara bhejo ya PJP wala beat karo.</div></div>';
@@ -3447,18 +3579,24 @@ var Plan = {
     if (ex && /approved/i.test(ex.Status || '')) return toast('HOD ne aaj ka change approve kar diya hai — ab dobara request nahi');
     var curTw = (r.OffPjp && r.Town) || (pjp ? pjp.Town : '') || '';
     var curSt = r.State || Plan.stateOf(curTw) || (Plan.states()[0] || '');
+    var curWw = Plan.ww();
     Plan.picked = null;
     UI.prompt({
       icon:'', title:'Change PJP',
       /* the selects are read by o.grab() BEFORE the dialog closes — reading them from .then() would
          race the close animation */
       grab: function () { Plan.picked = { state:Plan.pickVal('state'), town:Plan.pickVal('town'),
-                                          beat:Plan.pickVal('beat') }; },
-      msg:'<div class="hint" style="margin:0 0 10px">Mapping sheet se aati hai. Na mile to <b>add new…</b> chuno — ' +
-          'HOD approval ke baad master me add hoga.</div>' +
-          '<label class="f">State</label>' + Plan.pickSel('state', Plan.states(), curSt) +
-          '<label class="f">Town / City</label>' + Plan.pickSel('town', Plan.towns(curSt), curTw) +
-          '<label class="f">Beat / Market</label>' + Plan.pickSel('beat', Plan.beats(curTw), '') +
+                                          beat:Plan.pickVal('beat'), ww:val('pl_ww2') || curWw,
+                                          det:Plan.grabBracket(val('pl_ww2') || curWw) }; },
+      msg:'<div class="hint" style="margin:0 0 10px">Yahi ek jagah hai jahan plan badal sakte ho. Mapping sheet se ' +
+          'aati hai — na mile to <b>add new…</b> chuno, HOD approval ke baad master me add hoga.</div>' +
+          /* Working With lives HERE now: the card itself is read-only */
+          '<label class="f">Working With</label>' +
+          '<select class="in" id="pl_ww2" onchange="Plan.chgWw(this.value)">' +
+          Plan.WW.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (curWw === o[0] ? ' selected' : '') + '>' +
+            esc(o[1]) + '</option>'; }).join('') + '</select>' +
+          '<div id="pl_wwx">' + Plan.wwBracket(curWw, r) + '</div>' +
+          '<div id="pl_geo">' + Plan.geoFields(curWw, curSt, curTw) + '</div>' +
           Plan.rejNote(ex),
       label:'Reason (HOD ko dikhega)', placeholder:'e.g. distributor meeting, market band tha…',
       multiline:true, required:true, requiredMsg:'Reason likhna zaroori hai',
@@ -3467,6 +3605,33 @@ var Plan = {
       if (!reason) return;
       Plan.sendDev(null, reason);
     });
+  },
+  /* the State/Town/Beat trio only makes sense for a field day — a Leave has no beat */
+  geoFields: function (ww, st, tw) {
+    if (!Pjp.isField(ww)) return '<div class="hint" style="margin-top:8px">Ye field day nahi hai — ' +
+      'town/beat ki zaroorat nahi.</div>';
+    return '<label class="f">State</label>' + Plan.pickSel('state', Plan.states(), st) +
+      '<label class="f">Town / City</label>' + Plan.pickSel('town', Plan.towns(st), tw) +
+      '<label class="f">Beat / Market</label>' + Plan.pickSel('beat', Plan.beats(tw), '');
+  },
+  /* swapping Working-With inside the popup swaps its bracket fields and the geo block, WITHOUT
+     re-rendering the screen behind the dialog (that would close it) */
+  chgWw: function (v) {
+    var b = $('pl_wwx'); if (b) b.innerHTML = I18n.tr(Plan.wwBracket(v, Plan.row()));
+    var g = $('pl_geo');
+    if (g) {
+      var pjp = DB.pjpFor(DB.me.code, today()), r = Plan.row();
+      var tw = (r.OffPjp && r.Town) || (pjp ? pjp.Town : '') || '';
+      g.innerHTML = I18n.tr(Plan.geoFields(v, r.State || Plan.stateOf(tw) || (Plan.states()[0] || ''), tw));
+    }
+  },
+  /* read whichever bracket fields the chosen Working-With put on screen */
+  grabBracket: function (ww) {
+    var d = {};
+    if (ww === 'ME Sales Team' || ww === 'BA Supervisor') d.name = val('pl_wwname');
+    if (ww === 'Meeting / Activity') { d.act = val('pl_act'); d.dur = val('pl_dur'); d.rmk = val('pl_rmk'); }
+    if (ww === 'Leave' || ww === 'Sick Leave') { d.reason = val('pl_reason'); d.rmk = val('pl_rmk'); }
+    return d;
   },
   /* which beats the HOD has already refused, shown wherever a new beat is being chosen */
   rejNote: function (dev) {
@@ -3580,9 +3745,10 @@ var Plan = {
   sendDev: function (el, reason) {
     var t = today(), pjp = DB.pjpFor(DB.me.code, t);
     var p = Plan.picked || {};
-    var town = p.town || '', beat = p.beat || '';
-    if (!town) return toast('Town / City chuno');
-    if (!beat) return toast('Beat / Market chuno');
+    var nw = p.ww || Plan.ww(), fld = Pjp.isField(nw);
+    var town = fld ? (p.town || '') : '', beat = fld ? (p.beat || '') : '';
+    if (fld && !town) return toast('Town / City chuno');
+    if (fld && !beat) return toast('Beat / Market chuno');
     if (!reason) return toast('Reason likhna zaroori hai');
     var ex = Plan.dev();
     /* already waiting → never queue a second request (this is what used to fire 3 times) */
@@ -3595,15 +3761,16 @@ var Plan = {
     return Busy.run('dev_' + t, el, 'Bhej raha hai\u2026', function () {
       return DB.save('Deviation', { Id:DB.me.code + '_' + t, Date:t,
         PlannedTown:pjp ? pjp.Town : '', PlannedBeat:pjp ? pjp.Beat : '',
-        NewTown:town, NewBeat:beat, NewWw:Plan.ww(), Reason:reason, Status:'Pending',
+        NewTown:town, NewBeat:beat, NewWw:nw, Reason:reason, Status:'Pending',
         TryCount:num(ex && ex.TryCount) + 1, RejectedJson:JSON.stringify(Plan.rejectedList(ex)),
-        UpdatedAt:Date.now() }).then(function () {
+        UpdatedAt:Date.now(), Ts:new Date().toISOString() }).then(function () {
         /* Record the proposed beat on the day plan, and CLEAR NotifiedAt: whatever was sent on WhatsApp
            earlier described a different beat, so it has to go out again once the HOD approves. That also
            puts the button back to "Send WhatsApp" instead of "Send again", and re-locks Field until the
            new plan is actually sent. */
         return DB.save('DayPlan', Object.assign({}, Plan.row(), { Id:Plan.id(), Date:t,
-          State:p.state || '', Town:town, Beat:beat, OffPjp:'Yes', Approval:'Pending',
+          State:p.state || '', Town:town, Beat:beat, WorkingWith:nw,
+          WwDetail:JSON.stringify(p.det || {}), OffPjp:'Yes', Approval:'Pending',
           NotifiedAt:'' }), { quiet:true });
       }).then(function () {
         Log.add('Deviation', 'Submitted', t, town + '/' + beat + ' \u2014 ' + reason);
@@ -3662,8 +3829,14 @@ var Field = {
       '<div class="sub">Dukaan me andar jaane se <b>pehle</b> shop ke bahar ka ek photo lo — board aur entry ' +
       'dono dikhne chahiye. ' + (Bypass.on() ? 'Aapke liye ye <b>optional</b> hai (bypass ON) — gallery se bhi chalega.'
                                              : 'Ye <b>live camera</b> se hi hoga, gallery se nahi.') + '</div>' +
-      '<div class="ph-g" style="margin-top:10px">' + Cam.tile('entry', 'Shop ka photo', true, { live:true, sendJs:'Field.photoMeta()' }) + '</div>' +
+      '<div class="ph-g" style="margin-top:10px">' +
+        Cam.tile('entry', 'Shop ka photo', true, { live:true, sendJs:'Field.photoMeta()', cbJs:'Field.entryDone' }) + '</div>' +
       (Cam.has('entry') || Bypass.on() ? '' : '<div class="hint" style="margin-top:8px"> Photo lene ke baad hi product add kar paoge.</div>') +
+      /* the explicit way forward once the photo exists — the rep should not have to guess that the
+         screen has opened up below */
+      (Cam.ok('entry') || Bypass.on()
+        ? '<div class="btns"><button class="btn" onclick="Field.entryDone()">Order punch karo</button></div>'
+        : '') +
       '</div>';
     if (!Cam.ok('entry') && !Bypass.on()) return h;
 
@@ -3718,6 +3891,20 @@ var Field = {
     Cam.clear(['entry']);                       /* new store = new visit photo */
     Field.lines = [];
     render();
+  },
+  /* The shop photo GATES the visit, so filling it has to open the rest of the screen. Cam.paint only
+     redraws the tile, which is why the order steps stayed hidden until the rep left the tab and came
+     back. Called from the tile's own cb and from the "Order punch karo" button. */
+  entryDone: function () {
+    var had = !!$('f_prods');            /* already past the gate → do NOT rebuild the form */
+    var go = function () {
+      var box = $('f_prods'); if (!box) return;
+      var card = box.closest ? box.closest('.card') : null;
+      if (card && card.scrollIntoView) card.scrollIntoView({ behavior:'smooth', block:'start' });
+      if (had) { var q = $('f_psearch'); if (q) q.focus(); }
+    };
+    /* already rendered → scroll now; a fresh render needs a tick for the DOM to exist */
+    if (had) go(); else { render(); setTimeout(go, 80); }
   },
   /* stable id for everything photographed at this store today, so re-taking a slot overwrites
      the same Photos row instead of adding another */
@@ -4016,7 +4203,10 @@ var Cam = {
     var live = opt.live !== false && !Bypass.on();
     if (Bypass.on()) req = false;
     var call = 'Cam.pick(\'' + slot + '\',{live:' + (live ? 'true' : 'false') +
-      (opt.sendJs ? ',send:' + opt.sendJs : '') + '})';
+      (opt.sendJs ? ',send:' + opt.sendJs : '') +
+      /* a slot that GATES the screen needs to tell the screen it was filled — paint() only redraws
+         the tile itself, which is why the order steps used to stay hidden until you left the tab */
+      (opt.cbJs ? ',cb:' + opt.cbJs : '') + '})';
     return '<div class="ph-t" id="ph_' + slot + '">' +
       '<div class="ph-h"><b>' + esc(label) + (req ? ' <span class="req">*</span>' : ' <i>(optional)</i>') + '</b>' +
       '<span class="ph-s"></span></div>' +
@@ -4708,7 +4898,7 @@ var Posm = {
   },
   /* CASE 1 — POSM laga hua hai: do photo compulsory, teesra optional */
   auditPhotos: function () {
-    var o = { live:Posm.live(), sendJs:'Posm.meta()' };
+    var o = { live:Posm.live(), sendJs:'Posm.meta()', cbJs:'Posm.shot' };
     return '<div class="sec-title">Photo (2 compulsory)</div>' +
       '<div class="ph-g two">' +
         Cam.tile('posm1', 'POSM ka close-up', true, o) +
@@ -4718,7 +4908,7 @@ var Posm = {
   },
   /* CASE 2 — POSM nahi hai. Requirement hai to shelf ka photo, warna poore shop ka. */
   reqPhotos: function () {
-    var o = { live:Posm.live(), sendJs:'Posm.meta()' }, need = val('pr_need') !== 'No';
+    var o = { live:Posm.live(), sendJs:'Posm.meta()', cbJs:'Posm.shot' }, need = val('pr_need') !== 'No';
     return '<div class="sec-title">Photo (1 compulsory)</div>' +
       (need
         ? '<div class="hint" style="margin-bottom:8px">Jis <b>shelf par POSM lagana hai</b> uska photo lo — jagah saaf dikhni chahiye.</div>' +
@@ -4751,12 +4941,20 @@ var Posm = {
         '<div><label class="f">Next review</label><input class="in" id="pa_nr" type="date"></div></div>' +
       '<label class="f">Remarks</label><textarea class="in" id="pa_rm" rows="2"></textarea>' +
       Posm.auditPhotos() +
-      (Posm.auditReady() ? '' : '<div class="banner w" style="margin-top:10px"><span></span><div>' +
-        '<b>Dono compulsory photo lo</b><br><span style="font-weight:500">POSM ka close-up aur poori shelf — ' +
-        'tabhi save hoga.</span></div></div>') +
-      '<div class="btns"><button class="btn" onclick="Posm.saveAudit(this)"' + (Posm.auditReady() ? '' : ' disabled') +
+      '<div class="banner w" id="pa_need" style="margin-top:10px;display:' + (Posm.auditReady() ? 'none' : '') + '">' +
+        '<span></span><div><b>Dono compulsory photo lo</b><br><span style="font-weight:500">POSM ka close-up aur ' +
+        'poori shelf — tabhi save hoga.</span></div></div>' +
+      '<div class="btns"><button class="btn" id="pa_save" onclick="Posm.saveAudit(this)"' + (Posm.auditReady() ? '' : ' disabled') +
         '> Audit save karo</button>' +
       '<button class="btn ghost" onclick="Posm.ans=null;render()"> Wapas</button></div></div>';
+  },
+  /* Taking a photo must unlock Save straight away. A full render would rebuild this form and throw away
+     the element / brand / condition / remarks the rep already chose, so only the gate is refreshed. */
+  shot: function () {
+    var b = $('pa_save'); if (b) b.disabled = !Posm.auditReady();
+    var n = $('pa_need'); if (n) n.style.display = Posm.auditReady() ? 'none' : '';
+    var rb = $('pr_save'); if (rb) rb.disabled = !Posm.reqReady();
+    var rn = $('pr_need_note'); if (rn) rn.style.display = Posm.reqReady() ? 'none' : '';
   },
   /* ONE readiness test per screen, used by the button's disabled state AND by the handler — a
      bypassed user is ready without the photos, everyone else is not. */
@@ -4795,10 +4993,10 @@ var Posm = {
         .map(function (o) { return '<option>' + o + '</option>'; }).join('') + '</select>' +
       '<label class="f">Remarks <span class="req">*</span></label><textarea class="in" id="pr_rm" rows="2" placeholder="Kyun chahiye / store ka kya kehna hai"></textarea>' +
       Posm.reqPhotos() +
-      (Posm.reqReady() ? '' : '<div class="banner w" style="margin-top:10px"><span></span><div><b>' +
-        (Posm.need === 'No' ? 'Poore shop ka photo lo' : 'Shelf ka photo lo') +
-        '</b><br><span style="font-weight:500">Ye compulsory hai — tabhi save hoga.</span></div></div>') +
-      '<div class="btns"><button class="btn" onclick="Posm.saveReq(this)"' + (Posm.reqReady() ? '' : ' disabled') +
+      '<div class="banner w" id="pr_need_note" style="margin-top:10px;display:' + (Posm.reqReady() ? 'none' : '') + '">' +
+        '<span></span><div><b>' + (Posm.need === 'No' ? 'Poore shop ka photo lo' : 'Shelf ka photo lo') +
+        '</b><br><span style="font-weight:500">Ye compulsory hai — tabhi save hoga.</span></div></div>' +
+      '<div class="btns"><button class="btn" id="pr_save" onclick="Posm.saveReq(this)"' + (Posm.reqReady() ? '' : ' disabled') +
         '> Requirement save karo</button>' +
       '<button class="btn ghost" onclick="Posm.ans=null;render()"> Wapas</button></div></div>';
   },
