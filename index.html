@@ -128,10 +128,13 @@ select.in{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xml
 .kpi span{font-size:11px;color:var(--ink-3);font-weight:600}
 .kpi.b b{color:var(--blue)} .kpi.g b{color:var(--ok)} .kpi.w b{color:var(--warn)} .kpi.r b{color:var(--bad)}
 
-/* list rows */
-.lrow{display:flex;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+/* list rows
+   A row WRAPS rather than crushes: the text column keeps a 120px floor, so a wide status pill or a
+   pair of buttons moves to a second line instead of squeezing the name into one letter per line
+   (which is what a 30-character `nowrap` pill did to the PJP list on a 320px phone). */
+.lrow{display:flex;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .lrow:last-child{border-bottom:0}
-.lrow .m{flex:1;min-width:0}
+.lrow .m{flex:1 1 60%;min-width:120px}
 .lrow .t{font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lrow .s{font-size:11.5px;color:var(--ink-3);overflow-wrap:anywhere}
 .lrow>.pill,.lrow>button,.lrow>a{flex:0 0 auto}
@@ -969,10 +972,14 @@ var Auth = {
     }).catch(function () { var c = Auth.users(); if (c.length) return done(c); Auth.gateErr('Network error — dobara try karo'); });
   },
   enter: function (u, em) {
+    /* the bypass flag comes down with the login row too, so the very first screen after login already
+       knows — otherwise the gates would look locked until the first pull returned `me` */
+    var byp = /^(yes|true|1)$/i.test(String(u.Bypass || ''));
     Store.set(K.sess, { code:u.Code, name:u.Name, email:em, rights:u.Rights || 'Employee',
       hq:u.HQ, zone:u.Zone, desig:u.Designation, doj:toISO(u.DateofJoining), pwdChanged:true });
     DB.me = { code:u.Code, name:u.Name, rights:u.Rights || 'Employee', hq:u.HQ, zone:u.Zone,
-      desig:u.Designation, doj:toISO(u.DateofJoining) };
+      desig:u.Designation, doj:toISO(u.DateofJoining),
+      bypass:byp, bypassBy:u.BypassBy || '', bypassNote:u.BypassNote || '' };
     Auth.start();
   },
   start: function () {
@@ -1068,7 +1075,13 @@ var Preview = {
     var e = DB.emp(code); if (!e) return toast('Employee nahi mila');
     Preview.real = DB.me;
     Preview.on = true;
-    DB.me = { code:e.Code, name:e.Name, rights:'Employee', hq:e.HQ, zone:e.Zone, desig:e.Designation, doj:toISO(e.DateofJoining) };
+    /* Master_Employees carries no bypass flag — it lives on the LoginConfig row, which an admin has.
+       Without this the preview would show locked gates for a rep whose gates are actually open. */
+    var lc = (DB.m.LoginConfig || []).filter(function (x) {
+      return String(x.Code).toUpperCase() === String(e.Code).toUpperCase(); })[0] || {};
+    DB.me = { code:e.Code, name:e.Name, rights:'Employee', hq:e.HQ, zone:e.Zone, desig:e.Designation,
+      doj:toISO(e.DateofJoining), bypass:Admin.isBypass(lc), bypassBy:lc.BypassBy || '',
+      bypassNote:lc.BypassNote || '' };
     Preview.reset();
     document.body.classList.add('prev');
     Nav.build(); Router.go('home');
@@ -1091,6 +1104,44 @@ var Preview = {
     Preview.reset();
     document.body.classList.remove('prev');
     Nav.build(); Router.go('admin'); toast('Preview band');
+  }
+};
+
+/* ═══════════════ BYPASS — per-user relaxation, granted by an Admin/HOD ═══════════════
+   Some reps genuinely cannot complete the full flow: a dead camera, a store that refuses photos, a
+   rep who joined mid-cycle with no approved PJP yet. Rather than loosening the rules for everyone,
+   an Admin/HOD switches it ON for that ONE user in Admin → Users.
+
+   WAIVED (and this list is shown in the UI, so nobody has to guess):
+     • photos stop being compulsory, and gallery upload is allowed where only the live camera was
+     • the tab sequence PJP → Plan → Notify → Field stops blocking
+     • a PJP can be submitted with days still empty, and outside the 27–1 window
+   NEVER WAIVED: the data itself (store, distributor, town/beat, order status, remarks), the
+   Master_* read-only rule, and the one-request guards — those stop duplicates, not effort.
+
+   The server decides: the flag arrives on `me` from the pull (and on the login row), so a device
+   cannot grant itself anything. */
+var Bypass = {
+  on: function () { return !!(DB.me && DB.me.bypass); },
+  by: function () { return (DB.me && DB.me.bypassBy) || ''; },
+  note: function () { return (DB.me && DB.me.bypassNote) || ''; },
+  /* what it waives, in the rep's language — used by the Home strip and the admin's confirm dialog */
+  WAIVES:['📷 Photo compulsory nahi rahegi (gallery se bhi chalega)',
+          '🔓 Tab ka order (PJP → Plan → Notify → Field) nahi rokega',
+          '🗺️ PJP adhoora bhi bhej sakte ho, window ke bahar bhi'],
+  strip: function () {
+    if (!Bypass.on()) return '';
+    return '<div class="strip w"><span class="g">🔓</span><div class="m"><b>Bypass ON</b> ' +
+      '<i>· photo aur tab-order optional hain' + (Bypass.by() ? ' · ' + esc(Bypass.by()) : '') +
+      (Bypass.note() ? ' · ' + esc(Bypass.note()) : '') + '</i></div>' +
+      '<button class="btn ghost" onclick="Bypass.info()">Kya kya?</button></div>';
+  },
+  info: function () {
+    UI.alert({ icon:'🔓', title:'Bypass ON hai',
+      msg:'Aapke liye ye restrictions hata di gayi hain:<br>• ' + Bypass.WAIVES.join('<br>• ') +
+          '<br><br>Baaki sab wahi hai — store, distributor, town/beat, order status aur remarks ' +
+          'bharna zaroori hai.' + (Bypass.by() ? '<br><br><b>Kisne di:</b> ' + esc(Bypass.by()) : '') +
+          (Bypass.note() ? '<br><b>Reason:</b> ' + esc(Bypass.note()) : '') });
   }
 };
 
@@ -1122,6 +1173,7 @@ var Gate = {
   },
   allowed: function (v) {
     if (Auth.isAdmin()) return true;
+    if (Bypass.on()) return true;                  /* the sequence is one of the waived rules */
     var l = Gate.level();
     if (v === 'plan')  return l >= 1;
     if (v === 'field') return l >= 2;
@@ -1984,6 +2036,10 @@ var Home = {
     h += '<div class="banner b"><span>👉</span><div><b>' + esc(next.t) + '</b><br><span style="font-weight:500">' + esc(next.s) + '</span>' +
       '<div class="btns"><button class="btn sm" onclick="Router.go(\'' + next.v + '\')">Chalo →</button></div></div></div>';
 
+    /* A relaxed rule is never invisible: the rep should know WHY the gates are open, and an auditor
+       should be able to see it on the screen. */
+    h += Bypass.strip();
+
     h += '<div class="kpis">' +
       UI.kpi(orders.length, 'Visits', 'b') + UI.kpi(withOrder.length, 'Order mila', 'g') +
       UI.kpi(lakh(nsv), 'NSV ₹L', 'b') + UI.kpi(stores.length, 'Naye outlet', 'w') + '</div>';
@@ -2061,6 +2117,11 @@ var Pjp = {
         var d = toISO(r.Date);
         if (!Pjp.days[d]) Pjp.days[d] = { ww:Pjp.ww(r.Ww), city:r.Town || '', beat:r.Beat || '', st:'HQ' };
       });
+      /* A day before this rep JOINED is not theirs to plan: the day list already refuses to render an
+         input for it, but a day could still arrive here from an older draft or from Master_PJP — and
+         DaysJson is what gets published back into the master on approval. Drop them at the source. */
+      var doj0 = DB.doj(DB.me.code);
+      if (doj0) Object.keys(Pjp.days).forEach(function (d) { if (d < doj0) delete Pjp.days[d]; });
       Pjp.loadedKey = k;
       Pjp.hydratedAt = remote || Date.now();
     }
@@ -2101,7 +2162,7 @@ var Pjp = {
     return { need:need, done:done, miss:miss, off:off };
   },
   windowOpen: function () {
-    if (Auth.isAdmin()) return true;
+    if (Auth.isAdmin() || Bypass.on()) return true;
     var a = Pjp.month.split('-'), y = +a[0], m = +a[1];
     var t = new Date(); t.setHours(0, 0, 0, 0);
     return t >= new Date(y, m - 2, 27) && t <= new Date(y, m - 1, 1);
@@ -2136,7 +2197,10 @@ var Pjp = {
 
     h += '<div class="card"><div class="btns">' +
       (locked ? '' : '<button class="btn ghost" onclick="Pjp.autofill()">✨ PJP se auto-fill</button>' +
-        '<button class="btn" id="pjp_sub" onclick="Pjp.submit(this)" ' + (c.miss.length || !c.need || !Pjp.windowOpen() || /pending|approved/i.test(dr.Status||'') ? 'disabled' : '') + '>' + (/pending/i.test(dr.Status||'') ? '⏳ Already sent — HOD ke paas hai' : '📤 HOD ko bhejo') + '</button>') +
+        '<button class="btn" id="pjp_sub" onclick="Pjp.submit(this)" ' +
+          ((c.miss.length && !Bypass.on()) || !c.need || !Pjp.windowOpen() || /pending|approved/i.test(dr.Status||'') ? 'disabled' : '') + '>' +
+          (/pending/i.test(dr.Status||'') ? '⏳ Already sent — HOD ke paas hai' :
+           (c.miss.length && Bypass.on()) ? '📤 Adhoora hi bhej do (bypass)' : '📤 HOD ko bhejo') + '</button>') +
       '</div></div>';
 
     h += '<div class="sec-title">Din-wise plan</div>';
@@ -2196,17 +2260,21 @@ var Pjp = {
       Coverage:c.done + '/' + c.need, UpdatedAt:Date.now() }, { quiet:true });
   },
   autofill: function () {
-    var mp = DB.pjpMonth(DB.me.code, Pjp.month);
-    if (!mp.length) return toast('Master_PJP me is month ka data nahi hai');
+    var doj = DB.doj(DB.me.code);
+    /* joining date wins over whatever the master holds — those days are not this rep's to plan */
+    var mp = DB.pjpMonth(DB.me.code, Pjp.month).filter(function (r) { return !doj || toISO(r.Date) >= doj; });
+    if (!mp.length) return toast('Master_PJP me is month ka (joining ke baad ka) data nahi hai');
     mp.forEach(function (r) { var d = toISO(r.Date);
       Pjp.days[d] = { ww:Pjp.ww(r.Ww), city:r.Town || '', beat:r.Beat || '', st:(Pjp.days[d] && Pjp.days[d].st) || 'HQ' }; });
-    Pjp._dirty = true; Pjp.flush(); render(); toast('✨ Master PJP se fill ho gaya');
+    Pjp._dirty = true; Pjp.flush(); render();
+    toast('✨ ' + mp.length + ' din Master PJP se fill ho gaye' + (doj ? ' (joining ke baad ke)' : ''));
   },
   submit: function (el) {
     var c = Pjp.cover(), dr0 = Pjp.draft();
     if (/pending|approved/i.test(dr0.Status || '')) { render(); return toast('⏳ Already sent — HOD ke paas hai'); }
     if (!c.need) return toast('Kam se kam ek field day plan karo');
-    if (c.miss.length) return toast('Pehle poora month plan karo');
+    /* full-month coverage and the 27–1 window are waived for a bypassed user */
+    if (c.miss.length && !Bypass.on()) return toast('Pehle poora month plan karo');
     if (!Pjp.windowOpen()) return toast('Submit window band hai (27–1)');
     return UI.confirm({ icon:'\ud83d\udce4', title:'PJP HOD ko bhejna hai?',
       msg:'<b>' + esc(monthName(Pjp.month)) + '</b> ka plan \u2014 <b>' + c.done + '/' + c.need +
@@ -2458,11 +2526,12 @@ var Field = {
        the visit: no products, no submit until the photo is taken. */
     h += '<div class="card"><h3><span class="ic">2</span>Shop ka photo</h3>' +
       '<div class="sub">Dukaan me andar jaane se <b>pehle</b> shop ke bahar ka ek photo lo — board aur entry ' +
-      'dono dikhne chahiye. Ye <b>live camera</b> se hi hoga, gallery se nahi.</div>' +
+      'dono dikhne chahiye. ' + (Bypass.on() ? 'Aapke liye ye <b>optional</b> hai (bypass ON) — gallery se bhi chalega.'
+                                             : 'Ye <b>live camera</b> se hi hoga, gallery se nahi.') + '</div>' +
       '<div class="ph-g" style="margin-top:10px">' + Cam.tile('entry', 'Shop ka photo', true, { live:true, sendJs:'Field.photoMeta()' }) + '</div>' +
-      (Cam.has('entry') ? '' : '<div class="hint" style="margin-top:8px">📷 Photo lene ke baad hi product add kar paoge.</div>') +
+      (Cam.has('entry') || Bypass.on() ? '' : '<div class="hint" style="margin-top:8px">📷 Photo lene ke baad hi product add kar paoge.</div>') +
       '</div>';
-    if (!Cam.ok('entry')) return h;
+    if (!Cam.ok('entry') && !Bypass.on()) return h;
 
     h += '<div class="card"><h3><span class="ic">3</span>Product add karo</h3>' +
       '<div class="row two" style="margin-top:10px">' +
@@ -2581,7 +2650,8 @@ var Field = {
   submit: function (el) {
     if (Busy.busy('order')) return toast('⏳ Ruko — order save ho raha hai');
     if (!Field.store) return toast('Store select karo');
-    if (!Cam.ok('entry')) return toast('📷 Pehle shop ka photo lo');
+    /* never trust the disabled button — but a bypassed user is allowed through */
+    if (!Cam.ok('entry') && !Bypass.on()) return toast('📷 Pehle shop ka photo lo');
     var st = val('f_status'), src = val('f_src'), rem = val('f_remarks');
     var noOrder = st === 'No Order' || st === 'Cancel Order';
     if (!noOrder && !Field.lines.length) return toast('Product add karo (ya No Order select karo)');
@@ -2745,7 +2815,10 @@ var Cam = {
   /* a photo tile: preview, status, retake. `req` marks it compulsory. */
   tile: function (slot, label, req, opt) {
     opt = opt || {};
-    var live = opt.live !== false;
+    /* A bypassed user gets gallery upload and no red star — done HERE so every tile in the app
+       follows the same rule and no screen can forget it. */
+    var live = opt.live !== false && !Bypass.on();
+    if (Bypass.on()) req = false;
     var call = 'Cam.pick(\'' + slot + '\',{live:' + (live ? 'true' : 'false') +
       (opt.sendJs ? ',send:' + opt.sendJs : '') + '})';
     return '<div class="ph-t" id="ph_' + slot + '">' +
@@ -3483,10 +3556,12 @@ var Posm = {
         '>✅ Audit save karo</button>' +
       '<button class="btn ghost" onclick="Posm.ans=null;render()">↩ Wapas</button></div></div>';
   },
-  auditReady: function () { return Cam.ok('posm1') && Cam.ok('posm2'); },
+  /* ONE readiness test per screen, used by the button's disabled state AND by the handler — a
+     bypassed user is ready without the photos, everyone else is not. */
+  auditReady: function () { return Bypass.on() || (Cam.ok('posm1') && Cam.ok('posm2')); },
   saveAudit: function (el) {
     if (Busy.busy('posm')) return toast('⏳ Ruko — POSM save ho raha hai');
-    if (!Cam.ok('posm1') || !Cam.ok('posm2')) return toast('📷 POSM ke 2 photo compulsory hain');
+    if (!Posm.auditReady()) return toast('📷 POSM ke 2 photo compulsory hain');
     if (!val('pa_el')) return toast('POSM element select karo');
     if (!val('pa_br')) return toast('Brand select karo');
     if (!val('pa_cn')) return toast('Condition select karo');
@@ -3525,7 +3600,7 @@ var Posm = {
         '>✅ Requirement save karo</button>' +
       '<button class="btn ghost" onclick="Posm.ans=null;render()">↩ Wapas</button></div></div>';
   },
-  reqReady: function () { return Cam.ok(Posm.need === 'No' ? 'shop' : 'shelf'); },
+  reqReady: function () { return Bypass.on() || Cam.ok(Posm.need === 'No' ? 'shop' : 'shelf'); },
   saveReq: function (el) {
     if (Busy.busy('posm')) return toast('⏳ Ruko — save ho raha hai');
     if (!val('pr_rm')) return toast('Remarks likho');
@@ -4113,21 +4188,48 @@ var Admin = {
     h += emps.map(function (e) {
       var d = DB.find('PjpDraft', e.Code + '__' + mon);
       var pub = DB.m.Master_PJP ? DB.pjpMonth(e.Code, mon).length : 0;
-      var st = d ? Appr.norm(d.Status) : '';
-      var lbl = !d ? ['\u2014 Bheja nahi', 'p-grey'] : (Appr.LBL[st] || Appr.LBL.pending);
+      var pst = Admin.pjpState(d, pub), lbl = pst.lbl;
       var cv = d ? Appr.cover(d.Coverage) : '';
       return '<div class="lrow" style="cursor:pointer" onclick="Admin.pjpEmp=&quot;' + esc(e.Code) + '&quot;;render()">' +
         '<span class="ap-ic">\ud83d\uddfa\ufe0f</span>' +
         '<div class="m"><div class="t">' + esc(e.Name) + '</div>' +
-        '<div class="s">' + esc(e.Code) + ' \u00b7 ' + esc(e.HQ || '') +
+        '<div class="s">' + esc(pst.note) + ' \u00b7 ' + esc(e.Code) + ' \u00b7 ' + esc(e.HQ || '') +
           (cv ? ' \u00b7 ' + cv + ' field din' : '') +
-          ' \u00b7 master me ' + pub + ' din' +
+          (pst.k === 'live' ? '' : ' \u00b7 master me ' + pub + ' din') +
           (d && d.HodBy ? ' \u00b7 ' + (String(d.Status).toLowerCase() === 'approved' ? 'approved' : 'decided') +
             ' by ' + esc(d.HodBy) + (d.HodRole ? ' (' + esc(d.HodRole) + ')' : '') : '') + '</div></div>' +
         '<span class="pill ' + lbl[1] + '">' + lbl[0] + '</span>' +
         '<span class="ap-x">\u203a</span></div>';
     }).join('') + '</div>';
     return h;
+  },
+
+  /* ONE resolver for "what is this employee's month actually at", used by the list AND the detail
+     view so they can never disagree.
+       Master_PJP has days  → the plan is LIVE. Nothing reaches that tab except through
+                              publishPjp_ after an HOD approval, so days in the master ARE approval.
+                              (July's plans were loaded straight into the sheet and have no draft row
+                              at all — those used to read "Bheja nahi", which was simply wrong.)
+       pending              → it is sitting with the HOD right now. This BEATS the master days: if the
+                              rep edited an approved month and re-sent it, the live question is the
+                              new submission.
+       rejected             → stays rejected until they fix it and send it again (which makes it
+                              pending, i.e. "Approval ke liye bheja").
+       draft / nothing      → genuinely not sent yet.
+     A pill is a chip, not a sentence — the long version of each state goes in `note`, which the row's
+     sub-line and the detail header show. (A 30-character pill is `nowrap`, so on a 320px phone it
+     squeezed the employee name down to one letter per line.) */
+  pjpState: function (d, pubDays) {
+    var st = d ? Appr.norm(d.Status) : '';
+    if (st === 'pending')  return { k:'pending',  lbl:['⏳ HOD ko bheja', 'p-warn'],
+                                    note:'Approval ke liye bheja hua hai' };
+    if (st === 'rejected') return { k:'rejected', lbl:['❌ Rejected', 'p-bad'],
+                                    note:'Reject hua — theek karke dobara bhejna hai' };
+    if (pubDays)           return { k:'live',     lbl:['✅ PJP defined', 'p-ok'],
+                                    note:pubDays + ' din Master_PJP me live' };
+    if (st === 'approved') return { k:'approved', lbl:['✅ Approved', 'p-ok'],
+                                    note:'Approve ho gaya — master me publish hona pending hai' };
+    return { k:'none', lbl:['✏️ Bheja nahi', 'p-grey'], note:'Abhi HOD ko bheja hi nahi' };
   },
 
   /* one employee's month: the draft they built + what is live in Master_PJP, day by day */
@@ -4138,19 +4240,31 @@ var Admin = {
     var pub = {};
     DB.pjpMonth(code, mon).forEach(function (r) { pub[toISO(r.Date)] = r; });
     var st = d ? Appr.norm(d.Status) : '';
-    var lbl = d ? (Appr.LBL[st] || Appr.LBL.pending) : ['\u2014 Bheja nahi', 'p-grey'];
+    var pst = Admin.pjpState(d, Object.keys(pub).length), lbl = pst.lbl;
 
     var h = '<div class="card"><div class="ap-h"><span class="ap-ic">\ud83d\udc64</span>' +
       '<div class="m"><div class="t">' + esc(e.Name) + '</div><div class="s">' + esc(code) + ' \u00b7 ' +
         esc(e.HQ || '') + ' \u00b7 ' + (monthName(mon) || mon) + '</div></div>' +
       '<span class="pill ' + lbl[1] + '">' + lbl[0] + '</span></div>' +
+      /* A re-submitted month still carries the LAST decision's HodBy/HodAt (the upsert merges), so
+         once the status is pending again this has to read as history \u2014 it used to relabel an old
+         REJECTION as "\u2705 Approve kiya" purely because the new status was no longer 'rejected'. */
       (d && d.HodBy ? '<div class="hint" style="margin-top:6px">' +
-        (st === 'rejected' ? '\u274c Reject' : '\u2705 Approve') + ' kiya: <b>' + esc(d.HodBy) + '</b>' +
+        (st === 'pending' ? '\ud83d\udd53 Pichhla decision: ' + (d.RejectReason ? '\u274c Reject' : '\u2705 Approve') + ' \u2014 '
+                          : (st === 'rejected' ? '\u274c Reject' : '\u2705 Approve') + ' kiya: ') +
+        '<b>' + esc(d.HodBy) + '</b>' +
         (d.HodRole ? ' <b>(' + esc(d.HodRole) + ')</b>' : '') +
         (d.HodAt ? ' \u00b7 ' + Appr.when(d.HodAt) : '') +
         (d.PublishedRows ? ' \u00b7 ' + d.PublishedRows + ' din Master_PJP me publish' : '') + '</div>' : '') +
       (d && st === 'rejected' && d.RejectReason ? '<div class="banner r" style="margin-top:8px"><span>\ud83d\udcac</span>' +
         '<div>' + esc(d.RejectReason) + '</div></div>' : '') +
+      /* say WHY it reads "PJP defined" when there is no draft row to point at */
+      (!d && pst.k === 'live' ? '<div class="hint" style="margin-top:6px">\u2705 <b>' + Object.keys(pub).length +
+        ' din</b> Master_PJP me live hain \u2014 master me plan approval ke baad hi aata hai. Is month ka ' +
+        'draft row app me nahi hai (sheet me seedha load hua tha).</div>' : '') +
+      (d && pst.k === 'pending' && Object.keys(pub).length ? '<div class="hint" style="margin-top:6px">' +
+        '\u23f3 Naya submission HOD ke paas hai. Filhaal master me purane <b>' + Object.keys(pub).length +
+        ' din</b> live hain \u2014 approve karne par overwrite ho jayenge.</div>' : '') +
       '<div class="btns"><button class="btn ghost sm" onclick="Admin.pjpEmp=&quot;&quot;;render()">\u2039 Sab employee</button>' +
       (d && st === 'pending' ? '<button class="btn ok sm" onclick="Admin.pjpOk(&quot;' + esc(d.Key) + '&quot;)">\u2705 Approve</button>' +
         '<button class="btn bad sm" onclick="Admin.pjpNo(&quot;' + esc(d.Key) + '&quot;)">\u274c Reject</button>' : '') +
@@ -4388,15 +4502,78 @@ var Admin = {
     return Rep.tab(cur, Object.keys(rows[0]), rows);
   },
 
+  /* ── Users: rights, joining date, and the per-user BYPASS switch ──
+     Rendered as rows, not a table, because each user needs an action — and a row wraps on a phone
+     while a 7th table column would just push the switch off-screen. */
   users: function () {
-    var u = DB.m.LoginConfig || [];
-    return '<div class="banner b"><span>🔑</span><div>Password reset karne se sab logins <b>Honasa@123</b> ho jayenge aur pehli login par change maangega.' +
-      '<div class="btns"><button class="btn sm" onclick="Admin.resetPwd()">Reset all passwords</button></div></div></div>' +
-      '<div class="card"><div class="tw"><table><thead><tr><th>Code</th><th>Name</th><th>Email</th><th>Rights</th><th>Status</th><th>DOJ</th></tr></thead><tbody>' +
-      u.map(function (x) { return '<tr><td>' + esc(x.Code) + '</td><td>' + esc(x.Name) + '</td><td>' + esc(x.Email) + '</td>' +
-        '<td><span class="pill ' + (/admin|hod/i.test(x.Rights) ? 'p-blue' : 'p-grey') + '">' + esc(x.Rights) + '</span></td>' +
-        '<td>' + esc(x.Status) + '</td><td>' + dmy(x.DateofJoining) + '</td></tr>'; }).join('') +
-      '</tbody></table></div></div>';
+    var u = (DB.m.LoginConfig || []).slice();
+    var on = u.filter(Admin.isBypass);
+    var h = '<div class="banner b"><span>🔑</span><div>Password reset karne se sab logins <b>Honasa@123</b> ho jayenge aur pehli login par change maangega.' +
+      '<div class="btns"><button class="btn sm" onclick="Admin.resetPwd()">Reset all passwords</button></div></div></div>';
+
+    h += '<div class="card"><h3><span class="ic">🔓</span>Bypass — per user</h3>' +
+      '<div class="sub">Kisi ek user ke liye app ki <b>restrictions hata do</b> — sirf zaroori cheezein bharni padengi. ' +
+      'Ye <b>per user</b> hai: X aur Y par ON, Z par OFF. Kya hatta hai:</div>' +
+      '<div class="hint" style="margin-top:6px">• ' + Bypass.WAIVES.join('<br>• ') + '</div>' +
+      '<div class="hint" style="margin-top:6px">Data phir bhi zaroori hai — store, distributor, town/beat, ' +
+      'order status, remarks. Master tabs read-only rehte hain.</div>' +
+      (on.length ? '<div class="strip w" style="margin-bottom:0"><span class="g">🔓</span><div class="m"><b>' +
+        on.length + ' user par bypass ON hai</b> <i>· ' + on.map(function (x) { return esc(x.Name || x.Code); }).join(', ') +
+        '</i></div></div>' : '<div class="hint" style="margin-top:8px">Abhi kisi par bypass ON nahi hai.</div>') +
+      '</div>';
+
+    h += '<div class="sec-title">' + u.length + ' login</div><div class="card">' +
+      u.map(function (x) {
+        var b = Admin.isBypass(x);
+        return '<div class="lrow">' +
+          '<div class="m"><div class="t">' + esc(x.Name || x.Code) + '</div>' +
+          '<div class="s">' + esc(x.Code) + ' · ' + esc(x.Email || '') + ' · ' + esc(x.Rights || 'Employee') +
+            ' · ' + esc(x.Status || '') + ' · joining ' + dmy(x.DateofJoining) +
+            (b && x.BypassBy ? ' · bypass ' + esc(x.BypassBy) + (x.BypassAt ? ' ' + Appr.when(x.BypassAt) : '') : '') +
+            (b && x.BypassNote ? ' · ' + esc(x.BypassNote) : '') + '</div></div>' +
+          '<span class="pill ' + (/admin|hod/i.test(x.Rights || '') ? 'p-blue' : 'p-grey') + '">' +
+            esc(x.Rights || 'Employee') + '</span>' +
+          (b ? '<span class="pill p-warn">🔓 Bypass ON</span>' : '') +
+          '<button class="btn ' + (b ? 'bad' : 'ghost') + ' sm" onclick="Admin.bypass(\'' +
+            Appr.q(x.Code) + '\',' + (b ? 'false' : 'true') + ',this)">' +
+            (b ? 'Bypass OFF karo' : 'Bypass ON karo') + '</button>' +
+          '</div>'; }).join('') + '</div>';
+    return h;
+  },
+  isBypass: function (x) { return /^(yes|true|1)$/i.test(String((x && x.Bypass) || '')); },
+
+  /* Turning it ON asks for a reason (it lands in the sheet next to who granted it, so a relaxed rule
+     is never anonymous); turning it OFF just confirms. The row is updated locally so the switch
+     flips immediately, then the sheet is the record. */
+  bypass: function (code, on, el) {
+    var row = (DB.m.LoginConfig || []).filter(function (x) { return String(x.Code) === String(code); })[0] || {};
+    var who = esc(row.Name || code);
+    var ask = on
+      ? UI.prompt({ icon:'🔓', title:'Bypass ON karein?',
+          msg:'<b>' + who + '</b> ke liye ye restrictions hat jayengi:<br>• ' + Bypass.WAIVES.join('<br>• ') +
+              '<br><br>Sirf inhi par lagu hoga, baaki team par nahi.',
+          label:'Reason (sheet me save hoga)', placeholder:'e.g. camera kharab hai, mid-month joining',
+          multiline:true, required:true, requiredMsg:'Reason likhna zaroori hai', ok:'Haan, ON karo' })
+      : UI.confirm({ icon:'🔒', title:'Bypass OFF karein?', danger:true,
+          msg:'<b>' + who + '</b> par app ki poori restrictions wapas lag jayengi — photo compulsory, ' +
+              'tab ka order, poora PJP.', ok:'Haan, OFF karo', cancel:'Nahi' });
+    return ask.then(function (r) {
+      if (!r) return;
+      return Busy.run('bypass_' + code, el, on ? 'ON kar rahe hain…' : 'OFF kar rahe hain…', function () {
+        return Api.post({ action:'admin', email:Auth.session().email, op:'setBypass',
+                          code:code, on:!!on, note:(on ? String(r) : '') }).then(function (res) {
+          if (!res || !res.ok) return UI.alert({ icon:'⚠️', title:'Nahi ho paya',
+            msg:esc((res && res.error) || 'Server se jawab nahi aaya') + '<br><br>Backend purana ho to ' +
+                '<b>backend.gs</b> dobara paste karke deploy karo.' });
+          /* keep the on-screen list in step with what the sheet now holds */
+          row.Bypass = on ? 'Yes' : 'No';
+          row.BypassBy = res.by || ''; row.BypassAt = res.at || ''; row.BypassNote = on ? String(r) : '';
+          DB.cache();
+          Log.add('Bypass', on ? 'ON' : 'OFF', code, on ? String(r) : '');
+          render(); toast(on ? '🔓 Bypass ON — ' + (row.Name || code) : '🔒 Bypass OFF — ' + (row.Name || code), 3200);
+        });
+      });
+    });
   },
   resetPwd: function () {
     UI.confirm({ icon:'\ud83d\udd11', title:'Sab passwords reset karein?', danger:true,
