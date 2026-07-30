@@ -1763,6 +1763,23 @@ I18n.D.en = I18n.EN = {
   'Jo din galat hai unke box tick karo — niche reject selected days chalu ho jayega.':'Tick the box on each day that is wrong — reject selected days switches on below.',
   'Poora plan niche hai — padho, galat din tick karo, phir niche se decide karo.':'The whole plan is below — read it, tick the wrong days, then decide from there.',
   'Galat din tick karo, phir yahan se decide karo':'Tick the wrong days, then decide from here',
+  'Is din ko save karo':'Save this day',
+  'Ab dobara bhejo':'Now send it again',
+  'Reject wale din theek karke save karo, phir HOD ko dobara bhejo.':'Fix the rejected days, save them, then send it to the HOD again.',
+  'Bhara':'Filled',
+  'Poora':'Complete',
+  'Adhoora':'Incomplete',
+  'Sab save karo':'Save everything',
+  'HOD ko dobara bhejo':'Send to the HOD again',
+  '! Pehle har reject wale din ka Town aur Beat bharo — tabhi dobara bhej paoge.':'! Fill the Town and Beat on every rejected day first — only then can you send it again.',
+  'Save ho gaya':'Saved',
+  'Sab din save ho gaye':'All days saved',
+  'Rep ke paas hai':'With the rep',
+  'din wapas bheje hue hain — rep theek karke dobara bhejega, tab approve kar sakte ho.':'days were sent back — the rep will fix them and send again, then you can approve.',
+  'Rep ke paas hai — wapas aane ka wait':'With the rep — waiting for it to come back',
+  'Jab tak rep dobara nahi bhejta, isme kuch decide nahi karna hai.':'Nothing to decide here until the rep sends it again.',
+  'Theek karke dobara bhejna hai':'Fix it and send it again',
+  'PJP tab me sirf reject wale din khule hain.':'Only the rejected days are open in the PJP tab.',
   'Order punch karo':'Punch the order',
   /* live updates + the read-only plan / waiting screen */
   'HOD ne approve kar diya — aage badho':'The HOD approved it — carry on',
@@ -4246,7 +4263,7 @@ var Pjp = {
       '</div>' +
       '<label class="f">Beat / Market <span class="hint">(khud likho)</span></label>' +
       '<input class="in" id="pj_beat_' + d + '" placeholder="Beat / market ka naam" value="' + esc(r.beat || '') +
-      '" oninput="Pjp.set(' + q + ',\'beat\',this.value)">';
+      '" oninput="Pjp.set(' + q + ',\'beat\',this.value)" onchange="Pjp.touch()">';
   },
   sel: function (d, kind, list, cur) {
     var isNew = !!cur && list.indexOf(cur) < 0;
@@ -4264,6 +4281,7 @@ var Pjp = {
     if (box) box.style.display = el.value === Plan.ADD ? '' : 'none';
     if (el.value === Plan.ADD) { if (box) { box.focus(); Pjp.set(d, kind, box.value); } return; }
     Pjp.set(d, kind, el.value);
+    if (kind === 'city') Pjp.touch();
     /* a new State means a different Town list — rebuild that one select in place */
     if (kind === 'state') {
       var ts = $('pj_city_' + d); if (!ts) return;
@@ -4351,22 +4369,24 @@ var Pjp = {
       '</div>';
 
     /* resumed-work banner: the draft came back from the sheet, so nothing needs refilling */
-    if (c.done && !locked)
+    if (c.done && !locked && !part)
       h += '<div class="banner b"><span></span><div><b>' + c.done + ' din pehle se bhare hue hain</b> — wahi wapas load kiye hain, dobara bharne ki zaroorat nahi.' +
         (dr.UpdatedAt ? ' <span class="hint">(last save: ' + esc(new Date(+dr.UpdatedAt).toLocaleString('en-IN')) + ')</span>' : '') + '</div></div>';
-    if (c.miss.length && !locked)
+    if (c.miss.length && !locked && !part)
       h += '<div class="banner w"><span>!</span><div>' + c.miss.length + ' din pending hai (' + monthName(Pjp.month).split(' ')[0] + ' ' + c.miss.join(', ') + '). Har working day me City + Beat bharo ya Off karo.</div></div>';
-    if (c.miss.length === 0 && !locked)
+    if (c.miss.length === 0 && !locked && !part)
       h += '<div class="banner g"><span></span><div>Poora month plan ho gaya — ab HOD ko bhej sakte ho.</div></div>';
     if (locked)
       h += '<div class="banner b"><span></span><div>Ye PJP <b>' + esc(dr.Status) + '</b> hai' + (dr.RejectReason ? ' — ' + esc(dr.RejectReason) : '') + '. Change karna ho to HOD se baat karo.</div></div>';
 
-    h += '<div class="card"><div class="btns">' +
+    /* In the partial flow BOTH of these are wrong: auto-fill would rewrite the whole month from the
+       master, wiping the days the HOD already accepted (and the fixes just typed), and a second Send
+       button up here competes with the save-and-send card under the returned days. */
+    if (!part) h += '<div class="card"><div class="btns">' +
       (locked ? '' : '<button class="btn ghost" onclick="Pjp.autofill()"> PJP se auto-fill</button>' +
         '<button class="btn" id="pjp_sub" onclick="Pjp.submit(this)" ' +
           ((c.miss.length && !Bypass.on()) || !c.need || !Pjp.windowOpen() ? 'disabled' : '') + '>' +
-          (part ? 'Theek kiya — dobara bhejo' :
-           pend ? 'Dobara bhejo (' + (num(dr.Revision) + 1) + ')' :
+          (pend ? 'Dobara bhejo (' + (num(dr.Revision) + 1) + ')' :
            (c.miss.length && Bypass.on()) ? 'Adhoora hi bhej do (bypass)' : 'HOD ko bhejo') + '</button>') +
       '</div></div>';
 
@@ -4414,8 +4434,38 @@ var Pjp = {
         (f ? (locked ? '<div class="sub">' + esc(r.state ? r.state + ' · ' : '') + esc(r.city || '—') + ' · ' + esc(r.beat || '—') + '</div>'
           : Pjp.geo(d, r) +
             ((r.city || '').trim() && (r.beat || '').trim() ? '' : '<div class="hint" style="margin-top:5px;color:#b7791f">! Town aur Beat dono bharo — tabhi ye din complete hoga.</div>')) : '') +
+        /* a day the HOD sent back gets its own Save, so the rep can store one day at a time and see it */
+        (sentBack ? '<div class="btns" style="margin-top:8px"><button class="btn ok sm" ' +
+          'onclick="Pjp.saveDay(\'' + d + '\',this)">Is din ko save karo</button></div>' +
+          (Pjp.savedAt[d] ? '<div class="hint" style="margin-top:6px">Save ho gaya · ' +
+            esc(Pjp.savedAt[d]) + '</div>' : '') : '') +
         '</div>';
     });
+
+    /* ── the end of a partial fix: save both days, then send the month back ──
+       Two buttons in the order the work happens, with the state of each returned day spelled out, so
+       nobody sends a month back with one day still half-typed. */
+    if (part) {
+      var ready = rejD.filter(function (k) {
+        var r2 = Pjp.days[k] || {};
+        return !Pjp.isField(Pjp.ww(r2.ww)) || ((r2.city || '').trim() && (r2.beat || '').trim());
+      });
+      h += '<div class="card"><h3>Ab dobara bhejo</h3>' +
+        '<div class="sub">Reject wale din theek karke <b>save</b> karo, phir HOD ko dobara bhejo.</div>' +
+        '<div class="tw" style="margin-top:10px"><table><thead><tr><th>Din</th><th>Bhara</th><th>Save</th></tr></thead><tbody>' +
+        rejD.map(function (k) {
+          var r2 = Pjp.days[k] || {}, ok = ready.indexOf(k) >= 0;
+          return '<tr><td>' + dmy(k) + '</td>' +
+            '<td>' + (ok ? '<span class="pill p-ok">Poora</span>' : '<span class="pill p-bad">Adhoora</span>') + '</td>' +
+            '<td>' + (Pjp.savedAt[k] ? esc(Pjp.savedAt[k]) : '<span class="hint">—</span>') + '</td></tr>';
+        }).join('') + '</tbody></table></div>' +
+        '<div class="btns"><button class="btn ok" onclick="Pjp.saveAll(this)">Sab save karo</button></div>' +
+        '<div class="btns"><button class="btn" onclick="Pjp.submit(this)"' +
+          (ready.length === rejD.length ? '' : ' disabled') + '>HOD ko dobara bhejo</button></div>' +
+        (ready.length === rejD.length ? '' :
+          '<div class="hint" style="margin-top:6px;color:#b7791f">! Pehle har reject wale din ka Town aur ' +
+          'Beat bharo — tabhi dobara bhej paoge.</div>') + '</div>';
+    }
     return h;
   },
   after: function () { Flush.reg('pjp', Pjp.flush); },
@@ -4428,6 +4478,31 @@ var Pjp = {
     clearTimeout(Pjp._t);
     if (k === 'ww' || k === 'st') { Pjp.flush(); render(); }        /* dropdown = discrete choice, save now */
     else Pjp._t = setTimeout(Pjp.flush, 1200);                      /* typing = debounce */
+  },
+  /* which days the rep has explicitly saved in this sitting — shown on the row, so "did it save?"
+     is answerable without leaving the screen */
+  savedAt:{},
+  /* an explicit Save. Autosave already runs on a 1.2s debounce, but a rep fixing two rejected days
+     wants to SEE that both are stored before he sends the month back. */
+  /* the send-again summary has to be honest about what is filled. A re-render on every keystroke
+     would steal the caret, so it happens when a returned day loses focus — and only in the partial
+     flow, where there are two or three rows, not thirty-one. */
+  touch: function () { if (!Pjp.partial()) return; Pjp.flush(); render(); },
+  saveDay: function (d, el) {
+    Pjp._dirty = true;
+    var p = Pjp.flush();
+    Pjp.savedAt[d] = new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+    return Busy.run('pjpsave_' + d, el, 'Save\u2026', function () {
+      return (p || Promise.resolve()).then(function () { render(); toast('Save ho gaya'); });
+    });
+  },
+  saveAll: function (el) {
+    Pjp._dirty = true;
+    var p = Pjp.flush(), now = new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+    Pjp.rejDays().forEach(function (d) { Pjp.savedAt[d] = now; });
+    return Busy.run('pjpsaveall', el, 'Save\u2026', function () {
+      return (p || Promise.resolve()).then(function () { render(); toast('Sab din save ho gaye'); });
+    });
   },
   flush: function () {
     if (!Pjp._dirty || !Pjp.days) return null;
@@ -6827,7 +6902,10 @@ var Appr = {
   /* Admin/HOD can decide right here, through the SAME handlers the Admin console uses — so the two
      screens can never disagree. Without this an HOD saw "HOD ke paas hai" and had no way to act. */
   ACTABLE:['pjp','dev','tada'],
-  can: function (o) { return Auth.isAdmin() && (o.status === 'pending' || o.status === 'partial') &&
+  /* A partially rejected request is WITH THE REP: he has days to fix and re-send. Until he does,
+     there is nothing for an HOD to approve or reject — and a stray tap would decide a month whose
+     rejected days have already been changed underneath it. */
+  can: function (o) { return Auth.isAdmin() && o.status === 'pending' &&
     Appr.ACTABLE.indexOf(o.act) >= 0; },
   act: function (kind, key, ok) {
     if (kind === 'pjp')  return ok ? Admin.pjpOk(key) : Admin.pjpNo(key);
@@ -7020,6 +7098,10 @@ var Appr = {
         (o.approx ? ' <i>(exact time purane row me save nahi hua tha)</i>' : '') + '</span></div>';
 
       if (o.status === 'partial') {
+        h += '<div class="tl-i wait"><b>' + (Auth.isAdmin() ? 'Rep ke paas hai — wapas aane ka wait'
+          : 'Theek karke dobara bhejna hai') + '</b><span>' +
+          (Auth.isAdmin() ? 'Jab tak rep dobara nahi bhejta, isme kuch decide nahi karna hai.'
+                          : 'PJP tab me sirf reject wale din khule hain.') + '</span></div>';
         h += '<div class="tl-i bad"><b>HOD ne kuch din reject kiye</b><span>' +
           (o.doneT ? esc(Appr.when(o.doneT)) + (o.by ? ' · ' + esc(o.by) : '') : 'Time record nahi hua') +
           '<br>Sirf wo din theek karke dobara bhejo — baaki month waise hi hai.</span></div>';
@@ -7070,7 +7152,7 @@ var Appr = {
        Admin/HOD → not yet decided (or, for an order, not yet moved out of "in process").
        Employee   → it came back REJECTED, so they have to redo something. Their own PENDING request
                     needs nothing from them, so it is not counted anywhere. */
-  todo: function (o) { return Auth.isAdmin() ? (o.status === 'pending' || o.status === 'partial')
+  todo: function (o) { return Auth.isAdmin() ? o.status === 'pending'
     : (o.status === 'rejected' || o.status === 'partial'); },
 
   /* "Approved by Admin" vs "Approved by HOD" — that trail has to be visible */
@@ -7281,11 +7363,15 @@ var Admin = {
         Admin.rejDays(d).map(function (k) { return dmy(k); }).join(', ') +
         ' \u2014 rep sirf yeh din edit kar sakta hai.</span></div></div>' : '') +
       '<div class="btns"><button class="btn ghost sm" onclick="Admin.pjpEmp=&quot;&quot;;render()">\u2039 Sab employee</button>' +
-      (d && st !== 'approved' ?
+      (d && st === 'pending' ?
         '<button class="btn ok sm" onclick="Admin.toBar()">Approve</button>' +
         '<button class="btn bad sm" onclick="Admin.toBar()">Reject</button>' : '') + '</div>' +
-      (d && st !== 'approved' ? '<div class="hint" style="margin-top:6px">Poora plan niche hai \u2014 ' +
+      (d && st === 'pending' ? '<div class="hint" style="margin-top:6px">Poora plan niche hai \u2014 ' +
         'padho, galat din tick karo, phir niche se decide karo.</div>' : '') +
+      (d && st === 'partial' ? '<div class="banner b" style="margin-top:8px"><span></span><div>' +
+        '<b>Rep ke paas hai</b><br><span style="font-weight:500">' + Admin.rejDays(d).length +
+        ' din wapas bheje hue hain — rep theek karke dobara bhejega, tab approve kar sakte ho.' +
+        '</span></div></div>' : '') +
       '</div>' +
       (d ? Admin.pjpDays(d.Key, true) : '');
 
@@ -7444,7 +7530,9 @@ var Admin = {
      act on it. `Reject only the selected days` appears the moment a day is ticked. */
   pjpBar: function (key, pos) {
     var d = DB.find('PjpDraft', key); if (!d) return '';
-    if (Appr.norm(d.Status) === 'approved') return '';
+    /* only a PENDING month is the HOD's to decide. Approved is finished; partially rejected and fully
+       rejected are both back with the rep. */
+    if (Appr.norm(d.Status) !== 'pending') return '';
     var n = Admin.selN(key), q = esc(key), jk = Appr.jid(key) + '_' + pos;
     return '<div class="card pjp-bar" onclick="event.stopPropagation()">' +
       '<div class="c-h"><h3>Ab decide karo</h3><span class="pill ' + (n ? 'p-bad' : 'p-grey') +
@@ -7472,7 +7560,7 @@ var Admin = {
     var d = DB.find('PjpDraft', key); if (!d) return '';
     var days = {}; try { days = JSON.parse(d.DaysJson || '{}') || {}; } catch (e) {}
     var rej = Admin.rejDays(d);
-    var st = Appr.norm(d.Status), can = act && Auth.isAdmin() && st !== 'approved';
+    var st = Appr.norm(d.Status), can = act && Auth.isAdmin() && st === 'pending';
     var list = Object.keys(days).sort();
     if (!list.length) return '<div class="hint">Is draft me koi din nahi hai.</div>';
 
