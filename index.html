@@ -370,6 +370,9 @@ td.num,th.num{text-align:right}
 .dr-b{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
 .ck{flex:0 0 auto;padding:2px 0}
 .ck input{width:20px;height:20px;accent-color:var(--bad)}
+/* the decide-here bar: same three choices above and below the day list */
+.pjp-bar{position:relative}
+.pjp-bar .btns{margin-top:8px}
 .pva{padding:9px 0;border-bottom:1px solid var(--line)}
 .pva:last-child{border-bottom:0}
 .pva-h{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
@@ -1721,6 +1724,16 @@ I18n.D.en = I18n.EN = {
   'Reject selected days':'Reject selected days',
   'selected days':'selected days',
   'Master_PJP me':'In Master_PJP',
+  'din select kiye hain':'days selected',
+  'Sirf yehi din reject honge — baaki month approve rahega.':'Only these days will be rejected — the rest of the month stays approved.',
+  'Select kiye din reject karo':'Reject the selected days',
+  'Sirf ye ':'Reject only these ',
+  'din reject karo':'days',
+  'Poora PJP approve':'Approve the whole PJP',
+  'Poora PJP reject':'Reject the whole PJP',
+  'Sirf yeh ek din reject karo':'Reject only this one day',
+  'Ek din select kiya hai':'One day selected',
+  'Jo din galat hai unke box tick karo, phir niche wala reject button dabao. Ya Edit dabakar khud theek kar do.':'Tick the box on each day that is wrong, then press the reject button below. Or press Edit and fix it yourself.',
   'Order punch karo':'Punch the order',
   /* live updates + the read-only plan / waiting screen */
   'HOD ne approve kar diya — aage badho':'The HOD approved it — carry on',
@@ -2496,6 +2509,13 @@ var Router = {
   }
 };
 function render() {
+  /* ── a re-render must NOT move the page ──
+     Almost every action ends in render(): ticking a checkbox, changing a status, saving a note. The
+     screen is rebuilt from scratch, and the browser used to land the reader back at the top — so
+     ticking day 25 of a 31-day list meant scrolling down again to tick day 26. The scroll position is
+     restored right after the paint, while layout is still synchronous.
+     A real tab change still starts at the top: Router.go scrolls AFTER calling render(). */
+  var y = window.pageYOffset || document.documentElement.scrollTop || 0;
   var f = ({ home:Home, pjp:Pjp, plan:Plan, field:Field, sec:Sec, posm:Posm, trk:Trk, eod:Eod,
              appr:Appr, admin:Admin })[Router.cur];
   /* first ever paint and the data is still on its way — show a skeleton, never blank cards */
@@ -2503,6 +2523,7 @@ function render() {
   if (f && !DB.pulledAt && Api.n > 0) { $('view').innerHTML = I18n.tr(UI.skel()); return; }
   if (f) { try { $('view').innerHTML = I18n.tr(f.html()); if (f.after) f.after(); } catch (e) { $('view').innerHTML =
     '<div class="card"><h3>! Screen error</h3><div class="sub">' + esc(e.message) + '</div></div>'; } }
+  if (y > 0 && (window.pageYOffset || document.documentElement.scrollTop || 0) !== y) window.scrollTo(0, y);
 }
 
 /* ═══════════════ UI kit ═══════════════ */
@@ -3569,8 +3590,10 @@ var Home = {
   after: function () {
     var s = $('hm_chips'); if (!s) return;
     s.classList.toggle('fit', s.scrollWidth <= s.clientWidth + 2);
+    /* centre the active chip HORIZONTALLY only. scrollIntoView moves the nearest scrollable
+       ancestor on BOTH axes, which meant the page jumped to the chip row on every re-render. */
     var on = s.querySelector('[data-on="1"]');
-    if (on && on.scrollIntoView) on.scrollIntoView({ block:'nearest', inline:'center' });
+    if (on) s.scrollLeft = Math.max(0, on.offsetLeft - (s.clientWidth - on.offsetWidth) / 2);
   },
   go: function (v) { Home.view = v; render(); Home.after(); },
   setPer: function (p) { Home.per = p; render(); },
@@ -3967,7 +3990,7 @@ var Pjp = {
     var q = "'" + d + "','" + kind + "'";
     return '<select class="in" id="pj_' + kind + '_' + d + '" onchange="Pjp.pick(' + q + ',this)">' +
       '<option value="">— select —</option>' +
-      list.map(function (x) { return '<option' + (x === cur ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') +
+      list.map(function (x) { return '<option value="' + esc(x) + '"' + (x === cur ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') +
       '<option value="' + Plan.ADD + '"' + (isNew ? ' selected' : '') + '>add new…</option></select>' +
       '<input class="in" id="pj_' + kind + 'n_' + d + '" style="margin-top:5px;display:' + (isNew ? '' : 'none') +
       '" placeholder="Naya ' + esc(kind === 'city' ? 'town' : kind) + ' likho" value="' + (isNew ? esc(cur) : '') +
@@ -3983,7 +4006,7 @@ var Pjp = {
       var ts = $('pj_city_' + d); if (!ts) return;
       var list = Plan.towns(el.value), cur = (Pjp.days[d] || {}).city || '';
       ts.innerHTML = I18n.tr('<option value="">— select —</option>' +
-        list.map(function (x) { return '<option' + (x === cur ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') +
+        list.map(function (x) { return '<option value="' + esc(x) + '"' + (x === cur ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') +
         '<option value="' + Plan.ADD + '">add new…</option>');
       if (list.indexOf(cur) < 0) { ts.value = ''; Pjp.set(d, 'city', ''); }
     }
@@ -4120,10 +4143,10 @@ var Pjp = {
           (locked ? '<span class="pill p-blue">' + esc(r.ww) + '</span>'
             : '<select class="in" style="width:auto;flex:1;min-width:150px;padding:7px 30px 7px 10px;font-size:12.5px" onchange="Pjp.set(\'' + d + '\',\'ww\',this.value)">' +
               ['Self Working','ME Sales Team','BA Supervisor','Meeting / Activity','Weekly Off','Leave','Sick Leave','HO Holiday']
-              .map(function (o) { return '<option' + (o === r.ww ? ' selected' : '') + '>' + o + '</option>'; }).join('') + '</select>') +
+              .map(function (o) { return '<option value="' + o + '"' + (o === r.ww ? ' selected' : '') + '>' + o + '</option>'; }).join('') + '</select>') +
           (f ? (locked ? '<span class="pill p-grey">' + esc(r.st || 'HQ') + '</span>'
             : '<select class="in" style="width:auto;padding:7px 30px 7px 10px;font-size:12.5px" onchange="Pjp.set(\'' + d + '\',\'st\',this.value)">' +
-              ['HQ','Ex-HQ','Outstation'].map(function (o) { return '<option' + (o === (r.st || 'HQ') ? ' selected' : '') + '>' + o + '</option>'; }).join('') + '</select>') : '') +
+              ['HQ','Ex-HQ','Outstation'].map(function (o) { return '<option value="' + o + '"' + (o === (r.st || 'HQ') ? ' selected' : '') + '>' + o + '</option>'; }).join('') + '</select>') : '') +
         '</div>' +
         (f ? (locked ? '<div class="sub">' + esc(r.state ? r.state + ' · ' : '') + esc(r.city || '—') + ' · ' + esc(r.beat || '—') + '</div>'
           : Pjp.geo(d, r) +
@@ -4137,7 +4160,7 @@ var Pjp = {
   set: function (d, k, v) {
     if (!Pjp.days) Pjp.load();
     if (!Pjp.days[d]) Pjp.days[d] = { ww:(new Date(d + 'T00:00:00').getDay() === 0 ? 'Weekly Off' : 'Self Working'), state:'', city:'', beat:'', st:'HQ' };
-    Pjp.days[d][k] = v;
+    Pjp.days[d][k] = k === 'ww' ? Pjp.ww(v) : v;
     Pjp._dirty = true;
     clearTimeout(Pjp._t);
     if (k === 'ww' || k === 'st') { Pjp.flush(); render(); }        /* dropdown = discrete choice, save now */
@@ -4290,7 +4313,7 @@ var Plan = {
     var isNew = cur && list.indexOf(cur) < 0;
     return '<select class="in" id="pl_' + kind + '_sel" onchange="Plan.other(\'' + kind + '\',this)">' +
       (list.length ? '' : '<option value="">— master me kuch nahi mila —</option>') +
-      list.map(function (x) { return '<option' + (x === cur ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') +
+      list.map(function (x) { return '<option value="' + esc(x) + '"' + (x === cur ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') +
       '<option value="' + Plan.ADD + '"' + (isNew ? ' selected' : '') + '>add new…</option>' +
       '</select>' +
       '<div id="pl_' + kind + '_add" style="display:' + (isNew || !list.length ? '' : 'none') + ';margin-top:6px">' +
@@ -4309,7 +4332,7 @@ var Plan = {
     var sel = $('pl_town_sel'); if (!sel) return;
     var list = Plan.towns(state);
     sel.innerHTML = I18n.tr((list.length ? '' : '<option value="">— master me kuch nahi mila —</option>') +
-      list.map(function (x) { return '<option>' + esc(x) + '</option>'; }).join('') +
+      list.map(function (x) { return '<option value="' + esc(x) + '">' + esc(x) + '</option>'; }).join('') +
       '<option value="' + Plan.ADD + '"> Add new…</option>');
     if (!list.length) sel.value = Plan.ADD;
     Plan.other('town', sel);
@@ -4318,7 +4341,7 @@ var Plan = {
     var sel = $('pl_beat_sel'); if (!sel) return;
     var list = Plan.beats(town);
     sel.innerHTML = I18n.tr((list.length ? '' : '<option value="">— master me kuch nahi mila —</option>') +
-      list.map(function (x) { return '<option>' + esc(x) + '</option>'; }).join('') +
+      list.map(function (x) { return '<option value="' + esc(x) + '">' + esc(x) + '</option>'; }).join('') +
       '<option value="' + Plan.ADD + '"> Add new…</option>');
     if (!list.length) sel.value = Plan.ADD;
     var box = $('pl_beat_add'); if (box) box.style.display = sel.value === Plan.ADD ? '' : 'none';
@@ -4340,10 +4363,10 @@ var Plan = {
     if (ww === 'Meeting / Activity')
       return '<label class="f">Meeting / Activity type <span class="req">*</span></label>' +
         '<select class="in" id="pl_act"><option value="">Type chuno…</option>' +
-        Plan.ACT.map(function (a) { return '<option' + (d.act === a ? ' selected' : '') + '>' + esc(a) + '</option>'; }).join('') +
+        Plan.ACT.map(function (a) { return '<option value="' + esc(a) + '"' + (d.act === a ? ' selected' : '') + '>' + esc(a) + '</option>'; }).join('') +
         '</select>' +
         '<div class="row two"><div><label class="f">Duration</label><select class="in" id="pl_dur">' +
-        Plan.DUR.map(function (x) { return '<option' + (d.dur === x ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') +
+        Plan.DUR.map(function (x) { return '<option value="' + esc(x) + '"' + (d.dur === x ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') +
         '</select></div>' +
         '<div><label class="f">Remark <span class="req">*</span></label>' +
         '<input class="in" id="pl_rmk" value="' + esc(d.rmk || '') + '" placeholder="Short remark"></div></div>';
@@ -4786,15 +4809,15 @@ var Field = {
     h += '<div class="card"><h3><span class="ic">' + (++sN) + '</span>Product add karo</h3>' +
       '<div class="row two" style="margin-top:10px">' +
         '<select class="in" id="f_brand" onchange="Field.onBrand()"><option value="">Sab brand</option>' +
-          Field.uniq('Brand').map(function (b) { return '<option>' + esc(b) + '</option>'; }).join('') + '</select>' +
+          Field.uniq('Brand').map(function (b) { return '<option value="' + esc(b) + '">' + esc(b) + '</option>'; }).join('') + '</select>' +
         '<select class="in" id="f_msl" onchange="Field.renderProds()"><option value="">All SKU</option><option>MSL</option><option>Non-MSL</option></select>' +
       '</div>' +
       /* Category and Sub-category: the rep thinks in "face wash", not in SKU codes */
       '<div class="row two" style="margin-top:8px">' +
         '<select class="in" id="f_cat" onchange="Field.onCat()"><option value="">Sab category</option>' +
-          Field.uniq('Category').map(function (c) { return '<option>' + esc(c) + '</option>'; }).join('') + '</select>' +
+          Field.uniq('Category').map(function (c) { return '<option value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('') + '</select>' +
         '<select class="in" id="f_sub" onchange="Field.renderProds()"><option value="">Sab sub-category</option>' +
-          Field.uniq('SubCategory').map(function (c) { return '<option>' + esc(c) + '</option>'; }).join('') + '</select>' +
+          Field.uniq('SubCategory').map(function (c) { return '<option value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('') + '</select>' +
       '</div>' +
       '<input class="in" id="f_psearch" placeholder=" Product name ya code" oninput="Field.renderProds()" style="margin-top:10px">' +
       '<div id="f_prods" class="slist"></div></div>';
@@ -4894,7 +4917,7 @@ var Field = {
     var cur = sel.value;
     var list = Field.uniq('Category', function (p) { return !b || String(p.Brand) === b; });
     sel.innerHTML = '<option value="">Sab category</option>' +
-      list.map(function (c) { return '<option' + (c === cur ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('');
+      list.map(function (c) { return '<option value="' + esc(c) + '"' + (c === cur ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('');
     Field.fillSubs();
   },
   fillSubs: function () {
@@ -4903,7 +4926,7 @@ var Field = {
     var list = Field.uniq('SubCategory', function (p) {
       return (!b || String(p.Brand) === b) && (!c || String(p.Category) === c); });
     sel.innerHTML = '<option value="">Sab sub-category</option>' +
-      list.map(function (x) { return '<option' + (x === cur ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('');
+      list.map(function (x) { return '<option value="' + esc(x) + '"' + (x === cur ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('');
   },
   renderProds: function () {
     var box = $('f_prods'); if (!box) return;
@@ -6064,7 +6087,7 @@ var Posm = {
       Ib:['Agency','Distributor','Sales Team'], Vb:['BDE','ASM','RSM'] };
     var sel = function (id, arr, lbl, req) {
       return '<div><label class="f">' + lbl + (req ? ' <span class="req">*</span>' : '') + '</label><select class="in" id="' + id + '">' +
-        '<option value="">— Select —</option>' + arr.map(function (o) { return '<option>' + esc(o) + '</option>'; }).join('') + '</select></div>'; };
+        '<option value="">— Select —</option>' + arr.map(function (o) { return '<option value="' + esc(o) + '">' + esc(o) + '</option>'; }).join('') + '</select></div>'; };
     return '<div class="card"><h3><span class="ic"></span>Store audit</h3>' +
       '<div class="row two">' + sel('pa_el', S.El, 'POSM element', 1) + sel('pa_ty', S.Ty, 'POSM type') + '</div>' +
       '<div class="row two">' + sel('pa_lo', S.Lo, 'Install location') + sel('pa_br', S.Br, 'Honasa brand', 1) + '</div>' +
@@ -6121,11 +6144,11 @@ var Posm = {
     return '<div class="card"><h3><span class="ic"></span>POSM requirement</h3>' +
       '<label class="f">Kya POSM chahiye? <span class="req">*</span></label>' +
       '<select class="in" id="pr_need" onchange="Posm.need=this.value;render()">' +
-        ['Yes','No'].map(function (o) { return '<option' + (Posm.need === o ? ' selected' : '') + '>' + o + '</option>'; }).join('') +
+        ['Yes','No'].map(function (o) { return '<option value="' + o + '"' + (Posm.need === o ? ' selected' : '') + '>' + o + '</option>'; }).join('') +
       '</select>' +
       '<label class="f">Kaunsa element</label><select class="in" id="pr_el">' +
         ['Wobbler','Shelf Strip','Dangler','Poster','Standee','FSU','CTU','Vinyl','Glow Sign','Other']
-        .map(function (o) { return '<option>' + o + '</option>'; }).join('') + '</select>' +
+        .map(function (o) { return '<option value="' + o + '">' + o + '</option>'; }).join('') + '</select>' +
       '<label class="f">Remarks <span class="req">*</span></label><textarea class="in" id="pr_rm" rows="2" placeholder="Kyun chahiye / store ka kya kehna hai"></textarea>' +
       Posm.reqPhotos() +
       '<div class="banner w" id="pr_need_note" style="margin-top:10px;display:' + (Posm.reqReady() ? 'none' : '') + '">' +
@@ -6753,8 +6776,10 @@ var Admin = {
   chips: function () {
     var s = $('ad_chips'); if (!s) return;
     s.classList.toggle('fit', s.scrollWidth <= s.clientWidth + 2);
+    /* centre the active chip HORIZONTALLY only. scrollIntoView moves the nearest scrollable
+       ancestor on BOTH axes, which meant the page jumped to the chip row on every re-render. */
     var on = s.querySelector('[data-on="1"]');
-    if (on && on.scrollIntoView) on.scrollIntoView({ block:'nearest', inline:'center' });
+    if (on) s.scrollLeft = Math.max(0, on.offsetLeft - (s.clientWidth - on.offsetWidth) / 2);
   },
 
   kpi: function () {
@@ -6913,16 +6938,7 @@ var Admin = {
         Admin.rejDays(d).length + ' din reject kiye hue hain</b><br><span style="font-weight:500">' +
         Admin.rejDays(d).map(function (k) { return dmy(k); }).join(', ') +
         ' \u2014 rep sirf yeh din edit kar sakta hai.</span></div></div>' : '') +
-      '<div class="btns"><button class="btn ghost sm" onclick="Admin.pjpEmp=&quot;&quot;;render()">\u2039 Sab employee</button>' +
-      (d && st !== 'approved' ? '<button class="btn ok sm" onclick="Admin.pjpOk(&quot;' + esc(d.Key) + '&quot;)">Approve poora month</button>' +
-        '<button class="btn bad sm" id="pjp_part_' + Appr.jid(d.Key) + '" ' + (Admin.selN(d.Key) ? '' : 'disabled') +
-          ' onclick="Admin.pjpPart(&quot;' + esc(d.Key) + '&quot;)">' +
-          (Admin.selN(d.Key) ? 'Reject ' + Admin.selN(d.Key) + ' selected days' : 'Reject selected days') + '</button>' +
-        '<button class="btn ghost sm" onclick="Admin.pjpNo(&quot;' + esc(d.Key) + '&quot;)">Poora month reject</button>' : '') +
-      '</div>' +
-      (d && st !== 'approved' ? '<div class="hint" style="margin-top:6px">' +
-        'Jo din galat hai use tick karke reject selected days dabao. Baaki month waise hi rahega. ' +
-        'Ya Edit dabakar khud theek kar do, phir approve kar do.</div>' : '') +
+      '<div class="btns"><button class="btn ghost sm" onclick="Admin.pjpEmp=&quot;&quot;;render()">\u2039 Sab employee</button></div>' +
       '</div>' +
       (d ? Admin.pjpDays(d.Key, true) : '');
 
@@ -6973,7 +6989,7 @@ var Admin = {
       '</select></div>' +
       '<div><label class="f">Employee</label><select class="in" onchange="Admin.picsEmp=this.value;render()">' +
         '<option value="">Sab employee</option>' +
-        emps.map(function (e) { return '<option' + (e === emp ? ' selected' : '') + '>' + esc(e) + '</option>'; }).join('') +
+        emps.map(function (e) { return '<option value="' + esc(e) + '"' + (e === emp ? ' selected' : '') + '>' + esc(e) + '</option>'; }).join('') +
       '</select></div></div></div>';
 
     var rows = all.filter(function (p) { return toISO(p.Date) === day && (!emp || String(p.Employee || '') === emp); });
@@ -7051,12 +7067,48 @@ var Admin = {
   sel: function (key) { return (Admin.pjpSel[key] = Admin.pjpSel[key] || {}); },
   selN: function (key) { var s = Admin.sel(key); return Object.keys(s).filter(function (k) { return s[k]; }).length; },
   tick: function (key, d, on) { Admin.sel(key)[d] = !!on; Admin.selCount(key); },
-  /* update the button labels without a re-render — a re-render would collapse the day editor */
+  /* update every copy of the button without a re-render — a re-render would collapse the day editor
+     and lose the scroll position mid-selection */
+  selLbl: function (n) {
+    return !n ? 'Select kiye din reject karo'
+      : n === 1 ? 'Sirf yeh ek din reject karo' : 'Sirf ye ' + n + ' din reject karo';
+  },
   selCount: function (key) {
-    var n = Admin.selN(key), b = $('pjp_part_' + Appr.jid(key));
-    if (b) { b.disabled = !n; b.innerHTML = I18n.tr(n ? 'Reject ' + n + ' selected days' : 'Reject selected days'); }
+    var n = Admin.selN(key), jk = Appr.jid(key);
+    var txt = I18n.s(Admin.selLbl(n));
+    var all = document.querySelectorAll('.pjp-sel[data-k="' + jk + '"]');
+    for (var i = 0; i < all.length; i++) { all[i].disabled = !n; all[i].innerHTML = txt; }
   },
   edit: function (key, d) { Admin.pjpOpen = Admin.pjpOpen === key + '|' + d ? '' : key + '|' + d; render(); },
+
+  /* Approve / reject, as a row of buttons. Rendered ABOVE the day list and again BELOW it, because
+     the decision is taken at the bottom of a 31-day list and nobody should have to scroll back up to
+     act on it. `Reject only the selected days` appears the moment a day is ticked. */
+  pjpBar: function (key, pos) {
+    var d = DB.find('PjpDraft', key); if (!d) return '';
+    if (Appr.norm(d.Status) === 'approved') return '';
+    var n = Admin.selN(key), q = esc(key), jk = Appr.jid(key) + '_' + pos;
+    return '<div class="card pjp-bar" onclick="event.stopPropagation()">' +
+      (n ? '<div class="banner r" style="margin:0 0 8px"><span>' + n + '</span><div><b>' +
+        (n === 1 ? 'Ek din select kiya hai' : n + ' din select kiye hain') +
+        '</b><br><span style="font-weight:500">Sirf yehi din reject honge — ' +
+        'baaki month approve rahega.</span></div></div>' : '') +
+      '<div class="btns" style="margin-top:0">' +
+        '<button class="btn bad pjp-sel" data-k="' + Appr.jid(key) + '" id="pjp_part_' + jk + '"' +
+          (n ? '' : ' disabled') + ' onclick="Admin.pjpPart(&quot;' + q + '&quot;)">' +
+          Admin.selLbl(n) + '</button>' +
+      '</div>' +
+      '<div class="btns">' +
+        '<button class="btn ok" onclick="Admin.pjpOk(&quot;' + q + '&quot;)">Poora PJP approve</button>' +
+        '<button class="btn ghost" onclick="Admin.pjpNo(&quot;' + q + '&quot;)">Poora PJP reject</button>' +
+      '</div>' +
+      /* ONE sentence in ONE string: quoting the button's own label inside it meant the label got
+         translated as a fragment and the sentence came out half English ("press sirf ye days below") */
+      (pos === 'top' ? '<div class="hint" style="margin-top:6px">' +
+        'Jo din galat hai unke box tick karo, phir niche wala reject button dabao. ' +
+        'Ya Edit dabakar khud theek kar do.</div>' : '') +
+      '</div>';
+  },
 
   /* an HOD editing a rep's plan must be offered the REP's towns, not their own */
   pjpDays: function (key, act) {
@@ -7068,8 +7120,9 @@ var Admin = {
     if (!list.length) return '<div class="hint">Is draft me koi din nahi hai.</div>';
 
     var DAY = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    var jk = Appr.jid(key), sel = Admin.sel(key);
-    var h = '<div class="sec-title">Poora plan \u2014 ' + list.length + ' din</div><div class="card">';
+    var sel = Admin.sel(key);
+    var h = (can ? Admin.pjpBar(key, 'top') : '') +
+      '<div class="sec-title">Poora plan \u2014 ' + list.length + ' din</div><div class="card">';
     list.forEach(function (k) {
       var r = days[k] || {}, ww = Pjp.ww(r.ww), f = Pjp.isField(ww);
       var bad = rej.indexOf(k) >= 0, open = Admin.pjpOpen === key + '|' + k;
@@ -7089,6 +7142,8 @@ var Admin = {
         '</div>';
     });
     h += '</div>';
+    /* the same three choices again, right where the reader finishes the list */
+    h += can ? Admin.pjpBar(key, 'bot') : '';
     return h;
   },
   /* the HOD's own editor for one day — the same three fields the rep fills, mapped to the REP */
@@ -7106,13 +7161,13 @@ var Admin = {
         '<div><label class="f">State</label>' +
           '<select class="in" onchange="Admin.setDay(' + q + ',\'state\',this.value)">' +
           '<option value="">— select —</option>' +
-          states.map(function (x) { return '<option' + (x === stt ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') +
+          states.map(function (x) { return '<option value="' + esc(x) + '"' + (x === stt ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') +
           '</select></div>' +
         '<div><label class="f">Town / City</label>' +
           '<select class="in" onchange="Admin.setDay(' + q + ',\'city\',this.value)">' +
           '<option value="">— select —</option>' +
           Plan.townsOf(code, stt).map(function (x) {
-            return '<option' + (x === r.city ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') +
+            return '<option value="' + esc(x) + '"' + (x === r.city ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') +
           (r.city && Plan.townsOf(code, stt).indexOf(r.city) < 0 ? '<option selected>' + esc(r.city) + '</option>' : '') +
           '</select></div></div>' +
         '<label class="f">Beat / Market</label>' +
@@ -7232,7 +7287,7 @@ var Admin = {
     if (q) rows = rows.filter(function (r) { return JSON.stringify(r).toUpperCase().indexOf(q) >= 0; });
     var cols = rows.length ? Object.keys(rows[0]).filter(function (c) { return c !== 'LastSync'; }).slice(0, 9) : [];
     var h = '<div class="card"><label class="f">Tab</label><select class="in" onchange="Admin.dtab=this.value;render()">' +
-      tabs.map(function (t) { return '<option' + (t === cur ? ' selected' : '') + '>' + t + '</option>'; }).join('') + '</select>' +
+      tabs.map(function (t) { return '<option value="' + t + '"' + (t === cur ? ' selected' : '') + '>' + t + '</option>'; }).join('') + '</select>' +
       '<input class="in" style="margin-top:8px" placeholder=" Kuch bhi search karo" value="' + esc(Admin.dq || '') +
       '" oninput="Admin.dq=this.value;clearTimeout(Admin._t);Admin._t=setTimeout(render,400)">' +
       '<div class="hint" style="margin-top:6px">' + rows.length + ' rows</div>' +
