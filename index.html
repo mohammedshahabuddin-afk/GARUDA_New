@@ -130,6 +130,9 @@ select.in{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xml
    (margin-top:10px) or a .sec-title (16px) still spaces correctly, never doubled. */
 .kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
 @media(min-width:560px){.kpis{grid-template-columns:repeat(4,1fr)}}
+/* a THREE-number strip must not read as "two and a leftover" on a phone */
+.kpis.k3{grid-template-columns:repeat(3,1fr)}
+@media(min-width:560px){.kpis.k3{grid-template-columns:repeat(3,1fr)}}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px;box-shadow:var(--sh)}
 .kpi{min-width:0}
 .kpi b{display:block;font-size:clamp(16px,5.4vw,22px);line-height:1.15;letter-spacing:-.02em;overflow-wrap:anywhere}
@@ -194,6 +197,10 @@ td.num,th.num{text-align:right}
 .nav button.on{color:var(--blue)}
 .nav button span:not(.g):not(.badge){max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nav button.lk{opacity:.42}
+/* a deadline the rep cannot see anywhere else: the PJP window is open and the plan is not in yet */
+.nav button.hot{color:var(--warn)}
+.nav button.hot:not(.on)::after{content:'';position:absolute;top:5px;left:50%;margin-left:12px;
+  width:6px;height:6px;border-radius:50%;background:var(--warn)}
 @media(min-width:900px){
   body{padding-bottom:0;padding-left:216px}
   .nav{top:0;bottom:0;right:auto;width:216px;flex-direction:column;border-top:0;border-right:1px solid var(--line);padding:12px 8px}
@@ -347,6 +354,36 @@ td.num,th.num{text-align:right}
 .chips.fit{-webkit-mask-image:none;mask-image:none}
 
 /* ── segmented control + locked field + focus box: the previous app's Plan layout ── */
+/* ── dashboard: tiny SVG charts, plan-vs-achieved bars, share rows ── */
+.cht{width:100%;height:132px;display:block}
+.cht .cg{stroke:var(--line);stroke-width:1}
+.cht .cl{font-size:8.5px;fill:var(--ink-3);font-weight:600}
+.cht .cv{font-size:8.5px;fill:var(--ink);font-weight:700}
+.drow{border-bottom:1px solid var(--line);padding:9px 0}
+.drow:last-child{border-bottom:0}
+.drow.bad{background:#fff6f5;margin:0 -14px;padding:9px 14px}
+.drow.op{background:#f7f9ff;margin:0 -14px;padding:9px 14px}
+.dr-h{display:flex;gap:8px;align-items:flex-start}
+.dr-h .m{flex:1;min-width:0}
+.dr-h .t{font-weight:700;font-size:13px}
+.dr-h .s{font-size:11.5px;color:var(--ink-3);font-weight:600;margin-top:2px}
+.dr-b{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
+.ck{flex:0 0 auto;padding:2px 0}
+.ck input{width:20px;height:20px;accent-color:var(--bad)}
+.pva{padding:9px 0;border-bottom:1px solid var(--line)}
+.pva:last-child{border-bottom:0}
+.pva-h{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.pva-h b{font-size:12.5px;display:block}
+.pva-h i{font-size:10.5px;color:var(--ink-3);font-style:normal;font-weight:600}
+.pva-n{text-align:right;font-size:15px;font-weight:800;color:var(--blue);white-space:nowrap}
+.pva-n span{font-size:11px;color:var(--ink-3);font-weight:600;margin-left:3px}
+.pbar{height:7px;background:var(--line);border-radius:6px;margin-top:5px;overflow:hidden}
+.pbar i{display:block;height:100%;background:var(--blue);border-radius:6px}
+.pbar i.g{background:var(--ok)} .pbar i.w{background:var(--warn)} .pbar i.r{background:var(--bad)}
+.srow{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;font-weight:600}
+.srow i{font-style:normal;color:var(--ink-3);font-weight:600}
+#app tr.tot td{background:#f4f7fc;border-top:2px solid var(--line)}
+#app tr.me td{background:#eef4ff}
 .seg{display:flex;gap:6px;background:#eef1f6;border-radius:12px;padding:4px;margin-top:10px}
 .seg button{flex:1;border:0;background:0;border-radius:9px;padding:9px 8px;font-size:12.5px;font-weight:700;
   color:var(--ink-2);min-height:38px}
@@ -832,6 +869,7 @@ I18n.D.hi = {
   'Sick Leave':'बीमारी की छुट्टी', 'HO Holiday':'HO छुट्टी',
   'Reason':'कारण', 'Remark':'रिमार्क', 'Nahi':'नहीं', 'Haan':'हाँ', 'Theek hai':'ठीक है',
   'Store select karo':'दुकान चुनें', 'Product add karo':'प्रोडक्ट जोड़ें', 'Shop ka photo':'दुकान का फोटो',
+  'Tracker':'ट्रैकर', 'Performance':'परफॉर्मेंस', 'Summary':'सारांश', 'New outlets':'नए आउटलेट', 'Orders':'ऑर्डर',
   'Naya outlet':'नया आउटलेट', 'Remarks':'रिमार्क्स', 'Aaj':'आज', 'Total':'कुल',
   'Mere orders':'मेरे ऑर्डर', 'Mera performance':'मेरा परफॉर्मेंस', 'Meri requests':'मेरी रिक्वेस्ट',
   'EOD — din close karo':'EOD — दिन बंद करें', 'Aaj ka kaam':'आज का काम', 'Visits':'विज़िट',
@@ -857,6 +895,7 @@ I18n.D.bn = {
   'add new…':'নতুন যোগ করুন…', 'Self Working':'নিজে কাজ', 'Leave':'ছুটি', 'Weekly Off':'সাপ্তাহিক ছুটি',
   'Reason':'কারণ', 'Remark':'মন্তব্য', 'Nahi':'না', 'Haan':'হ্যাঁ', 'Theek hai':'ঠিক আছে',
   'Store select karo':'দোকান বাছুন', 'Product add karo':'পণ্য যোগ করুন', 'Shop ka photo':'দোকানের ছবি',
+  'Tracker':'ট্র্যাকার', 'Performance':'পারফরম্যান্স', 'Summary':'সারসংক্ষেপ', 'New outlets':'নতুন আউটলেট', 'Orders':'অর্ডার',
   'Naya outlet':'নতুন আউটলেট', 'Remarks':'মন্তব্য', 'Aaj':'আজ', 'Total':'মোট',
   'Mere orders':'আমার অর্ডার', 'Mera performance':'আমার পারফরম্যান্স', 'Meri requests':'আমার অনুরোধ',
   'Visits':'ভিজিট', 'Pending':'বাকি', 'Done':'হয়েছে',
@@ -878,6 +917,7 @@ I18n.D.ta = {
   'add new…':'புதிதாக சேர்…', 'Self Working':'தனியாக வேலை', 'Leave':'விடுப்பு', 'Weekly Off':'வார விடுமுறை',
   'Reason':'காரணம்', 'Remark':'குறிப்பு', 'Nahi':'இல்லை', 'Haan':'ஆம்', 'Theek hai':'சரி',
   'Store select karo':'கடையை தேர்வு செய்', 'Product add karo':'பொருள் சேர்', 'Shop ka photo':'கடையின் புகைப்படம்',
+  'Tracker':'டிராக்கர்', 'Performance':'செயல்திறன்', 'Summary':'சுருக்கம்', 'New outlets':'புதிய கடைகள்', 'Orders':'ஆர்டர்கள்',
   'Naya outlet':'புதிய கடை', 'Remarks':'குறிப்புகள்', 'Aaj':'இன்று', 'Total':'மொத்தம்',
   'Mere orders':'என் ஆர்டர்கள்', 'Mera performance':'என் செயல்திறன்', 'Meri requests':'என் கோரிக்கைகள்',
   'Visits':'வருகைகள்', 'Pending':'நிலுவை', 'Done':'முடிந்தது',
@@ -899,6 +939,7 @@ I18n.D.te = {
   'add new…':'కొత్తది జోడించు…', 'Self Working':'స్వయంగా పని', 'Leave':'సెలవు', 'Weekly Off':'వారపు సెలవు',
   'Reason':'కారణం', 'Remark':'వ్యాఖ్య', 'Nahi':'కాదు', 'Haan':'అవును', 'Theek hai':'సరే',
   'Store select karo':'దుకాణం ఎంచుకో', 'Product add karo':'ఉత్పత్తి జోడించు', 'Shop ka photo':'దుకాణం ఫోటో',
+  'Tracker':'ట్రాకర్', 'Performance':'పనితీరు', 'Summary':'సారాంశం', 'New outlets':'కొత్త అవుట్‌లెట్‌లు', 'Orders':'ఆర్డర్‌లు',
   'Naya outlet':'కొత్త అవుట్‌లెట్', 'Remarks':'వ్యాఖ్యలు', 'Aaj':'ఈరోజు', 'Total':'మొత్తం',
   'Mere orders':'నా ఆర్డర్లు', 'Mera performance':'నా పనితీరు', 'Meri requests':'నా అభ్యర్థనలు',
   'Visits':'విజిట్లు', 'Pending':'పెండింగ్', 'Done':'పూర్తి',
@@ -920,6 +961,7 @@ I18n.D.or = {
   'add new…':'ନୂଆ ଯୋଡ଼ନ୍ତୁ…', 'Self Working':'ନିଜେ କାମ', 'Leave':'ଛୁଟି', 'Weekly Off':'ସାପ୍ତାହିକ ଛୁଟି',
   'Reason':'କାରଣ', 'Remark':'ମନ୍ତବ୍ୟ', 'Nahi':'ନା', 'Haan':'ହଁ', 'Theek hai':'ଠିକ ଅଛି',
   'Store select karo':'ଦୁକାନ ବାଛନ୍ତୁ', 'Product add karo':'ପ୍ରଡକ୍ଟ ଯୋଡ଼ନ୍ତୁ', 'Shop ka photo':'ଦୁକାନର ଫଟୋ',
+  'Tracker':'ଟ୍ରାକର', 'Performance':'ପ୍ରଦର୍ଶନ', 'Summary':'ସାରାଂଶ', 'New outlets':'ନୂଆ ଆଉଟଲେଟ', 'Orders':'ଅର୍ଡର',
   'Naya outlet':'ନୂଆ ଆଉଟଲେଟ', 'Remarks':'ମନ୍ତବ୍ୟ', 'Aaj':'ଆଜି', 'Total':'ମୋଟ',
   'Mere orders':'ମୋର ଅର୍ଡର', 'Mera performance':'ମୋର ପ୍ରଦର୍ଶନ', 'Meri requests':'ମୋର ଅନୁରୋଧ',
   'Visits':'ଭିଜିଟ', 'Pending':'ବାକି', 'Done':'ହୋଇଗଲା',
@@ -1058,7 +1100,6 @@ I18n.D.en = I18n.EN = {
   'Notify pending':'Notify pending',
   'Pending':'Pending',
   'Done':'Done',
-  'store':'stores',
   'audit':'audits',
 
   /* ── PJP ── */
@@ -1589,6 +1630,97 @@ I18n.D.en = I18n.EN = {
   'POSM REQUIREMENT':'POSM REQUIREMENT',
   'COVERAGE':'COVERAGE',
   'TARGET vs ACHIEVEMENT':'TARGET vs ACHIEVEMENT',
+  'Apne order, naye outlet aur POSM ka status khud update karo. Koi approval nahi — ASM se baat karke jo hua wahi yahan mark kar do, sheet me chala jayega.':'Update the status of your own orders, new outlets and POSM yourself. No approvals — talk to your ASM, mark what actually happened here, and it goes into the sheet.',
+  'Sirf pehle 80 dikha rahe hain — filter use karo.':'Showing the first 80 only — use the filter.',
+  'Note — ASM ne kya kaha':'Note — what the ASM said',
+  'Tracker tab me status update karo':'update the status in the Tracker tab',
+  'Abhi is type ka kuch nahi bhara':'Nothing filled in for this type yet',
+  'Ye row nahi mili — Sync karo':'This row was not found — Sync and try again',
+  'Note save ho gaya':'Note saved',
+  'Is period me kuch nahi':'Nothing in this period',
+  'se chalu':'onwards',
+  'plan din':'plan days',
+  'field din ×':'field days ×',
+  'Plan ka NSO target':'NSO target from the plan',
+  'Month ka NSV target':'Month NSV target',
+  'Planned beat din':'Planned beat days',
+  'Chhoot gaya':'Missed',
+  'din PJP se bahar kaam hua (off-PJP)':'days worked outside the PJP (off-PJP)',
+  'Status Tracker tab se update karo — ASM se poochh ke.':'Update the status from the Tracker tab — after checking with your ASM.',
+  'Tracker kholo':'Open Tracker',
+  'Ek bhi order pending nahi — sab billed':'Nothing pending — everything is billed',
+  'MSL data nahi hai':'No MSL data',
+  'Pending — billing baaki':'Pending — billing awaited',
+  'Pending orders — billing nahi hui':'Pending orders — not billed yet',
+  'Is period koi order nahi':'No orders in this period',
+  'Order mila (PC)':'Orders won (PC)',
+  'POSM chahiye':'POSM needed',
+  'EOD file kiye':'EOD filed',
+  'Store visit kiye':'Stores visited',
+  'Jitne store ne order diya':'Stores that gave an order',
+  'Audit kiye':'Audits done',
+  'Team ka data aa raha hai…':'Fetching the team data…',
+  '· sirf totals, kisi ka raw data nahi':'· totals only, nobody’s raw data',
+  'Team view abhi ready nahi':'Team view is not ready yet',
+  'Dobara try karo':'Try again',
+  'Is period me team ka koi kaam record nahi hua':'No team activity recorded in this period',
+  'Mera total':'My total',
+  'Team me rank':'Rank in the team',
+  '— kis ke saath kaam kiya':'— who you worked with',
+  'Din ka bucket us din ke plan ke Working-With se aata hai.':'A day lands in a column according to that day’s plan (Working-With).',
+  'Main akela vs team ke saath':'Me alone vs with the team',
+  'Sirf aapke numbers — kis mode me aap best perform karte ho.':'Your numbers only — which mode you perform best in.',
+  'Server ne mana kar diya — backend.gs dobara deploy karna pad sakta hai':'The server refused — backend.gs may need to be re-deployed',
+  'Internet nahi mila — refresh karke dobara try karo':'No internet — refresh and try again',
+  'PJP window khuli hai (27 se 1 tarikh)':'The PJP window is open (27th to the 1st)',
+  'ka plan abhi bhar ke HOD ko bhej do.':'plan — fill it now and send it to the HOD.',
+  'approve ho gaya':'is approved',
+  'Ab is month me change nahi hoga — agli PJP 27 tarikh se khulegi.':'No more changes this month — the next PJP opens on the 27th.',
+  'Approve hone tak aap edit karke dobara bhej sakte ho — naya request purane ko replace kar dega.':'Until it is approved you can edit and send again — a new request replaces the old one.',
+  'Approve hone tak aap edit karke dobara bhej sakte ho.':'Until it is approved you can edit and send it again.',
+  'Ye month approve ho chuka hai':'This month is already approved',
+  'Naya request bhejna hai?':'Send a new request?',
+  'Purana request cancel ho jayega — HOD ko sirf yehi naya dikhega.':'The old request is cancelled — the HOD only sees this new one.',
+  'Naya request bheja — purana cancel':'New request sent — the old one is cancelled',
+  'ka PJP approve ho gaya — agli PJP 27 tarikh se khulegi':'PJP is approved — the next PJP opens on the 27th',
+  'Dobara bhejo':'Send again',
+  'khud likho':'type it yourself',
+  'Beat / market ka naam':'Beat / market name',
+  'Naya town likho':'Type the new town',
+  'Naya state likho':'Type the new state',
+  'Sab category':'All categories',
+  'Sab sub-category':'All sub-categories',
+  '"Other" (meeting / leave) total me gina jaata hai lekin apna column nahi hai.':'"Other" (meeting / leave) counts in the total but has no column of its own.',
+  '/din':'/day',
+  'Meri approvals':'My approvals',
+  'Sirf dekhne ke liye — jo bheja hai, kab bheja aur kab decision aaya. Kisi bhi request par tap karke detail dekho.':'View only — what you sent, when you sent it and when the decision came. Tap any request for the detail.',
+  'Jo bhi approval ke liye aaya hai — kab bheja, kab decide hua, sab yahan. Kisi bhi request par tap karo.':'Everything sent for approval — when it was sent, when it was decided. Tap any request.',
+  'Poora plan':'Full plan',
+  'HOD ke paas hai':'With the HOD',
+  'HOD ne kuch din reject kiye':'The HOD rejected some days',
+  'Sirf wo din theek karke dobara bhejo — baaki month waise hi hai.':'Fix only those days and send it again — the rest of the month stands.',
+  'PJP tab me sirf reject wale din khule hain — theek karke dobara bhejo.':'Only the rejected days are open in the PJP tab — fix them and send it again.',
+  'reject kiye hue hain':'are rejected',
+  '— rep sirf yeh din edit kar sakta hai.':'— the rep can only edit these days.',
+  'Approve poora month':'Approve the whole month',
+  'Poora month reject':'Reject the whole month',
+  'Jo din galat hai use tick karke reject selected days dabao. Baaki month waise hi rahega. Ya Edit dabakar khud theek kar do, phir approve kar do.':'Tick the days that are wrong and press reject selected days — the rest of the month stands. Or press Edit, fix it yourself, then approve.',
+  'Change turant draft me save ho jata hai — rep ko bhi dikhega.':'The change saves into the draft at once — the rep sees it too.',
+  'Is draft me koi din nahi hai.':'This draft has no days in it.',
+  'Pehle wo din tick karo jo reject karne hain':'First tick the days you want to reject',
+  'din reject karne hain?':'days to reject?',
+  'Baaki din waise hi rahenge — rep sirf yeh din edit kar payega.':'The other days stand — the rep will only be able to edit these.',
+  'Reason (rep ko dikhega)':'Reason (the rep sees this)',
+  'e.g. ye beat pichhle hafte hi kiya tha':'e.g. this beat was already done last week',
+  'din reject — rep ko sirf wahi edit karne milega':'days rejected — the rep can only edit those',
+  'din reject hue hain':'days came back rejected',
+  'Ye din reject hua tha — theek karo':'This day was rejected — fix it',
+  'Sirf yeh din edit ho sakte hain — baaki month approve hai. Theek karke dobara bhej do.':'Only these days can be edited — the rest of the month is approved. Fix them and send it again.',
+  'Theek kiya — dobara bhejo':'Fixed — send again',
+  'Partly rejected':'Partly rejected',
+  'Reject selected days':'Reject selected days',
+  'selected days':'selected days',
+  'Master_PJP me':'In Master_PJP',
   'Order punch karo':'Punch the order',
   /* live updates + the read-only plan / waiting screen */
   'HOD ne approve kar diya — aage badho':'The HOD approved it — carry on',
@@ -2216,6 +2348,9 @@ var Gate = {
     if (v === 'plan')  return l >= 1;
     if (v === 'field') return l >= 2;
     if (v === 'sec' || v === 'posm' || v === 'eod') return l >= 3;
+    /* PJP is a once-a-month job: open until HOD approves the month the window is for, then shut
+       until the 27th comes round again */
+    if (v === 'pjp') return !Pjp.approvedFor(Pjp.winMonth());
     return true;
   },
   why: function (v) {
@@ -2227,6 +2362,7 @@ var Gate = {
       if (ps.s === 'rejected') return 'PJP reject hua — PJP tab me reason dekho aur dobara bhejo';
       return 'Pehle is month ka PJP banao aur HOD se approve karwao';
     }
+    if (v === 'pjp') return monthName(Pjp.winMonth()) + ' ka PJP approve ho gaya — agli PJP 27 tarikh se khulegi';
     if (v === 'field' && l < 2) {
       var p = DB.find('DayPlan', DB.me.code + '_' + today());
       if (p && p.PlanAt && !p.NotifiedAt) return 'Plan HOD ko bhejo (Notify) — tabhi Field khulega';
@@ -2250,6 +2386,8 @@ var Gate = {
 };
 
 /* ═══════════════ NAV + ROUTER ═══════════════ */
+/* Home carries the whole analysis: Dashboard / Calls & stores / Order vs delivery / Team, all of it
+   period-switchable. The month roll-up that used to be its own tab lives inside it now. */
 var TABS = [
   { v:'home',  g:'', t:'Home' },
   { v:'pjp',   g:'', t:'PJP' },
@@ -2257,9 +2395,9 @@ var TABS = [
   { v:'field', g:'', t:'Field' },
   { v:'sec',   g:'', t:'Orders' },
   { v:'posm',  g:'', t:'POSM' },
+  { v:'trk',   g:'', t:'Tracker' },
   { v:'eod',   g:'', t:'EOD' },
-  { v:'sum',   g:'', t:'Summary' },
-  { v:'appr',  g:'', t:'Requests' }
+  { v:'appr',  g:'', t:'Approvals' }
 ];
 /* An admin/HOD does not punch orders — their nav is the console and the approval queue.
    The full salesman strip appears only while previewing a rep, which is exactly when it is useful. */
@@ -2279,8 +2417,9 @@ var Nav = {
     return v === 'admin' ? b.admin : b.appr;
   },
   /* Counted from Appr.list() itself — the SAME list the Approvals screen shows — so the red number can
-     never disagree with the queue. It covers PJP, plan changes, store openings, POSM requests and
-     TA/DA; orders are excluded because they are a status change, not a decision.
+     never disagree with the queue. It covers PJP, plan changes and TA/DA; orders are excluded because
+     they are a status change, not a decision, and new outlets / POSM requirements are not approvals
+     at all any more — they live in the rep's own Tracker tab.
      Cached per render pass: Nav.build asks for it several times. */
   _c:null, _cAt:0,
   counts: function () {
@@ -2292,13 +2431,20 @@ var Nav = {
         out.admin = out.appr = list.filter(function (o) { return Appr.can(o); }).length;
       } else {
         /* a rep is nudged about what needs REDOING, not about waiting */
-        out.appr = list.filter(function (o) { return o.status === 'rejected'; }).length;
+        out.appr = list.filter(function (o) {
+          return o.status === 'rejected' || o.status === 'partial'; }).length;
       }
     } catch (e) {}
     Nav._c = out; Nav._cAt = Date.now();
     return out;
   },
   pill: function (n) { return n ? '<span class="badge">' + (n > 99 ? '99+' : n) + '</span>' : ''; },
+  /* a tab that needs attention RIGHT NOW gets a dot: the PJP window is open and the plan is not
+     approved yet, which is a deadline the rep cannot see anywhere else */
+  hot: function (v) {
+    if (v !== 'pjp' || Auth.isAdmin()) return false;
+    try { return Pjp.winOpen() && !Pjp.approvedFor(Pjp.winMonth()); } catch (e) { return false; }
+  },
   build: function () {
     var wide = window.innerWidth >= 900;
     var list = Auth.isAdmin() ? ADMIN_TABS.slice()
@@ -2321,7 +2467,7 @@ var Nav = {
     $('nav').innerHTML = I18n.tr(list.map(function (x) {
       var n = x.v === 'more' ? moreN : Nav.badge(x.v);
       return '<button data-v="' + x.v + '" onclick="Router.go(\'' + x.v + '\')" class="' +
-        (x.v === Router.cur ? 'on' : '') + (Gate.allowed(x.v) ? '' : ' lk') + '">' +
+        (x.v === Router.cur ? 'on' : '') + (Gate.allowed(x.v) ? '' : ' lk') + (Nav.hot(x.v) ? ' hot' : '') + '">' +
         '<span class="g">' + x.g + '</span><span>' + x.t + '</span>' + Nav.pill(n) + '</button>';
     }).join(''));
   },
@@ -2350,7 +2496,7 @@ var Router = {
   }
 };
 function render() {
-  var f = ({ home:Home, pjp:Pjp, plan:Plan, field:Field, sec:Sec, posm:Posm, eod:Eod, sum:Sum,
+  var f = ({ home:Home, pjp:Pjp, plan:Plan, field:Field, sec:Sec, posm:Posm, trk:Trk, eod:Eod,
              appr:Appr, admin:Admin })[Router.cur];
   /* first ever paint and the data is still on its way — show a skeleton, never blank cards */
   /* every screen leaves through here, so ONE call translates the whole app */
@@ -2493,7 +2639,7 @@ var Sync = {
     /* the 3-minute background sync is transactional-only; it upgrades itself to a full pull the moment
        the sheet's fingerprint changes (see DB.pull), so nothing can drift */
     setInterval(function () { if (Api.online() && Auth.session()) { Queue.drain(); DB.pull(false, { txn:true }).then(function () {
-      if (Router.cur === 'home' || Router.cur === 'sum' || Router.cur === 'admin') render(); }); } }, 180000);
+      if (Router.cur === 'home' || Router.cur === 'admin') render(); }); } }, 180000);
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'hidden') Flush.all();
       else if (Auth.session()) { Queue.drain(); DB.maybe(); }
@@ -3146,18 +3292,221 @@ var Card = {
 
 /* ═══════════════ HOME ═══════════════ */
 var Home = {
+  /* dash · calls · ord · team */
+  view:'dash', per:'M', month:'', metric:'nsv',
+  /* GARUDA went live in July — there is no data before it, so no period may reach back past it */
+  start: function () { return String(DB.cfg('Go_Live_Month', '2026-07')).slice(0, 7); },
+  mon: function () {
+    var t = today().slice(0, 7);
+    if (!Home.month || Home.month > t || Home.month < Home.start()) Home.month = t;
+    return Home.month;
+  },
+  months: function () {
+    var out = [], m = Home.start(), t = today().slice(0, 7), guard = 0;
+    while (m <= t && guard++ < 60) {
+      out.push(m);
+      var y = +m.slice(0, 4), n = +m.slice(5, 7) + 1;
+      if (n > 12) { n = 1; y++; }
+      m = y + '-' + p2(n);
+    }
+    return out;
+  },
+  /* [from, to] for the chosen period — the ONE definition every number on the screen uses */
+  range: function () {
+    var t = today();
+    if (Home.per === 'D') return [t, t];
+    if (Home.per === 'W') {
+      var d = new Date(t + 'T00:00:00'); d.setDate(d.getDate() - 6);
+      var f = iso(d), s = Home.start() + '-01';
+      return [f < s ? s : f, t];
+    }
+    var m = Home.mon();
+    var last = new Date(+m.slice(0, 4), +m.slice(5, 7), 0);
+    return [m + '-01', m === t.slice(0, 7) ? t : iso(last)];
+  },
+  rangeLbl: function () {
+    var r = Home.range();
+    return Home.per === 'D' ? dmy(r[0])
+      : Home.per === 'W' ? dmy(r[0]) + ' – ' + dmy(r[1])
+      : monthName(Home.mon()) + ' (1–' + (+r[1].slice(8, 10)) + ')';
+  },
+  days: function () { var r = Home.range();
+    return Math.round((new Date(r[1] + 'T00:00:00') - new Date(r[0] + 'T00:00:00')) / 864e5) + 1; },
+  inR: function (d) { var r = Home.range(), x = toISO(d); return !!x && x >= r[0] && x <= r[1]; },
+
+  /* ── status buckets, one place ── */
+  cancelled: function (s) { return /cancel|no.?order/i.test(String(s || '')); },
+  billed: function (s) { return /billing|delivered/i.test(String(s || '')); },
+  FIELD:/self working|me sales team|ba supervisor/i,
+  /* which company a day was worked with — the whole Team view hangs off this one bucket */
+  bucket: function (ww) {
+    var w = String(ww || '');
+    if (/me sales team/i.test(w)) return 'team';
+    if (/ba supervisor/i.test(w)) return 'ba';
+    if (/self working/i.test(w)) return 'self';
+    return 'other';
+  },
+  BK:[['self', 'Self'], ['team', 'ME Sales team'], ['ba', 'BA supervisor']],
+
+  /* ══ ONE aggregation for the whole screen ══
+     Everything is derived from the rep's own rows for the chosen range, so no two cards can disagree
+     about the same number. Cancelled / No-Order visits still count as a CALL but never as value. */
+  agg: function () {
+    var A = { tc:0, pc:0, scT:0, nsoT:0, posmT:0, fieldDays:0, planDays:0,
+      placed:0, billed:0, pending:0, cancel:0, nsv:0, mrp:0, units:0,
+      nso:0, posm:0, posmReq:0, eod:0,
+      byBrand:{}, byCat:{}, bySub:{}, bySku:{}, byStore:{}, byDay:{}, byBucket:{},
+      msl:{ u:0, v:0 }, non:{ u:0, v:0 }, mega:{}, ba:{},
+      pjpPlanned:0, pjpCovered:0, offPjp:0, monthly:{}, pend:[] };
+    Home.BK.forEach(function (b) { A.byBucket[b[0]] = { days:0, tc:0, pc:0, nsv:0, nso:0 }; });
+    A.byBucket.other = { days:0, tc:0, pc:0, nsv:0, nso:0 };
+
+    var stores = DB.myStores(), sMap = {};
+    stores.forEach(function (s) {
+      if (s.CompanyCode) sMap[String(s.CompanyCode)] = s;
+      if (s.ClientId) sMap[String(s.ClientId)] = s;
+    });
+
+    /* the plan tells us what the day was SUPPOSED to be — targets and the working-with bucket */
+    var dayBk = {};
+    DB.mine('DayPlan').forEach(function (p) {
+      var d = toISO(p.Date); if (!d) return;
+      dayBk[d] = Home.bucket(p.WorkingWith);
+      if (!Home.inR(d)) return;
+      A.planDays++;
+      if (!Home.FIELD.test(String(p.WorkingWith || ''))) return;
+      A.fieldDays++;
+      A.scT += num(p.ScTarget) || num(DB.cfg('SC_Call_Target', 7)) || 7;
+      A.nsoT += num(p.NsoTarget); A.posmT += num(p.PosmTarget);
+    });
+
+    DB.mine('SecOrders').forEach(function (o) {
+      var d = toISO(o.Date), can = Home.cancelled(o.Status), bil = Home.billed(o.Status);
+      if (d && !can) {
+        var mk = d.slice(0, 7);
+        if (!A.monthly[mk]) A.monthly[mk] = { nsv:0, placed:0, billed:0 };
+        A.monthly[mk].nsv += num(o.TotNsvLakh);
+        A.monthly[mk][bil ? 'billed' : 'placed']++;
+      }
+      if (!Home.billed(o.Status) && !can) A.pend.push(o);
+      if (!Home.inR(d)) return;
+      A.tc++;
+      if (!A.byDay[d]) A.byDay[d] = { tc:0, pc:0, nsv:0, val:0 };
+      A.byDay[d].tc++;
+      var bk = dayBk[d] || 'other', B = A.byBucket[bk] || A.byBucket.other;
+      B.tc++;
+      if (can) { A.cancel++; return; }
+      if (num(o.TotUnits) > 0) { A.pc++; A.byDay[d].pc++; B.pc++; }
+      if (bil) A.billed++; else A.pending++;
+      A.placed++;
+      A.nsv += num(o.TotNsvLakh); B.nsv += num(o.TotNsvLakh);
+      A.byDay[d].nsv += num(o.TotNsvLakh); A.byDay[d].val += num(o.TotValue);
+      var key = String(o.CompanyCode || o.StoreName || ''), st = sMap[key] || {};
+      var type = String(o.StoreType || st.StoreType || st.Type || '');
+      if (key) {
+        if (!A.byStore[key]) A.byStore[key] = { name:o.StoreName || (st.StoreName || key), type:type || '—', nsv:0, visits:0 };
+        A.byStore[key].nsv += num(o.TotNsvLakh); A.byStore[key].visits++;
+        (/mega/i.test(type) ? A.mega : A.ba)[key] = 1;
+      }
+    });
+
+    DB.mine('SecOrderLines').forEach(function (l) {
+      if (!Home.inR(l.Date) || Home.cancelled(l.Status)) return;
+      var u = num(l.Units), v = num(l.NsvLakh), mv = u * num(l.Mrp);
+      A.units += u; A.mrp += mv;
+      var add = function (o, k) { if (!o[k]) o[k] = { u:0, v:0, mrp:0 }; o[k].u += u; o[k].v += v; o[k].mrp += mv; };
+      add(A.byBrand, l.Brand || 'Other');
+      add(A.byCat, l.Category || 'Other');
+      add(A.bySub, l.SubCategory || 'Other');
+      if (!A.bySku[String(l.Sku)]) A.bySku[String(l.Sku)] = { name:l.SkuName || l.Sku, brand:l.Brand || '', u:0, v:0, mrp:0 };
+      A.bySku[String(l.Sku)].u += u; A.bySku[String(l.Sku)].v += v; A.bySku[String(l.Sku)].mrp += mv;
+      (/^msl$/i.test(String(l.MslStatus || '')) ? A.msl : A.non).u += u;
+      (/^msl$/i.test(String(l.MslStatus || '')) ? A.msl : A.non).v += v;
+    });
+
+    DB.mine('NewStores').forEach(function (r) {
+      if (!Home.inR(r.Date)) return;
+      A.nso++;
+      var B = A.byBucket[dayBk[toISO(r.Date)] || 'other'] || A.byBucket.other; B.nso++;
+    });
+    DB.mine('PosmAudit').forEach(function (r) { if (Home.inR(r.Date)) A.posm++; });
+    DB.mine('PosmRequirement').forEach(function (r) { if (Home.inR(r.Date)) A.posmReq++; });
+    DB.mine('Eod').forEach(function (r) { if (Home.inR(r.Date)) A.eod++; });
+
+    /* PJP adherence — a planned beat day counts as covered when that day has at least one visit */
+    var seen = {};
+    Object.keys(A.byDay).forEach(function (d) { seen[d] = 1; });
+    DB.pjpMonth(DB.me.code, Home.mon()).forEach(function (p) {
+      var d = toISO(p.Date);
+      if (!Home.inR(d)) return;
+      if (!Home.FIELD.test(String(p.Ww || 'Self Working'))) return;
+      A.pjpPlanned++;
+      if (seen[d]) { A.pjpCovered++; delete seen[d]; }
+    });
+    A.offPjp = Object.keys(seen).length;
+    Home.BK.concat([['other', 'Other']]).forEach(function (b) {
+      var n = 0;
+      Object.keys(A.byDay).forEach(function (d) { if ((dayBk[d] || 'other') === b[0]) n++; });
+      A.byBucket[b[0]].days = n;
+    });
+    return A;
+  },
+
+  /* ══ small chart helpers — plain SVG, no library, readable on a phone ══ */
+  bar: function (data, color) {
+    var W = 320, H = 132, pl = 26, pb = 20, pt = 10;
+    var iw = W - pl - 6, ih = H - pb - pt;
+    var max = Math.max.apply(null, data.map(function (d) { return d.v; })) || 1;
+    var bw = iw / Math.max(1, data.length) * .62, gap = iw / Math.max(1, data.length);
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="cht" preserveAspectRatio="none">';
+    for (var i = 0; i <= 3; i++) {
+      var y = pt + ih * i / 3;
+      s += '<line x1="' + pl + '" y1="' + y + '" x2="' + (W - 6) + '" y2="' + y + '" class="cg"/>' +
+        '<text x="' + (pl - 4) + '" y="' + (y + 3) + '" class="cl" text-anchor="end">' +
+        Home.n1(max * (1 - i / 3)) + '</text>';
+    }
+    data.forEach(function (d, i) {
+      var bh = d.v > 0 ? Math.max(2, d.v / max * ih) : 0, x = pl + i * gap + (gap - bw) / 2, y = pt + ih - bh;
+      s += '<rect x="' + x + '" y="' + y + '" width="' + bw + '" height="' + bh + '" rx="2" fill="' + color + '"/>' +
+        '<text x="' + (x + bw / 2) + '" y="' + (H - 6) + '" class="cl" text-anchor="middle">' + esc(d.l) + '</text>' +
+        (d.v > 0 ? '<text x="' + (x + bw / 2) + '" y="' + (y - 3) + '" class="cv" text-anchor="middle">' + Home.n1(d.v) + '</text>' : '');
+    });
+    return s + '</svg>';
+  },
+  n1: function (v) { return v >= 10 ? String(Math.round(v)) : (Math.round(v * 10) / 10).toFixed(1); },
+  /* plan vs achievement — a labelled bar the rep can read in one look */
+  pva: function (label, plan, act, sub) {
+    var p = plan > 0 ? Math.round(act / plan * 100) : 0;
+    var cls = p >= 100 ? 'g' : p >= 70 ? 'w' : 'r';
+    return '<div class="pva"><div class="pva-h"><div><b>' + esc(label) + '</b><i>' + esc(sub || '') + '</i></div>' +
+      '<div class="pva-n">' + Home.n1(act) + '<span>/ ' + Home.n1(plan) + '</span>' +
+      '<span class="pill p-' + (cls === 'g' ? 'ok' : cls === 'w' ? 'warn' : 'bad') + '">' + p + '%</span></div></div>' +
+      '<div class="pbar"><i class="' + cls + '" style="width:' + Math.min(100, p) + '%"></i></div></div>';
+  },
+  /* a share row — used by brand / category / MSL */
+  share: function (label, v, tot, sub) {
+    var p = tot > 0 ? Math.round(v / tot * 100) : 0;
+    return '<div style="margin-bottom:9px"><div class="srow"><span>' + esc(label) + '</span>' +
+      '<b>' + lakh(v) + ' L · ' + p + '%' + (sub ? ' <i>' + esc(sub) + '</i>' : '') + '</b></div>' +
+      '<div class="pbar"><i style="width:' + p + '%"></i></div></div>';
+  },
+  tbl: function (head, rows, foot) {
+    return '<div class="tw"><table><thead><tr>' + head.map(function (h, i) {
+      return '<th' + (i ? ' class="num"' : '') + '>' + esc(h) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      (rows.length ? rows.map(function (r) { return '<tr>' + r.map(function (c, i) {
+        return '<td' + (i ? ' class="num"' : '') + '>' + c + '</td>'; }).join('') + '</tr>'; }).join('')
+        : '<tr><td colspan="' + head.length + '">Is period me kuch nahi</td></tr>') +
+      (foot ? '<tr class="tot">' + foot.map(function (c, i) {
+        return '<td' + (i ? ' class="num"' : '') + '><b>' + c + '</b></td>'; }).join('') + '</tr>' : '') +
+      '</tbody></table></div>';
+  },
+
+  /* ══ the screen ══ */
   html: function () {
     var t = today(), code = DB.me.code;
     var plan = DB.find('DayPlan', code + '_' + t);
     var pjp = DB.pjpFor(code, t);
-    var orders = DB.mine('SecOrders').filter(function (r) { return toISO(r.Date) === t; });
-    var stores = DB.mine('NewStores').filter(function (r) { return toISO(r.Date) === t; });
-    var posm = DB.mine('PosmAudit').filter(function (r) { return toISO(r.Date) === t; });
-    var withOrder = orders.filter(function (o) { return num(o.TotUnits) > 0; });
-    var nsv = orders.reduce(function (a, o) { return a + num(o.TotNsvLakh); }, 0);
-    var pend = DB.mine('SecOrders').filter(function (o) { return String(o.Status) === 'Order in Process'; });
     var l = Gate.level();
-
     var ps = Gate.pjpState();
     var next = l === 0 ? (
         ps.s === 'pending'? { t:'PJP HOD ke paas hai', v:'appr',
@@ -3176,55 +3525,348 @@ var Home = {
       '<h3 style="color:#fff;font-size:18px;margin:6px 0 2px">Namaste, ' + esc((DB.me.name || '').split(' ')[0]) + '</h3>' +
       '<div style="font-size:12.5px;opacity:.9">' + (pjp ? 'Aaj ka PJP: <b>' + esc(pjp.Town || '—') + ' · ' + esc(pjp.Beat || '—') + '</b>'
         : 'Aaj ka PJP master me nahi mila') + '</div>' +
-      (Gate.locked() ? '<div style="margin-top:10px;background:rgba(255,255,255,.16);padding:8px 10px;border-radius:10px;font-size:12px"> Din lock hai — EOD tab se dobara khol sakte ho</div>' : '') +
+      (Gate.locked() ? '<div style="margin-top:10px;background:rgba(255,255,255,.16);padding:8px 10px;border-radius:10px;font-size:12px">Din lock hai — EOD tab se dobara khol sakte ho</div>' : '') +
       '</div>';
 
     h += '<div class="banner b"><span></span><div><b>' + esc(next.t) + '</b><br><span style="font-weight:500">' + esc(next.s) + '</span>' +
-      '<div class="btns"><button class="btn sm" onclick="Router.go(\'' + next.v + '\')">Chalo </button></div></div></div>';
-
-    /* A relaxed rule is never invisible: the rep should know WHY the gates are open, and an auditor
-       should be able to see it on the screen. */
+      '<div class="btns"><button class="btn sm" onclick="Router.go(\'' + next.v + '\')">Chalo</button></div></div></div>';
     h += Bypass.strip();
 
+    /* ── the three analysis tabs + the team table ── */
+    var TV = [['dash', 'Dashboard'], ['calls', 'Calls & stores'], ['ord', 'Order vs delivery'], ['team', 'Team']];
+    h += '<div class="card" style="padding:10px"><div class="chips" id="hm_chips">' +
+      TV.map(function (x) {
+        return '<button class="btn ' + (Home.view === x[0] ? '' : 'ghost') + ' sm"' +
+          (Home.view === x[0] ? ' data-on="1"' : '') + ' onclick="Home.go(\'' + x[0] + '\')">' + esc(x[1]) + '</button>';
+      }).join('') + '</div>' +
+      '<div class="seg" style="margin-top:8px">' +
+        [['D', 'Today'], ['W', '7 din'], ['M', 'Month']].map(function (p) {
+          return '<button class="' + (Home.per === p[0] ? 'on' : '') + '" onclick="Home.setPer(\'' + p[0] + '\')">' +
+            esc(p[1]) + '</button>'; }).join('') + '</div>' +
+      (Home.per === 'M' ? '<div class="chips" style="margin-top:8px">' + Home.months().map(function (m) {
+        return '<button class="btn ' + (Home.mon() === m ? '' : 'ghost') + ' xs" onclick="Home.setMon(\'' + m + '\')">' +
+          esc(monthName(m).split(' ')[0]) + '</button>'; }).join('') + '</div>' : '') +
+      '<div class="hint" style="margin-top:8px">' + esc(Home.rangeLbl()) + ' · GARUDA ' +
+      esc(monthName(Home.start()).split(' ')[0]) + ' se chalu</div></div>';
+
+    if (Home.view === 'team') return h + Home.teamHtml();
+
+    var A = Home.agg();
+    /* the four numbers a salesman is judged on, each with its own denominator */
+    var dlv = A.billed + A.pending;
     h += '<div class="kpis">' +
-      UI.kpi(orders.length, 'Visits', 'b') + UI.kpi(withOrder.length, 'Order mila', 'g') +
-      UI.kpi(lakh(nsv), 'NSV ₹L', 'b') + UI.kpi(stores.length, 'Naye outlet', 'w') + '</div>';
+      UI.kpi(A.tc, 'Calls' + (A.scT ? ' / ' + A.scT : ''), A.scT && A.tc >= A.scT ? 'g' : 'b') +
+      UI.kpi(A.placed, 'Orders · ' + A.billed + ' billed', 'b') +
+      UI.kpi(lakh(A.nsv), 'NSV ₹L', 'g') +
+      UI.kpi((dlv ? Math.round(A.billed / dlv * 100) : 0) + '%', 'Billed %', A.billed === dlv && dlv ? 'g' : 'w') +
+      '</div>';
 
-    /* approval status at a glance — a rep should never have to hunt for "kya mera PJP approve hua?" */
-    var reqs = Appr.list(), rp = reqs.filter(function (r) { return r.status === 'pending'; });
-    var rd = reqs.filter(function (r) { return r.doneT && Date.now() - r.doneT < 3 * 864e5; });
-    if (rp.length || rd.length) {
-      var more = rp.length + rd.length - 1;
-      h += '<div class="strip ' + (rp.length ? 'w' : 'g') + '">' +
-        '<span class="g">' + (rp.length ? '' : '') + '</span>' +
-        '<div class="m"><b>' + (rp.length ? rp.length + ' request HOD ke paas hai'
-                                          : rd.length + ' request par decision aa gaya') + '</b>' +
-        ' <i>· ' + esc(rp.length ? rp[0].title : rd[0].title) +
-        (more > 0 ? ' +' + more + ' aur' : '') + '</i></div>' +
-        '<button class="btn ghost" onclick="Router.go(\'appr\')">Dekho </button></div>';
-    }
+    if (Home.view === 'dash') h += Home.dashHtml(A, plan);
+    if (Home.view === 'calls') h += Home.callsHtml(A);
+    if (Home.view === 'ord') h += Home.ordHtml(A);
+    return h;
+  },
+  after: function () {
+    var s = $('hm_chips'); if (!s) return;
+    s.classList.toggle('fit', s.scrollWidth <= s.clientWidth + 2);
+    var on = s.querySelector('[data-on="1"]');
+    if (on && on.scrollIntoView) on.scrollIntoView({ block:'nearest', inline:'center' });
+  },
+  go: function (v) { Home.view = v; render(); Home.after(); },
+  setPer: function (p) { Home.per = p; render(); },
+  setMon: function (m) { Home.month = m; Home.per = 'M'; render(); },
+  setMetric: function (m) { Home.metric = m; render(); },
 
-    if (pend.length) {
-      h += '<div class="sec-title">Pending orders — ASM se follow-up</div><div class="card">' +
-        pend.slice(0, 6).map(function (o) {
-          var age = Math.max(0, Math.round((Date.now() - new Date(toISO(o.Date) + 'T00:00:00').getTime()) / 864e5));
-          return '<div class="lrow"><div class="m"><div class="t">' + esc(o.StoreName) + '</div>' +
-            '<div class="s">' + dmy(o.Date) + ' · ' + inr(o.TotValue) + ' · ' + age + ' din purana</div></div>' +
-            '<span class="pill p-warn">Process</span></div>'; }).join('') +
-        '<div class="btns"><button class="btn ghost sm" onclick="Router.go(\'sec\')">Sab dekho</button></div></div>';
-    }
+  /* ── 1. DASHBOARD ── */
+  dashHtml: function (A, plan) {
+    var t = today();
+    var h = '<div class="sec-title">Month-wise NSV (₹ Lakh)</div><div class="card">';
+    var ms = Home.months(), trend = ms.slice(-6).map(function (m) {
+      return { l:monthName(m).split(' ')[0].slice(0, 3), v:(A.monthly[m] || {}).nsv || 0 }; });
+    h += Home.bar(trend, 'var(--blue)') + '</div>';
 
+    h += '<div class="sec-title">Order vs billed — month wise</div><div class="card">' +
+      Home.tbl(['Month', 'Placed', 'Billed', 'Billed %', 'NSV ₹L'], ms.slice().reverse().map(function (m) {
+        var r = A.monthly[m] || { nsv:0, placed:0, billed:0 }, tot = r.placed + r.billed;
+        return [esc(monthName(m)), tot, r.billed, (tot ? Math.round(r.billed / tot * 100) : 0) + '%', lakh(r.nsv)];
+      })) + '</div>';
+
+    var bn = Object.keys(A.byBrand).sort(function (a, b) { return A.byBrand[b].v - A.byBrand[a].v; });
+    h += '<div class="sec-title">Brand share</div><div class="card">' +
+      (bn.length ? bn.slice(0, 8).map(function (b) {
+        return Home.share(b, A.byBrand[b].v, A.nsv, Math.round(A.byBrand[b].u) + ' u'); }).join('')
+        : UI.empty('', 'Is period koi order nahi')) + '</div>';
+
+    h += '<div class="sec-title">Snapshot — ' + esc(Home.rangeLbl()) + '</div><div class="card">' +
+      Home.tbl(['What', 'Value'], [
+        ['Store calls (TC)', A.tc + (A.scT ? ' <span class="hint">/ ' + A.scT + ' target</span>' : '')],
+        ['Order mila (PC)', A.pc + ' <span class="hint">' + (A.tc ? Math.round(A.pc / A.tc * 100) : 0) + '% strike rate</span>'],
+        ['MRP value', inr(A.mrp)],
+        ['NSV', lakh(A.nsv) + ' L'],
+        ['Units', Math.round(A.units)],
+        ['Naye outlet (NSO)', A.nso + (A.nsoT ? ' <span class="hint">/ ' + A.nsoT + '</span>' : '')],
+        ['POSM audit', A.posm + (A.posmT ? ' <span class="hint">/ ' + A.posmT + '</span>' : '')],
+        ['POSM chahiye', A.posmReq],
+        ['EOD file kiye', A.eod + ' / ' + A.planDays + ' plan din'],
+        ['Store visit kiye', Object.keys(A.byStore).length]
+      ]) + '</div>';
+
+    h += '<div class="sec-title">Din-wise</div><div class="card">' +
+      Home.tbl(['Date', 'Calls', 'Order', 'Value', 'NSV L'],
+        Object.keys(A.byDay).sort().reverse().map(function (d) {
+          var g = A.byDay[d];
+          return [dmy(d), g.tc, g.pc, inr(g.val), lakh(g.nsv)]; })) +
+      '<div class="btns"><button class="btn ghost sm" onclick="Home.excel()">Month data download</button></div></div>';
+
+    /* the day's own checklist stays on Home — it is the reason a rep opens the app in the morning */
     h += '<div class="sec-title">Aaj ka kaam</div><div class="card">' +
       Home.step('1', 'Plan', plan && plan.PlanAt, plan && plan.NotifiedAt ? 'Notified' : (plan && plan.PlanAt ? 'Notify pending' : 'Pending')) +
-      Home.step('2', 'Field visits', orders.length > 0, orders.length + ' store') +
-      Home.step('3', 'POSM', posm.length > 0, posm.length + ' audit') +
+      Home.step('2', 'Field visits', (A.byDay[t] || {}).tc > 0, ((A.byDay[t] || {}).tc || 0) + ' store') +
+      Home.step('3', 'POSM', A.posm > 0, A.posm + ' audit') +
       Home.step('4', 'EOD close', Gate.locked(), Gate.locked() ? 'Done' : 'Pending') +
       '</div>';
     return h;
   },
   step: function (n, t, done, s) {
-    return '<div class="lrow"><span class="pill ' + (done ? 'p-ok' : 'p-grey') + '">' + (done ? '' : n) + '</span>' +
+    return '<div class="lrow"><span class="pill ' + (done ? 'p-ok' : 'p-grey') + '">' + (done ? 'OK' : n) + '</span>' +
       '<div class="m"><div class="t">' + esc(t) + '</div><div class="s">' + esc(s) + '</div></div></div>';
+  },
+  excel: function () { return Rep.orders(Home.mon()); },
+
+  /* ── 2. CALLS & STORES ── */
+  callsHtml: function (A) {
+    var sc = num(DB.cfg('SC_Call_Target', 7)) || 7;
+    var h = '<div class="sec-title">Plan vs achieved</div><div class="card">' +
+      Home.pva('Store calls (SC)', A.scT || sc * Math.max(1, A.fieldDays), A.tc,
+        A.fieldDays + ' field din × ' + sc + '/din') +
+      Home.pva('Order mila (PC)', Math.round((A.scT || sc) * .6), A.pc, 'Jitne store ne order diya') +
+      Home.pva('Naye outlet (NSO)', A.nsoT || num(DB.cfg('NSO_Monthly_Target', 15)), A.nso, 'Plan ka NSO target') +
+      Home.pva('POSM', A.posmT || A.fieldDays, A.posm, 'Audit kiye') +
+      Home.pva('NSV (₹L)', num(DB.cfg('MTD @24 Days - Working', 36)), A.nsv, 'Month ka NSV target') +
+      '</div>';
+
+    var adh = A.pjpPlanned ? Math.round(A.pjpCovered / A.pjpPlanned * 100) : 0;
+    h += '<div class="sec-title">PJP adherence</div><div class="card">' +
+      '<div class="kpis k3" style="margin-bottom:0">' +
+        UI.kpi(A.pjpPlanned, 'Planned beat din', 'b') +
+        UI.kpi(A.pjpCovered, 'Covered · ' + adh + '%', adh >= 90 ? 'g' : adh >= 70 ? 'w' : 'r') +
+        UI.kpi(Math.max(0, A.pjpPlanned - A.pjpCovered), 'Chhoot gaya', A.pjpCovered === A.pjpPlanned ? 'g' : 'r') +
+      '</div>' +
+      (A.offPjp ? '<div class="hint" style="margin-top:8px">' + A.offPjp +
+        ' din PJP se bahar kaam hua (off-PJP)</div>' : '') + '</div>';
+
+    var totMega = 0, totBa = 0;
+    DB.myStores().forEach(function (s) {
+      if (/mega/i.test(String(s.StoreType || s.Type || ''))) totMega++; else totBa++; });
+    h += '<div class="sec-title">Store summary</div><div class="card">' +
+      '<div class="kpis k3" style="margin-bottom:0">' +
+        UI.kpi(Object.keys(A.byStore).length, 'Store visit kiye', 'b') +
+        UI.kpi(Object.keys(A.mega).length + ' / ' + totMega, 'MEGA BA', 'w') +
+        UI.kpi(Object.keys(A.ba).length + ' / ' + totBa, 'BA store', '') +
+      '</div></div>';
+
+    var top = Object.keys(A.byStore).sort(function (a, b) { return A.byStore[b].nsv - A.byStore[a].nsv; });
+    h += '<div class="sec-title">Top performing stores</div><div class="card">' +
+      Home.tbl(['Store', 'Visit', 'NSV L'], top.slice(0, 10).map(function (k) {
+        var s = A.byStore[k];
+        return ['<b>' + esc(s.name) + '</b><div class="hint">' + esc(s.type) + '</div>', s.visits, lakh(s.nsv)];
+      }), top.length ? ['TOTAL', Object.keys(A.byStore).length, lakh(A.nsv)] : null) + '</div>';
+    return h;
+  },
+
+  /* ── 3. ORDER vs DELIVERY ── */
+  ordHtml: function (A) {
+    var tot = A.placed + A.cancel;
+    var pc = function (v) { return (tot ? Math.round(v / tot * 100) : 0) + '%'; };
+    var h = '<div class="sec-title">Order status</div><div class="card">' +
+      Home.tbl(['Status', 'Store', 'Share'], [
+        ['Billed / delivered', A.billed, pc(A.billed)],
+        ['Pending — billing baaki', A.pending, pc(A.pending)],
+        ['No order / cancel', A.cancel, pc(A.cancel)]
+      ], ['TOTAL', tot, '100%']) +
+      '<div class="kpis k3" style="margin-top:10px;margin-bottom:0">' +
+        UI.kpi(lakh(A.nsv), 'NSV ₹L', 'g') + UI.kpi(inr(A.mrp), 'MRP value', 'b') +
+        UI.kpi(A.placed ? lakh(A.nsv / A.placed) : '0', 'Avg NSV / order', '') +
+      '</div></div>';
+
+    /* which orders are actually stuck — the whole point of the tab */
+    var pend = A.pend.sort(function (a, b) { return String(a.Date).localeCompare(String(b.Date)); });
+    h += '<div class="sec-title">Pending orders — billing nahi hui (' + pend.length + ')</div><div class="card">' +
+      (pend.length ? Home.tbl(['Store', 'Din', 'Value', 'NSV L'], pend.slice(0, 40).map(function (o) {
+        var age = Math.max(0, Math.round((Date.now() - new Date(toISO(o.Date) + 'T00:00:00').getTime()) / 864e5));
+        return ['<b>' + esc(o.StoreName) + '</b><div class="hint">' + dmy(o.Date) + ' · ' + esc(o.PoNumber) + '</div>',
+          age, inr(o.TotValue), lakh(o.TotNsvLakh)]; })) +
+        '<div class="hint" style="margin-top:8px">Status Tracker tab se update karo — ASM se poochh ke.</div>' +
+        '<div class="btns"><button class="btn ghost sm" onclick="Router.go(\'trk\')">Tracker kholo</button></div>'
+        : UI.empty('', 'Ek bhi order pending nahi — sab billed')) + '</div>';
+
+    var mt = A.msl.v + A.non.v;
+    h += '<div class="sec-title">MSL vs Non-MSL</div><div class="card">' +
+      (mt > 0 ? Home.share('MSL', A.msl.v, mt, Math.round(A.msl.u) + ' u') +
+        Home.share('Non-MSL', A.non.v, mt, Math.round(A.non.u) + ' u')
+        : UI.empty('', 'MSL data nahi hai')) + '</div>';
+
+    var cat = Object.keys(A.byCat).sort(function (a, b) { return A.byCat[b].v - A.byCat[a].v; });
+    h += '<div class="sec-title">Category-wise</div><div class="card">' +
+      Home.tbl(['Category', 'Units', 'NSV L', '%'], cat.slice(0, 12).map(function (c) {
+        return [esc(c), Math.round(A.byCat[c].u), lakh(A.byCat[c].v),
+          (A.nsv ? Math.round(A.byCat[c].v / A.nsv * 100) : 0) + '%']; })) + '</div>';
+
+    var sub = Object.keys(A.bySub).sort(function (a, b) { return A.bySub[b].v - A.bySub[a].v; });
+    h += '<div class="sec-title">Sub-category-wise</div><div class="card">' +
+      Home.tbl(['Sub-category', 'Units', 'NSV L'], sub.slice(0, 12).map(function (c) {
+        return [esc(c), Math.round(A.bySub[c].u), lakh(A.bySub[c].v)]; })) + '</div>';
+
+    var sk = Object.keys(A.bySku).sort(function (a, b) { return A.bySku[b].v - A.bySku[a].v; });
+    h += '<div class="sec-title">Top SKU</div><div class="card">' +
+      Home.tbl(['#  Product', 'Units', 'NSV L'], sk.slice(0, 12).map(function (k, i) {
+        var s = A.bySku[k];
+        return [(i + 1) + '. <b>' + esc(s.name) + '</b><div class="hint">' + esc(s.brand) + '</div>',
+          Math.round(s.u), lakh(s.v)]; })) + '</div>';
+    return h;
+  },
+
+  /* ── 4. TEAM — me against the team, and against myself in each working mode ──
+     A rep's device only ever holds their OWN rows, so the per-employee numbers come from a server
+     aggregate (no other rep's raw data is ever sent). Admin/HOD already hold everything, so for them
+     the same table is computed locally and needs no round trip. */
+  teamHtml: function () {
+    var r = Home.range(), M = [['nsv', 'NSV ₹L'], ['tc', 'Calls'], ['pc', 'Order mila'], ['nso', 'NSO'], ['days', 'Din']];
+    var h = '<div class="card" style="padding:10px"><div class="hint" style="margin-bottom:6px">Number</div>' +
+      '<div class="chips">' + M.map(function (m) {
+        return '<button class="btn ' + (Home.metric === m[0] ? '' : 'ghost') + ' xs" onclick="Home.setMetric(\'' + m[0] + '\')">' +
+          esc(m[1]) + '</button>'; }).join('') + '</div></div>';
+
+    var T = Team.get(r[0], r[1]);
+    if (T.wait) return h + '<div class="strip b"><span class="g"><span class="spin"></span></span>' +
+      '<div class="m"><b>Team ka data aa raha hai…</b> <i>· sirf totals, kisi ka raw data nahi</i></div></div>';
+    if (T.err) return h + '<div class="card"><div class="banner w"><span>!</span><div><b>Team view abhi ready nahi</b><br>' +
+      '<span style="font-weight:500">' + esc(T.err) + '</span>' +
+      '<div class="btns"><button class="btn sm" onclick="Team.load(true)">Dobara try karo</button></div></div></div></div>';
+
+    var rows = T.rows || [];
+    if (!rows.length) return h + '<div class="card">' + UI.empty('', 'Is period me team ka koi kaam record nahi hua') + '</div>';
+
+    var me = String(DB.me.code || '').toUpperCase();
+    var mk = Home.metric, fmt = function (v) { return mk === 'nsv' ? lakh(v) : String(Math.round(v)); };
+    var cell = function (b) { return b ? (mk === 'days' ? b.days : b[mk] || 0) : 0; };
+    var tot = function (e) { return Home.BK.reduce(function (a, b) { return a + cell(e.b[b[0]]); }, 0) +
+      cell(e.b.other); };
+    var sorted = rows.slice().sort(function (a, b) { return tot(b) - tot(a); });
+    var myRow = sorted.filter(function (e) { return String(e.code).toUpperCase() === me; })[0];
+    var rank = myRow ? sorted.indexOf(myRow) + 1 : 0;
+    var teamTot = sorted.reduce(function (a, e) { return a + tot(e); }, 0);
+    var avg = sorted.length ? teamTot / sorted.length : 0;
+
+    h += '<div class="kpis k3">' +
+      UI.kpi(myRow ? '#' + rank : '—', 'Team me rank (' + sorted.length + ')', rank && rank <= 3 ? 'g' : 'b') +
+      UI.kpi(myRow ? fmt(tot(myRow)) : '0', 'Mera total', 'b') +
+      UI.kpi(fmt(avg), 'Team average', myRow && tot(myRow) >= avg ? 'g' : 'w') + '</div>';
+
+    /* ONE table: every employee as a row, each working-mode as a column, so a rep can compare himself
+       across modes AND against everyone else without changing screens */
+    h += '<div class="sec-title">' + esc((M.filter(function (x) { return x[0] === mk; })[0] || M[0])[1]) +
+      ' — kis ke saath kaam kiya</div><div class="card">' +
+      '<div class="tw"><table><thead><tr><th>Employee</th>' +
+      Home.BK.map(function (b) { return '<th class="num">' + esc(b[1]) + '</th>'; }).join('') +
+      '<th class="num">Total</th></tr></thead><tbody>' +
+      sorted.map(function (e) {
+        var mine = String(e.code).toUpperCase() === me;
+        return '<tr' + (mine ? ' class="me"' : '') + '><td>' + (mine ? '<b>' + esc(e.name || e.code) + '</b> <span class="pill p-blue">You</span>'
+          : esc(e.name || e.code)) + '</td>' +
+          Home.BK.map(function (b) { return '<td class="num">' + fmt(cell(e.b[b[0]])) + '</td>'; }).join('') +
+          '<td class="num"><b>' + fmt(tot(e)) + '</b></td></tr>';
+      }).join('') +
+      '<tr class="tot"><td><b>TEAM TOTAL</b></td>' +
+      Home.BK.map(function (b) {
+        return '<td class="num"><b>' + fmt(sorted.reduce(function (a, e) { return a + cell(e.b[b[0]]); }, 0)) + '</b></td>'; }).join('') +
+      '<td class="num"><b>' + fmt(teamTot) + '</b></td></tr>' +
+      '</tbody></table></div>' +
+      '<div class="hint" style="margin-top:8px">Din ka bucket us din ke plan ke Working-With se aata hai. ' +
+      '"Other" (meeting / leave) total me gina jaata hai lekin apna column nahi hai.</div></div>';
+
+    if (myRow) {
+      var mine = Home.BK.map(function (b) { return { l:b[1].split(' ')[0], v:cell(myRow.b[b[0]]) }; });
+      h += '<div class="sec-title">Main akela vs team ke saath</div><div class="card">' +
+        Home.bar(mine, 'var(--blue)') +
+        '<div class="hint">Sirf aapke numbers — kis mode me aap best perform karte ho.</div></div>';
+    }
+    h += '<div class="card"><div class="btns"><button class="btn ghost" onclick="Team.load(true)">Refresh team data</button></div>' +
+      (T.at ? '<div class="hint" style="margin-top:6px">Last refresh: ' + esc(Appr.when(T.at)) + '</div>' : '') + '</div>';
+    return h;
+  }
+};
+
+/* ═══════════════ TEAM aggregate ═══════════════
+   The one place that knows how to get per-employee numbers without shipping anyone's raw rows:
+     • admin / HOD → computed locally, they already hold every row;
+     • employee    → one small GET (`action=team`) that returns totals only.
+   Cached per date-range so switching metric or tab does not re-fetch. */
+var Team = {
+  cache:{}, busy:'',
+  key: function (f, t) { return f + '|' + t; },
+  get: function (f, t) {
+    if (Auth.isAdmin()) return { rows:Team.local(f, t), at:DB.pulledAt };
+    var k = Team.key(f, t), c = Team.cache[k];
+    if (c) return c;
+    if (Team.busy !== k) Team.load(false, f, t);
+    return { wait:true };
+  },
+  load: function (loud, f, t) {
+    var r = Home.range(); f = f || r[0]; t = t || r[1];
+    var k = Team.key(f, t), s = Auth.session();
+    if (!s) return;
+    if (loud) delete Team.cache[k];
+    Team.busy = k;
+    return Api.get({ action:'team', email:s.email, from:f, to:t }).then(function (res) {
+      Team.busy = '';
+      if (!res || !res.ok) {
+        Team.cache[k] = { err:(res && res.error) || 'Server ne mana kar diya — backend.gs dobara deploy karna pad sakta hai' };
+      } else {
+        Team.cache[k] = { rows:res.rows || [], at:Date.now() };
+      }
+      if (Router.cur === 'home' && Home.view === 'team') render();
+    }, function () {
+      Team.busy = '';
+      Team.cache[k] = { err:'Internet nahi mila — refresh karke dobara try karo' };
+      if (Router.cur === 'home' && Home.view === 'team') render();
+    });
+  },
+  /* admin / HOD path — same shape, no round trip */
+  local: function (f, t) {
+    var inR = function (d) { var x = toISO(d); return !!x && x >= f && x <= t; };
+    var out = {}, bk = {};
+    var ens = function (code, name) {
+      var k = String(code || 'UNK').toUpperCase();
+      if (!out[k]) { out[k] = { code:k, name:name || '', b:{} };
+        ['self','team','ba','other'].forEach(function (x) { out[k].b[x] = { days:0, tc:0, pc:0, nsv:0, nso:0 }; }); }
+      if (name && !out[k].name) out[k].name = name;
+      return out[k];
+    };
+    (DB.m.Master_Employees || []).forEach(function (e) { ens(e.Code, e.Name); });
+    DB.rows('DayPlan').forEach(function (p) {
+      var d = toISO(p.Date); if (!d) return;
+      bk[String(p.EmpCode).toUpperCase() + '|' + d] = Home.bucket(p.WorkingWith);
+    });
+    var seen = {};
+    DB.rows('SecOrders').forEach(function (o) {
+      if (!inR(o.Date)) return;
+      var code = String(o.EmpCode || '').toUpperCase(), d = toISO(o.Date);
+      var e = ens(code, o.EmpName), b = e.b[bk[code + '|' + d] || 'other'];
+      b.tc++;
+      if (!seen[code + '|' + d]) { seen[code + '|' + d] = 1; b.days++; }
+      if (Home.cancelled(o.Status)) return;
+      if (num(o.TotUnits) > 0) b.pc++;
+      b.nsv += num(o.TotNsvLakh);
+    });
+    DB.rows('NewStores').forEach(function (r) {
+      if (!inR(r.Date)) return;
+      var code = String(r.EmpCode || '').toUpperCase();
+      ens(code, r.EmpName).b[bk[code + '|' + toISO(r.Date)] || 'other'].nso++;
+    });
+    return Object.keys(out).map(function (k) { return out[k]; }).filter(function (e) {
+      return ['self','team','ba','other'].some(function (x) {
+        var b = e.b[x]; return b.tc || b.nsv || b.nso; }); });
   }
 };
 
@@ -3245,7 +3887,7 @@ var Pjp = {
      on top of what is being typed right now). */
   loadedKey:'', hydratedAt:0,
   load: function () {
-    if (!Pjp.month) { var d = new Date(); d.setMonth(d.getMonth() + 1); Pjp.month = iso(d).slice(0, 7); }
+    if (!Pjp.month) Pjp.month = Pjp.winMonth();
     var dr = Pjp.draft(), k = Pjp.key();
     var remote = +dr.UpdatedAt || 0;
     var stale = (Pjp.loadedKey !== k) || (!Pjp._dirty && remote > Pjp.hydratedAt);
@@ -3261,7 +3903,8 @@ var Pjp = {
       /* seed any day the draft doesn't cover from the published Master_PJP */
       DB.pjpMonth(DB.me.code, Pjp.month).forEach(function (r) {
         var d = toISO(r.Date);
-        if (!Pjp.days[d]) Pjp.days[d] = { ww:Pjp.ww(r.Ww), city:r.Town || '', beat:r.Beat || '', st:'HQ' };
+        if (!Pjp.days[d]) Pjp.days[d] = { ww:Pjp.ww(r.Ww), state:r.State || Plan.stateOf(r.Town) || '',
+          city:r.Town || '', beat:r.Beat || '', st:'HQ' };
       });
       /* A day before this rep JOINED is not theirs to plan: the day list already refuses to render an
          input for it, but a day could still arrive here from an older draft or from Master_PJP — and
@@ -3285,6 +3928,66 @@ var Pjp = {
     if (/team/i.test(s)) return 'ME Sales Team';
     return 'Self Working'; },
   isField: function (w) { return ['Self Working','ME Sales Team','BA Supervisor'].indexOf(w) >= 0; },
+  /* ── partial rejection ──
+     An HOD can send back three days instead of a whole month. Those days — and ONLY those days —
+     open up again for the rep; the rest of the month is read-only, because it has already been
+     accepted and re-typing it would only introduce new mistakes. */
+  partial: function () { return /partial/i.test(String(Pjp.draft().Status || '')); },
+  rejDays: function () {
+    if (!Pjp.partial()) return [];
+    return Admin.rejDays(Pjp.draft());
+  },
+  /* may the rep touch THIS day? */
+  editable: function (d) {
+    var dr = Pjp.draft(), st = String(dr.Status || '');
+    if (/approved|accepted/i.test(st)) return false;
+    if (Pjp.partial()) return Pjp.rejDays().indexOf(d) >= 0;
+    return true;
+  },
+
+  /* ── State → Town → Beat for one day ──
+     State and Town come from the sheet (Master_Stores for this rep, plus whatever Master_PJP already
+     holds), Town is filtered by the chosen State, and the Beat is typed by hand — a beat name is the
+     rep's own words and no master can guess it. "add new…" is there so a town missing from the master
+     can never block a month's plan. Repopulating the Town list is a DOM update, not a re-render, or
+     the half-made choice on every other day row would be thrown away. */
+  geo: function (d, r) {
+    var st = r.state || Plan.stateOf(r.city) || (Plan.states()[0] || '');
+    var q = "'" + d + "'";
+    return '<div class="row two" style="margin-top:8px">' +
+      '<div><label class="f">State</label>' + Pjp.sel(d, 'state', Plan.states(), st) + '</div>' +
+      '<div><label class="f">Town / City</label>' + Pjp.sel(d, 'city', Plan.towns(st), r.city || '') + '</div>' +
+      '</div>' +
+      '<label class="f">Beat / Market <span class="hint">(khud likho)</span></label>' +
+      '<input class="in" id="pj_beat_' + d + '" placeholder="Beat / market ka naam" value="' + esc(r.beat || '') +
+      '" oninput="Pjp.set(' + q + ',\'beat\',this.value)">';
+  },
+  sel: function (d, kind, list, cur) {
+    var isNew = !!cur && list.indexOf(cur) < 0;
+    var q = "'" + d + "','" + kind + "'";
+    return '<select class="in" id="pj_' + kind + '_' + d + '" onchange="Pjp.pick(' + q + ',this)">' +
+      '<option value="">— select —</option>' +
+      list.map(function (x) { return '<option' + (x === cur ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') +
+      '<option value="' + Plan.ADD + '"' + (isNew ? ' selected' : '') + '>add new…</option></select>' +
+      '<input class="in" id="pj_' + kind + 'n_' + d + '" style="margin-top:5px;display:' + (isNew ? '' : 'none') +
+      '" placeholder="Naya ' + esc(kind === 'city' ? 'town' : kind) + ' likho" value="' + (isNew ? esc(cur) : '') +
+      '" oninput="Pjp.set(\'' + d + '\',\'' + kind + '\',this.value)">';
+  },
+  pick: function (d, kind, el) {
+    var box = $('pj_' + kind + 'n_' + d);
+    if (box) box.style.display = el.value === Plan.ADD ? '' : 'none';
+    if (el.value === Plan.ADD) { if (box) { box.focus(); Pjp.set(d, kind, box.value); } return; }
+    Pjp.set(d, kind, el.value);
+    /* a new State means a different Town list — rebuild that one select in place */
+    if (kind === 'state') {
+      var ts = $('pj_city_' + d); if (!ts) return;
+      var list = Plan.towns(el.value), cur = (Pjp.days[d] || {}).city || '';
+      ts.innerHTML = I18n.tr('<option value="">— select —</option>' +
+        list.map(function (x) { return '<option' + (x === cur ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') +
+        '<option value="' + Plan.ADD + '">add new…</option>');
+      if (list.indexOf(cur) < 0) { ts.value = ''; Pjp.set(d, 'city', ''); }
+    }
+  },
   dates: function () {
     var a = Pjp.month.split('-'), y = +a[0], m = +a[1], n = new Date(y, m, 0).getDate(), out = [];
     for (var d = 1; d <= n; d++) out.push(y + '-' + p2(m) + '-' + p2(d));
@@ -3307,15 +4010,36 @@ var Pjp = {
     });
     return { need:need, done:done, miss:miss, off:off };
   },
+  /* ── the 27th-to-1st window ──
+     A PJP for month M is filled between the 27th of M-1 and the 1st of M; that is when the PJP tab
+     lights up in the nav. The moment HOD APPROVES it the tab closes and stays closed until the next
+     27th. Until it is approved the rep may keep editing and re-send as often as he needs — each
+     re-send replaces the previous request, so HOD never has two live copies to judge. */
+  winMonth: function () {
+    var t = new Date(); t.setHours(0, 0, 0, 0);
+    var y = t.getFullYear(), m = t.getMonth();
+    if (t.getDate() >= 27) { m++; if (m > 11) { m = 0; y++; } }
+    return y + '-' + p2(m + 1);
+  },
+  winOpen: function () { var d = new Date().getDate(); return d >= 27 || d === 1; },
+  approvedFor: function (mo) {
+    var r = DB.find('PjpDraft', DB.me.code + '__' + mo);
+    return !!(r && /approved|accepted/i.test(r.Status || ''));
+  },
+  /* editable = not yet approved. That is the whole rule: an unapproved plan is still the rep's job,
+     whatever the date, and an approved one is finished. */
   windowOpen: function () {
     if (Auth.isAdmin() || Bypass.on()) return true;
-    var a = Pjp.month.split('-'), y = +a[0], m = +a[1];
-    var t = new Date(); t.setHours(0, 0, 0, 0);
-    return t >= new Date(y, m - 2, 27) && t <= new Date(y, m - 1, 1);
+    return !Pjp.approvedFor(Pjp.month);
   },
   html: function () {
     var dr = Pjp.load(), c = Pjp.cover(), doj = DB.doj(DB.me.code);
-    var locked = /pending|approved|accepted/i.test(dr.Status || '');
+    /* only an APPROVED plan is frozen. While it is merely pending the rep can still edit and re-send:
+       the new request supersedes the old one. */
+    var lockAll = /approved|accepted/i.test(dr.Status || '');
+    var locked = lockAll;                        /* the header still asks "is the month frozen?" */
+    var pend = /pending/i.test(dr.Status || '');
+    var part = Pjp.partial(), rejD = Pjp.rejDays();
     var h = UI.head('', 'Monthly PJP', 'Poore month ka beat plan — har din ka town aur beat bharo. <b>Auto-save on</b>, duplicate nahi banega.');
     h += '<div class="card"><label class="f">Month</label>' +
       '<input class="in" type="month" id="pjp_m" value="' + Pjp.month + '" onchange="Pjp.setMonth(this.value)">' +
@@ -3327,7 +4051,17 @@ var Pjp = {
       '<div class="hint" style="margin-top:8px"> Har change turant <b>PjpDraft</b> tab me save hota hai (ek hi row per month — duplicate nahi banti). Approve hone par har din ki alag row <b>Master_PJP</b> me chali jayegi.</div>' +
       (dr.PublishedAt ? '<div class="banner g" style="margin-top:10px"><span></span><div>Ye plan <b>Master_PJP me publish</b> ho chuka hai (' + esc(dr.PublishedRows || '') + ' din).</div></div>' : '') +
       (doj ? '<div class="hint" style="margin-top:8px"> Joining' + dmy(doj) + ' — usse pehle ke din plan me count nahi hote.</div>' : '') +
-      (!Pjp.windowOpen() ? '<div class="banner w" style="margin-top:10px"><span></span><div>Submit window band hai. PJP <b>27</b> se <b>1</b> tarikh ke beech bhejna hota hai.</div></div>' : '') +
+      (Pjp.winOpen() && !locked ? '<div class="banner w" style="margin-top:10px"><span>!</span><div><b>PJP window khuli hai (27 se 1 tarikh)</b><br>' +
+        '<span style="font-weight:500">' + esc(monthName(Pjp.winMonth())) + ' ka plan abhi bhar ke HOD ko bhej do.</span></div></div>' : '') +
+      (locked ? '<div class="banner g" style="margin-top:10px"><span></span><div><b>' + esc(monthName(Pjp.month)) + ' approve ho gaya</b><br>' +
+        '<span style="font-weight:500">Ab is month me change nahi hoga. Agli PJP <b>27</b> tarikh se khulegi.</span></div></div>' : '') +
+      (part ? '<div class="banner r" style="margin-top:10px"><span>!</span><div><b>' + rejD.length +
+        ' din reject hue hain</b><br><span style="font-weight:500">' +
+        rejD.map(function (k) { return dmy(k); }).join(', ') +
+        (dr.RejectReason ? ' — ' + esc(dr.RejectReason) : '') +
+        '<br>Sirf yeh din edit ho sakte hain — baaki month approve hai. Theek karke dobara bhej do.</span></div></div>' : '') +
+      (pend ? '<div class="banner b" style="margin-top:10px"><span></span><div><b>HOD ke paas hai</b><br>' +
+        '<span style="font-weight:500">Approve hone tak aap edit karke dobara bhej sakte ho — naya request purane ko replace kar dega.</span></div></div>' : '') +
       '</div>';
 
     /* resumed-work banner: the draft came back from the sheet, so nothing needs refilling */
@@ -3344,8 +4078,9 @@ var Pjp = {
     h += '<div class="card"><div class="btns">' +
       (locked ? '' : '<button class="btn ghost" onclick="Pjp.autofill()"> PJP se auto-fill</button>' +
         '<button class="btn" id="pjp_sub" onclick="Pjp.submit(this)" ' +
-          ((c.miss.length && !Bypass.on()) || !c.need || !Pjp.windowOpen() || /pending|approved/i.test(dr.Status||'') ? 'disabled' : '') + '>' +
-          (/pending/i.test(dr.Status||'') ? 'Already sent — HOD ke paas hai' :
+          ((c.miss.length && !Bypass.on()) || !c.need || !Pjp.windowOpen() ? 'disabled' : '') + '>' +
+          (part ? 'Theek kiya — dobara bhejo' :
+           pend ? 'Dobara bhejo (' + (num(dr.Revision) + 1) + ')' :
            (c.miss.length && Bypass.on()) ? 'Adhoora hi bhej do (bypass)' : 'HOD ko bhejo') + '</button>') +
       '</div></div>';
 
@@ -3359,16 +4094,29 @@ var Pjp = {
           '<div class="s">Joining se pehle — plan required nahi</div></div><span class="pill p-grey">—</span></div></div>';
         return;
       }
-      var r = Pjp.days[d] || { ww:sun ? 'Weekly Off' : 'Self Working', city:'', beat:'', st:'HQ' };
+      var r = Pjp.days[d] || { ww:sun ? 'Weekly Off' : 'Self Working', state:'', city:'', beat:'', st:'HQ' };
+      /* A partially rejected month is locked EXCEPT on the days that came back. */
+      var locked = lockAll || !Pjp.editable(d);
+      var sentBack = rejD.indexOf(d) >= 0;
       /* Whether Town/Beat are needed depends ONLY on the Working-With value, never on the weekday.
          It used to be `isField(ww) && !sun`, so a Sunday switched to Self Working showed no inputs. */
       var f = Pjp.isField(r.ww);
-      var off = !f && /weekly|holiday/i.test(r.ww);
-      h += '<div class="card" style="padding:12px 14px;background:' + (f ? '#fff' : (off ? '#fbfaf5' : '#fffaf8')) + '">' +
+      /* OFF means WEEKLY OFF and nothing else. A meeting, an activity or a leave day is not a field
+         day either, but calling it "OFF" is wrong — it is time worked, just not on a beat. */
+      var off = /weekly off/i.test(r.ww);
+      var tag = f ? 'WK-' + Math.min(4, Math.floor((dd - 1) / 7) + 1)
+        : off ? 'OFF' : /meeting|activity/i.test(r.ww) ? 'MEETING'
+        : /sick/i.test(r.ww) ? 'SICK' : /leave/i.test(r.ww) ? 'LEAVE'
+        : /holiday/i.test(r.ww) ? 'HOLIDAY' : 'OTHER';
+      h += '<div class="card" style="padding:12px 14px;background:' +
+        (sentBack ? '#fff6f5' : (f ? '#fff' : (off ? '#fbfaf5' : '#fffaf8'))) +
+        (sentBack ? ';border-color:var(--bad)' : '') + '">' +
+        (sentBack ? '<div class="hint" style="color:var(--bad);font-weight:700;margin-bottom:6px">' +
+          'Ye din reject hua tha — theek karo</div>' : '') +
         '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
           '<div style="font-weight:700;font-size:13.5px;min-width:74px">' + p2(dd) + ' ' + monthName(Pjp.month).split(' ')[0] +
           ' <span class="hint" style="font-weight:500">' + dn[dow] + '</span></div>' +
-          '<span class="pill ' + (f ? 'p-blue' : 'p-grey') + '">' + (f ? 'WK-' + Math.min(4, Math.floor((dd - 1) / 7) + 1) : 'OFF') + '</span>' +
+          '<span class="pill ' + (f ? 'p-blue' : off ? 'p-grey' : 'p-warn') + '">' + tag + '</span>' +
           (locked ? '<span class="pill p-blue">' + esc(r.ww) + '</span>'
             : '<select class="in" style="width:auto;flex:1;min-width:150px;padding:7px 30px 7px 10px;font-size:12.5px" onchange="Pjp.set(\'' + d + '\',\'ww\',this.value)">' +
               ['Self Working','ME Sales Team','BA Supervisor','Meeting / Activity','Weekly Off','Leave','Sick Leave','HO Holiday']
@@ -3377,10 +4125,8 @@ var Pjp = {
             : '<select class="in" style="width:auto;padding:7px 30px 7px 10px;font-size:12.5px" onchange="Pjp.set(\'' + d + '\',\'st\',this.value)">' +
               ['HQ','Ex-HQ','Outstation'].map(function (o) { return '<option' + (o === (r.st || 'HQ') ? ' selected' : '') + '>' + o + '</option>'; }).join('') + '</select>') : '') +
         '</div>' +
-        (f ? (locked ? '<div class="sub">' + esc(r.city || '—') + ' · ' + esc(r.beat || '—') + '</div>'
-          : '<div class="row two" style="margin-top:8px">' +
-            '<input class="in" placeholder="Town / City" value="' + esc(r.city) + '" oninput="Pjp.set(\'' + d + '\',\'city\',this.value)">' +
-            '<input class="in" placeholder="Beat / Market" value="' + esc(r.beat) + '" oninput="Pjp.set(\'' + d + '\',\'beat\',this.value)"></div>' +
+        (f ? (locked ? '<div class="sub">' + esc(r.state ? r.state + ' · ' : '') + esc(r.city || '—') + ' · ' + esc(r.beat || '—') + '</div>'
+          : Pjp.geo(d, r) +
             ((r.city || '').trim() && (r.beat || '').trim() ? '' : '<div class="hint" style="margin-top:5px;color:#b7791f">! Town aur Beat dono bharo — tabhi ye din complete hoga.</div>')) : '') +
         '</div>';
     });
@@ -3390,7 +4136,7 @@ var Pjp = {
   setMonth: function (m) { Pjp.flush(); Pjp.month = m; Pjp.days = null; Pjp.loadedKey = ''; Pjp.hydratedAt = 0; render(); },
   set: function (d, k, v) {
     if (!Pjp.days) Pjp.load();
-    if (!Pjp.days[d]) Pjp.days[d] = { ww:(new Date(d + 'T00:00:00').getDay() === 0 ? 'Weekly Off' : 'Self Working'), city:'', beat:'', st:'HQ' };
+    if (!Pjp.days[d]) Pjp.days[d] = { ww:(new Date(d + 'T00:00:00').getDay() === 0 ? 'Weekly Off' : 'Self Working'), state:'', city:'', beat:'', st:'HQ' };
     Pjp.days[d][k] = v;
     Pjp._dirty = true;
     clearTimeout(Pjp._t);
@@ -3411,28 +4157,35 @@ var Pjp = {
     var mp = DB.pjpMonth(DB.me.code, Pjp.month).filter(function (r) { return !doj || toISO(r.Date) >= doj; });
     if (!mp.length) return toast('Master_PJP me is month ka (joining ke baad ka) data nahi hai');
     mp.forEach(function (r) { var d = toISO(r.Date);
-      Pjp.days[d] = { ww:Pjp.ww(r.Ww), city:r.Town || '', beat:r.Beat || '', st:(Pjp.days[d] && Pjp.days[d].st) || 'HQ' }; });
+      Pjp.days[d] = { ww:Pjp.ww(r.Ww), state:r.State || Plan.stateOf(r.Town) || '',
+        city:r.Town || '', beat:r.Beat || '', st:(Pjp.days[d] && Pjp.days[d].st) || 'HQ' }; });
     Pjp._dirty = true; Pjp.flush(); render();
     toast('' + mp.length + ' din Master PJP se fill ho gaye' + (doj ? ' (joining ke baad ke)' : ''));
   },
   submit: function (el) {
     var c = Pjp.cover(), dr0 = Pjp.draft();
-    if (/pending|approved/i.test(dr0.Status || '')) { render(); return toast('Already sent — HOD ke paas hai'); }
+    if (/approved|accepted/i.test(dr0.Status || '')) { render(); return toast('Ye month approve ho chuka hai'); }
     if (!c.need) return toast('Kam se kam ek field day plan karo');
-    /* full-month coverage and the 27–1 window are waived for a bypassed user */
+    /* full-month coverage is waived for a bypassed user */
     if (c.miss.length && !Bypass.on()) return toast('Pehle poora month plan karo');
-    if (!Pjp.windowOpen()) return toast('Submit window band hai (27–1)');
-    return UI.confirm({ icon:'', title:'PJP HOD ko bhejna hai?',
-      msg:'<b>' + esc(monthName(Pjp.month)) + '</b> ka plan \u2014 <b>' + c.done + '/' + c.need +
-          ' field din</b> bhare hue hain.<br>Bhejne ke baad aap edit nahi kar paoge.',
+    /* Re-sending is allowed while the request is only PENDING — the rep fixes what HOD objected to
+       and sends again; the new copy REPLACES the old one, which is why the HOD stamp and the reject
+       reason are wiped and the revision is bumped. */
+    var again = /pending|partial/i.test(dr0.Status || ''), rev = num(dr0.Revision) + 1;
+    return UI.confirm({ icon:'', title:again ? 'Naya request bhejna hai?' : 'PJP HOD ko bhejna hai?',
+      msg:'<b>' + esc(monthName(Pjp.month)) + '</b> ka plan — <b>' + c.done + '/' + c.need +
+          ' field din</b> bhare hue hain.' +
+          (again ? '<br>Purana request cancel ho jayega — HOD ko sirf yehi naya dikhega.'
+                 : '<br>Approve hone tak aap edit karke dobara bhej sakte ho.'),
       ok:'Haan, bhej do', cancel:'Abhi nahi' }).then(function (go) {
       if (!go) return;
       Pjp._dirty = true;
       return Busy.run('pjp_' + Pjp.key(), el, 'Bhej raha hai…', function () { return DB.save('PjpDraft', { Key:Pjp.key(), EmpCode:DB.me.code, EmpName:DB.me.name, Month:Pjp.month,
       Status:'Pending', DaysJson:JSON.stringify(Pjp.days), Coverage:c.done + '/' + c.need,
+      Revision:rev, HodAt:'', HodBy:'', HodRole:'', RejectReason:'', RejectedDaysJson:'',
       SubmittedAt:new Date().toISOString(), UpdatedAt:Date.now() }).then(function () {
-      Log.add('PJP', 'Submitted', Pjp.month, c.done + '/' + c.need + ' days');
-      render(); toast(' PJP HOD ko chala gaya');
+      Log.add('PJP', again ? 'Re-submitted r' + rev : 'Submitted', Pjp.month, c.done + '/' + c.need + ' days');
+      render(); toast(again ? 'Naya request bheja — purana cancel' : 'PJP HOD ko chala gaya');
     }); });
     });
   }
@@ -3476,6 +4229,37 @@ var Plan = {
   uniq: function (a) { var s = {}, o = []; a.forEach(function (x) {
     x = String(x == null ? '' : x).trim(); if (x && !s[x.toUpperCase()]) { s[x.toUpperCase()] = 1; o.push(x); } });
     return o.sort(); },
+  /* ── the geo mapping, for ANY employee ──
+     The rep's own screens ask about themselves; an HOD editing a rep's plan has to be offered the
+     REP's states and towns, not their own. One implementation, an optional code. */
+  empStores: function (code) {
+    if (!code || String(code).toUpperCase() === String(DB.me.code || '').toUpperCase()) return DB.myStores();
+    var e = DB.emp(code) || {};
+    var nm = String(e.Name || '').toUpperCase().replace(/\s+/g, ' ').trim(), cd = String(code).toUpperCase();
+    var all = DB.m.Master_Stores || [];
+    var mine = all.filter(function (s) {
+      var a = String(s.EmAsm || '').toUpperCase().replace(/\s+/g, ' ').trim();
+      return a && (a === nm || a === cd); });
+    return mine.length ? mine : all;
+  },
+  statesOf: function (code) {
+    return Plan.uniq(Plan.empStores(code).map(function (s) { return s.State; })); },
+  townsOf: function (code, state) {
+    var st = String(state || '').toUpperCase().trim();
+    var fromStores = Plan.empStores(code).filter(function (s) {
+      return !st || String(s.State || '').toUpperCase().trim() === st; }).map(function (s) { return s.City; });
+    var fromPjp = (DB.m.Master_PJP || []).filter(function (p) {
+      return String(p.Code).toUpperCase() === String(code).toUpperCase() &&
+             (!st || !Plan.stateOfFor(code, p.Town) ||
+              String(Plan.stateOfFor(code, p.Town)).toUpperCase() === st); })
+      .map(function (p) { return p.Town; });
+    return Plan.uniq(fromStores.concat(fromPjp).filter(function (x) {
+      return !/^(leave|sunday|off day|weekly off|holiday|meeting.*)$/i.test(String(x || '').trim()); })); },
+  stateOfFor: function (code, town) {
+    var t = String(town || '').toUpperCase().trim(); if (!t) return '';
+    var hit = Plan.empStores(code).filter(function (s) {
+      return String(s.City || '').toUpperCase().trim() === t; })[0];
+    return hit ? (hit.State || '') : ''; },
   states: function () {
     return Plan.uniq(DB.myStores().map(function (s) { return s.State; })); },
   towns: function (state) {
@@ -4024,7 +4808,7 @@ var Field = {
       '<input type="hidden" id="f_src" value="' + esc(Field.src) + '">' +
       '<div class="hint">Order source: <b>' + esc(Field.src) + '</b> — badalna ho to upar step 2 me jao.</div>' +
       '<label class="f">Status</label><select class="in" id="f_status" onchange="Field.renderReason()">' +
-        ['Order in Process','Billing Done','No Order','Cancel Order'].map(function (o) { return '<option>' + o + '</option>'; }).join('') + '</select>' +
+        ['Order in Process','Billing Done','No Order','Cancel Order'].map(function (o) { return '<option value="' + o + '">' + o + '</option>'; }).join('') + '</select>' +
       '<div id="f_reason"></div>' +
       '<label class="f">Remarks</label><textarea class="in" id="f_remarks" rows="2"></textarea>' +
       '<div class="btns"><button class="btn" onclick="Field.submit(this)"> Submit &amp; aage badho</button></div></div>';
@@ -4199,7 +4983,7 @@ var Field = {
     box.innerHTML = I18n.tr((st === 'No Order' || st === 'Cancel Order')
       ? '<label class="f">Reason <span class="req">*</span></label><select class="in" id="f_rsn">' +
         ['Stock Issue','Transport Issue','Overdue','Collection Issue','Damage & Expiry','Official Issue','Shop Closed','Other']
-        .map(function (o) { return '<option>' + o + '</option>'; }).join('') + '</select>' : '');
+        .map(function (o) { return '<option value="' + o + '">' + o + '</option>'; }).join('') + '</select>' : '');
   },
   photoMeta: function () {
     var s = Field.store || {};
@@ -4292,12 +5076,15 @@ var Field = {
       StoreName:name, State:val('n_state'), Town:town, Address:val('n_addr'), Pincode:val('n_pin'),
       Beat:val('n_beat'), Category:val('n_cat'), OwnerName:val('n_owner'), OwnerMobile:val('n_mob'),
       DaySales:num(val('n_day')), MonthlyTurnover:num(val('n_turn')), Reason:reason,
-      PhotoFront:Cam.has('front') ? 'yes' : '', PhotoInside:Cam.has('inside') ? 'yes' : '', Status:'In-Process' })
+      /* Nobody approves a new outlet. It goes straight to the sheet and the rep drives it himself
+         from the Tracker tab, so its first status is simply the first tracker stage. */
+      PhotoFront:Cam.has('front') ? 'yes' : '', PhotoInside:Cam.has('inside') ? 'yes' : '',
+      Status:'Pending', StatusAt:new Date().toISOString() })
       .then(function () {
         Cam.upload(id, name);
         Log.add('NewStore', 'Created', id, name + ' · ' + town);
         Cam.clear(['front','inside']); Field.ns = { front:'', inside:'' };
-        toast('Outlet save ho gaya —' + id);
+        toast('Outlet save ho gaya —' + id + ' · Tracker tab me status update karo');
         Nav.build(); render();
       });
   }
@@ -4986,7 +5773,7 @@ var Sec = {
          written behind the rep's back and nothing typed just before Save is lost */
       '<label class="f">Status</label><select class="in" id="sl_status">' +
         ['Order in Process','Billing Done','No Order','Cancel Order'].map(function (s) {
-          return '<option' + (s === o.Status ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' +
+          return '<option value="' + s + '"' + (s === o.Status ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' +
       '<label class="f">Remarks</label><input class="in" id="sl_rm" value="' + esc(o.Remarks || '') + '">' +
       /* what the sheet holds RIGHT NOW, so "did it save?" is answerable on screen */
       '<div class="hint" id="sl_state" style="margin-top:10px">Sheet me: <b>' + num(o.TotSku) + ' SKU · ' +
@@ -5144,10 +5931,13 @@ var Sec = {
   setStatus: function (po, s) {
     var o = DB.find('SecOrders', po); if (!o) return;
     var lines = Sec.lines(o);          /* JSON, or rebuilt from the SecOrderLines rows */
+    /* committing with no recoverable lines would rewrite real totals as zeros */
+    if (Sec.orphan(o, lines)) return toast('Is order ki lines nahi mili — Sync karke dobara try karo', 5000);
     /* the status lives on the line rows too — commit rewrites both, so a report built off
        SecOrderLines can never disagree with the order header */
-    var nu = Object.assign({}, o, { Status:s,
-      DeliveredAt:s === 'Billing Done' ? new Date().toISOString() : (o.DeliveredAt || '') });
+    var now = new Date().toISOString();
+    var nu = Object.assign({}, o, { Status:s, StatusAt:now,
+      DeliveredAt:s === 'Billing Done' ? now : (o.DeliveredAt || '') });
     Sec.commit(nu, lines, 'Status:' + s).then(function () { Log.add('Order', 'Status ' + s, po, o.StoreName); });
   },
   setField: function (po, k, v) {
@@ -5488,49 +6278,150 @@ var Eod = {
 };
 
 /* ═══════════════ SUMMARY ═══════════════ */
-var Sum = {
+/* ═══════════════ TRACKER — the rep's own follow-up board ═══════════════
+   Secondary orders, new outlets and POSM requirements in ONE list, with a status the EMPLOYEE owns.
+   Nothing here is an approval: he rings his ASM, gets an answer, and records the stage himself — so
+   HOD and Admin have no button and no say on this screen. Every change is an upsert on the SAME row
+   (never a new one) and syncs like everything else, so the sheet always shows the real stage. */
+var Trk = {
+  kind:'ord', filter:'open',
+  KINDS:[['ord', 'Orders'], ['ns', 'New outlets'], ['pq', 'POSM']],
+  TAB:{ ord:'SecOrders', ns:'NewStores', pq:'PosmRequirement' },
+  /* one status list per type, in the order the work actually moves */
+  ST:{
+    ord:['Order in Process', 'Billing Done', 'No Order', 'Cancel Order'],
+    ns: ['Pending', 'Sent to ASM', 'Code created', 'First billing done', 'Dropped'],
+    pq: ['Pending', 'Sent to ASM', 'Approved by ASM', 'Dispatched', 'Installed', 'Rejected']
+  },
+  /* finished either way (drives the Open/Done filter) and finished BADLY (drives the red pill) */
+  DONE:['Billing Done', 'No Order', 'Cancel Order', 'First billing done', 'Dropped',
+        'Installed', 'Rejected'],
+  BAD:['No Order', 'Cancel Order', 'Dropped', 'Rejected'],
+  shut: function (s) { return Trk.DONE.indexOf(s) >= 0; },
+  pill: function (s) { return Trk.BAD.indexOf(s) >= 0 ? 'p-bad' : Trk.shut(s) ? 'p-ok' : 'p-warn'; },
+  /* a status the employee never picked (older rows, or a row created before this screen existed)
+     still has to land on a real option, or the dropdown would silently show the first one */
+  st: function (k, v) {
+    var s = String(v || '').trim(), list = Trk.ST[k];
+    if (list.indexOf(s) >= 0) return s;
+    if (/approv/i.test(s)) return k === 'pq' ? 'Approved by ASM' : k === 'ns' ? 'Code created' : list[0];
+    if (/reject|declin/i.test(s)) return k === 'ord' ? 'Cancel Order' : k === 'ns' ? 'Dropped' : 'Rejected';
+    return list[0];
+  },
+
+  /* ONE reader — every type is flattened to the same shape so the list, the counts and the save path
+     have no per-type branches to disagree about */
+  rows: function () {
+    var k = Trk.kind, out = [];
+    if (k === 'ord') DB.mine('SecOrders').forEach(function (o) {
+      out.push({ key:String(o.PoNumber), date:toISO(o.Date), title:o.StoreName || '',
+        sub:o.PoNumber + ' · ' + num(o.TotSku) + ' SKU · ' + num(o.TotUnits) + ' units · ' + inr(o.TotValue),
+        sub2:(o.Source || '') + (o.DbName ? ' · ' + o.DbName : ''),
+        st:Trk.st('ord', o.Status), note:o.Remarks || '', at:o.StatusAt || o.DeliveredAt || '' });
+    });
+    if (k === 'ns') DB.mine('NewStores').forEach(function (r) {
+      out.push({ key:String(r.StoreId), date:toISO(r.Date), title:r.StoreName || '',
+        sub:r.StoreId + ' · ' + (r.Town || '—') + (r.Beat ? ' / ' + r.Beat : ''),
+        sub2:(r.DbName || '') + (r.OwnerMobile ? ' · ' + r.OwnerMobile : ''),
+        st:Trk.st('ns', r.Status), note:r.StatusReason || '', at:r.StatusAt || '' });
+    });
+    if (k === 'pq') DB.mine('PosmRequirement').forEach(function (r) {
+      out.push({ key:String(r.Id), date:toISO(r.Date), title:r.StoreName || '',
+        sub:(r.Element || '—') + ' · ' + (r.City || '—'),
+        sub2:r.Remarks || '', st:Trk.st('pq', r.Status), note:r.StatusReason || '', at:r.StatusAt || '' });
+    });
+    /* open work first, then newest — a rep opens this screen to see what is still stuck */
+    return out.sort(function (a, b) {
+      var da = Trk.shut(a.st) ? 1 : 0, db = Trk.shut(b.st) ? 1 : 0;
+      return da - db || String(b.date).localeCompare(String(a.date));
+    });
+  },
+
   html: function () {
-    var m = today().slice(0, 7);
-    var ord = DB.mine('SecOrders').filter(function (r) { return toISO(r.Date).slice(0, 7) === m; });
-    var lines = DB.mine('SecOrderLines').filter(function (r) { return toISO(r.Date).slice(0, 7) === m; });
-    var ns = DB.mine('NewStores').filter(function (r) { return toISO(r.Date).slice(0, 7) === m; });
-    var pa = DB.mine('PosmAudit').filter(function (r) { return toISO(r.Date).slice(0, 7) === m; });
-    var eods = DB.mine('Eod').filter(function (r) { return toISO(r.Date).slice(0, 7) === m; });
-    var nsv = ord.reduce(function (a, o) { return a + num(o.TotNsvLakh); }, 0);
-    var days = {}; ord.forEach(function (o) { days[toISO(o.Date)] = 1; });
-    var brand = {}; lines.forEach(function (l) { var b = l.Brand || 'Other'; brand[b] = (brand[b] || 0) + num(l.NsvLakh); });
-    var mtd = num(DB.cfg('MTD @24 Days - Working', 36));
+    var all = Trk.rows();
+    var open = all.filter(function (r) { return !Trk.shut(r.st); });
+    var h = UI.head('', 'Tracker',
+      'Apne order, naye outlet aur POSM ka status khud update karo. Koi approval nahi — ' +
+      'ASM se baat karke jo hua wahi yahan mark kar do, sheet me chala jayega.');
 
-    var h = UI.head('', 'Mera performance', monthName(m) + ' · month-to-date');
-    h += '<div class="kpis">' + UI.kpi(Object.keys(days).length, 'Working days', 'b') +
-      UI.kpi(ord.length, 'Total visits', 'b') + UI.kpi(lakh(nsv), 'NSV ₹L', 'g') +
-      UI.kpi(Math.round(nsv / mtd * 100) + '%', 'MTD ach', nsv >= mtd ? 'g' : 'w') + '</div>';
-    h += '<div class="kpis" style="margin-top:10px">' + UI.kpi(ns.length, 'Naye outlet', 'w') +
-      UI.kpi(pa.length, 'POSM audit', '') + UI.kpi(eods.length, 'EOD filed', '') +
-      UI.kpi(ord.filter(function (o) { return o.Status === 'Billing Done'; }).length, 'Billed', 'g') + '</div>';
+    h += '<div class="kpis k3">' + UI.kpi(all.length, 'Total', 'b') +
+      UI.kpi(open.length, 'Open', open.length ? 'w' : 'g') +
+      UI.kpi(all.length - open.length, 'Closed', 'g') + '</div>';
 
-    h += '<div class="sec-title">Brand-wise NSV (₹ Lakh)</div><div class="card">' +
-      (Object.keys(brand).length ? Object.keys(brand).sort(function (a, b) { return brand[b] - brand[a]; }).map(function (b) {
-        var pct = nsv ? Math.round(brand[b] / nsv * 100) : 0;
-        return '<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12.5px;font-weight:600">' +
-          '<span>' + esc(b) + '</span><span>' + lakh(brand[b]) + ' L · ' + pct + '%</span></div>' +
-          '<div style="height:7px;background:var(--line);border-radius:6px;margin-top:4px;overflow:hidden">' +
-          '<div style="height:100%;width:' + pct + '%;background:var(--blue)"></div></div></div>'; }).join('')
-      : UI.empty('', 'Is month koi order nahi')) + '</div>';
+    h += '<div class="card" style="padding:10px"><div class="chips" id="tk_chips">' +
+      Trk.KINDS.map(function (c) {
+        var n = c[0] === Trk.kind ? open.length : 0;
+        return '<button class="btn ' + (Trk.kind === c[0] ? '' : 'ghost') + ' sm"' +
+          (Trk.kind === c[0] ? ' data-on="1"' : '') + ' onclick="Trk.go(\'' + c[0] + '\')">' +
+          esc(c[1]) + (n ? ' (' + n + ')' : '') + '</button>'; }).join('') + '</div>';
 
-    h += '<div class="sec-title">Din-wise</div><div class="card"><div class="tw"><table>' +
-      '<thead><tr><th>Date</th><th class="num">Visits</th><th class="num">Order</th><th class="num">Value</th><th class="num">NSV L</th></tr></thead><tbody>' +
-      Object.keys(days).sort().reverse().map(function (d) {
-        var g = ord.filter(function (o) { return toISO(o.Date) === d; });
-        return '<tr><td>' + dmy(d) + '</td><td class="num">' + g.length + '</td><td class="num">' +
-          g.filter(function (o) { return num(o.TotUnits) > 0; }).length + '</td><td class="num">' +
-          inr(g.reduce(function (a, o) { return a + num(o.TotValue); }, 0)) + '</td><td class="num">' +
-          lakh(g.reduce(function (a, o) { return a + num(o.TotNsvLakh); }, 0)) + '</td></tr>'; }).join('') +
-      '</tbody></table></div>' +
-      '<div class="btns"><button class="btn ghost sm" onclick="Sum.excel()"> Month data download</button></div></div>';
+    var chips = [['open', 'Open (' + open.length + ')'], ['done', 'Closed (' + (all.length - open.length) + ')'],
+                 ['all', 'All (' + all.length + ')']];
+    h += '<div style="display:flex;gap:6px;margin-top:8px">' + chips.map(function (c) {
+      return '<button class="btn ' + (Trk.filter === c[0] ? '' : 'ghost') + ' sm" style="flex:1 1 0"' +
+        ' onclick="Trk.set(\'' + c[0] + '\')">' + esc(c[1]) + '</button>'; }).join('') + '</div></div>';
+
+    var show = all.filter(function (r) {
+      return Trk.filter === 'all' || (Trk.filter === 'open' ? !Trk.shut(r.st) : Trk.shut(r.st)); });
+    if (!show.length) return h + '<div class="card">' +
+      UI.empty('', all.length ? 'Is filter me kuch nahi hai' : 'Abhi is type ka kuch nahi bhara') + '</div>';
+
+    h += '<div class="sec-title">' + show.length + ' item' + (show.length > 1 ? 's' : '') + '</div>';
+    h += show.slice(0, 80).map(Trk.card).join('');
+    if (show.length > 80) h += '<div class="hint">Sirf pehle 80 dikha rahe hain — filter use karo.</div>';
+    h += '<div class="card"><div class="btns">' +
+      '<button class="btn ghost" id="tk_sync" onclick="Sync.now(true,this)">Sync</button></div></div>';
     return h;
   },
-  excel: function () { return Rep.orders(today().slice(0, 7)); }
+  after: function () {
+    var s = $('tk_chips'); if (!s) return;
+    s.classList.toggle('fit', s.scrollWidth <= s.clientWidth + 2);
+  },
+
+  card: function (r) {
+    var k = Trk.kind, q = Appr.q(r.key), id = Appr.jid(r.key);
+    return '<div class="card">' +
+      '<div class="lrow" style="padding-top:0"><div class="m">' +
+        '<div class="t">' + esc(r.title) + '</div>' +
+        '<div class="s">' + dmy(r.date) + ' · ' + esc(r.sub) + '</div>' +
+        (r.sub2 ? '<div class="s">' + esc(r.sub2) + '</div>' : '') + '</div>' +
+      '<span class="pill ' + Trk.pill(r.st) + '">' + esc(r.st) + '</span></div>' +
+      '<label class="f">Status</label>' +
+      '<select class="in" onchange="Trk.setSt(\'' + q + '\',this.value)">' +
+        Trk.ST[k].map(function (s) {
+          return '<option value="' + esc(s) + '"' + (s === r.st ? ' selected' : '') + '>' + esc(s) + '</option>'; }).join('') +
+      '</select>' +
+      '<label class="f">Note — ASM ne kya kaha</label>' +
+      '<div style="display:flex;gap:6px;align-items:center">' +
+      '<input class="in" style="flex:1 1 0;min-width:0" id="tk_n_' + id + '" value="' + esc(r.note) + '" placeholder="Follow-up note">' +
+      '<button class="btn ghost sm" style="flex:0 0 auto" onclick="Trk.setNote(\'' + q + '\',\'' + id + '\',this)">Save</button></div>' +
+      (r.at ? '<div class="hint" style="margin-top:6px">Updated ' + esc(Appr.when(r.at)) + '</div>' : '') +
+      '</div>';
+  },
+
+  /* ── the only writer ── */
+  setSt: function (key, s) {
+    var k = Trk.kind, now = new Date().toISOString();
+    if (k === 'ord') return Sec.setStatus(key, s);
+    var tab = Trk.TAB[k], r = DB.find(tab, key);
+    if (!r) return toast('Ye row nahi mili — Sync karo');
+    DB.save(tab, Object.assign({}, r, { Status:s, StatusAt:now })).then(function () {
+      Log.add('Tracker', 'Status ' + s, key, k);
+      render(); toast('Status: ' + s);
+    });
+  },
+  setNote: function (key, id, el) {
+    var k = Trk.kind, box = $('tk_n_' + id), v = box ? box.value : '';
+    if (k === 'ord') { Sec.setField(key, 'Remarks', v); return toast('Note save ho gaya'); }
+    var tab = Trk.TAB[k], r = DB.find(tab, key);
+    if (!r) return toast('Ye row nahi mili — Sync karo');
+    Busy.run('tk_' + id, el, 'Save…', function () {
+      return DB.save(tab, Object.assign({}, r, { StatusReason:v, StatusAt:new Date().toISOString() }))
+        .then(function () { Log.add('Tracker', 'Note', key, k); render(); toast('Note save ho gaya'); });
+    });
+  },
+  go: function (k) { Trk.kind = k; render(); },
+  set: function (f) { Trk.filter = f; render(); }
 };
 
 /* ═══════════════ APPROVALS — "meri requests" ═══════════════
@@ -5543,8 +6434,9 @@ var Sum = {
 var Appr = {
   filter:'all', kindF:'all',
   open:{},
+  /* Store openings and POSM requirements are NOT approvals any more — the rep opens the outlet, asks
+     his ASM himself and records the stage in the Tracker tab. They deliberately do not appear here. */
   KINDS:[['PJP', 'PJP'], ['Plan change', 'Plan change'],
-         ['Store opening', 'Store opening'], ['POSM request', 'POSM request'],
          ['Order', 'Orders'], ['TA/DA', 'TA/DA']],
 
   ts: function (v) {
@@ -5575,13 +6467,17 @@ var Appr = {
   },
   norm: function (st) {
     var s = String(st || '').toLowerCase();
+    /* "Partially Rejected" must not be read as either a clean approval or a full rejection: the rep
+       has to fix only the ticked days, and the queue has to keep it visible as still-open work. */
+    if (/partial/.test(s)) return 'partial';
     if (/approv/.test(s)) return 'approved';
     if (/reject|declin/.test(s)) return 'rejected';
     if (/draft/.test(s)) return 'draft';
     return 'pending';
   },
   LBL:{ approved:['Approved','p-ok'], rejected:['Rejected','p-bad'],
-        pending:['HOD ke paas','p-warn'], draft:['Bheja nahi','p-grey'] },
+        pending:['HOD ke paas','p-warn'], draft:['Bheja nahi','p-grey'],
+        partial:['Partly rejected','p-bad'] },
   /* Coverage is "done/need"; guard against the old rows where Sheets read "9/9" as a date */
   cover: function (v) { var s = String(v || '').trim(); return /^\d+\s*\/\s*\d+$/.test(s) ? s : ''; },
   /* row keys go straight into an inline onclick — keep them attribute-safe */
@@ -5591,13 +6487,12 @@ var Appr = {
 
   /* Admin/HOD can decide right here, through the SAME handlers the Admin console uses — so the two
      screens can never disagree. Without this an HOD saw "HOD ke paas hai" and had no way to act. */
-  ACTABLE:['pjp','dev','ns','pq','tada'],
-  can: function (o) { return Auth.isAdmin() && o.status === 'pending' && Appr.ACTABLE.indexOf(o.act) >= 0; },
+  ACTABLE:['pjp','dev','tada'],
+  can: function (o) { return Auth.isAdmin() && (o.status === 'pending' || o.status === 'partial') &&
+    Appr.ACTABLE.indexOf(o.act) >= 0; },
   act: function (kind, key, ok) {
     if (kind === 'pjp')  return ok ? Admin.pjpOk(key) : Admin.pjpNo(key);
     if (kind === 'dev')  return Admin.devOk(key, ok ? 1 : 0);
-    if (kind === 'ns')   return Admin.storeOk(key, ok);
-    if (kind === 'pq')   return Admin.posmOk(key, ok);
     if (kind === 'tada') return Admin.tadaOk(key, ok);
   },
   btns: function (o, big) {
@@ -5624,12 +6519,14 @@ var Appr = {
         emp:d.EmpName || '',
         sent:d.SubmittedAt || '', sentAlt:(st === 'draft' ? '' : d.UpdatedAt || d.LastSync || ''),
         done:d.HodAt || '', by:d.HodBy || '', role:d.HodRole || '',
-        note:st === 'rejected' ? (d.RejectReason || '') : '',
+        note:(st === 'rejected' || st === 'partial') ? (d.RejectReason || '') : '',
+        rejDays:Admin.rejDays(d),
         rows:[['Month', monthName(d.Month) || d.Month || '—'],
               ['Field din bhare', cv || '—'],
               ['Publish', d.PublishedAt ? (Appr.when(d.PublishedAt) +
                 (d.PublishedRows ? ' · ' + d.PublishedRows + ' din Master_PJP me' : '')) : '—']],
         tip:st === 'draft' ? 'Ye abhi draft hai — PJP tab se HOD ko bhejo.'
+          : st === 'partial' ? 'PJP tab me sirf reject wale din khule hain — theek karke dobara bhejo.'
           : st === 'approved' ? 'Approved plan Master_PJP me chala gaya — Plan tab me roz dikhega.' : '' });
     });
 
@@ -5648,33 +6545,8 @@ var Appr = {
         tip:st === 'rejected' ? 'Ye beat dobara request nahi kar sakte — koi dusra beat chuno.' : '' });
     });
 
-    pick('NewStores').forEach(function (r) {
-      out.push({ id:'ns_' + Appr.jid(r.StoreId), icon:'', kind:'Store opening', go:'field',
-        status:Appr.norm(r.Status), act:'ns', key:r.StoreId,
-        title:'Naya outlet — ' + (r.StoreName || ''),
-        emp:r.EmpName || '',
-        sent:r.Ts || '', sentAlt:r.LastSync || '',
-        done:r.HodAt || '', by:r.HodBy || '', role:r.HodRole || '', note:r.StatusReason || '',
-        rows:[['Town / Beat', (r.Town || '—') + ' / ' + (r.Beat || '—')],
-              ['Distributor', r.DbName || '—'],
-              ['Owner', (r.OwnerName || '—') + (r.OwnerMobile ? ' · ' + r.OwnerMobile : '')],
-              ['Day sale / Monthly', inr(r.DaySales) + ' / ' + inr(r.MonthlyTurnover)],
-              ['Kyun chahiye', r.Reason || '—']],
-        tip:'' });
-    });
-
-    /* POSM requirement — the rep asks, admin/HOD decides */
-    pick('PosmRequirement').forEach(function (r) {
-      out.push({ id:'pq_' + Appr.jid(r.Id), icon:'', kind:'POSM request', go:'posm',
-        status:Appr.norm(r.Status), act:'pq', key:r.Id,
-        title:'POSM — ' + (r.StoreName || ''),
-        emp:r.EmpName || '',
-        sent:r.Ts || '', sentAlt:r.LastSync || '',
-        done:r.HodAt || '', by:r.HodBy || '', role:r.HodRole || '', note:r.StatusReason || '',
-        rows:[['Chahiye?', r.Requirement || '—'], ['Element', r.Element || '—'],
-              ['City', r.City || '—'], ['Rep ka remark', r.Remarks || '—']],
-        tip:'' });
-    });
+    /* NewStores and PosmRequirement used to be listed here for HOD approval. They are now purely the
+       employee's own follow-up — see the Tracker tab — so nothing about them belongs in a queue. */
 
     /* Orders are not approvals, but an HOD chasing billing needs the same one screen.
        Only shown to admin/HOD, and the action is a status change, not approve/reject. */
@@ -5714,10 +6586,13 @@ var Appr = {
 
   html: function () {
     var all = Appr.list();
-    var n = { pending:0, approved:0, rejected:0, draft:0 };
+    var n = { pending:0, approved:0, rejected:0, draft:0, partial:0 };
     all.forEach(function (o) { n[o.status]++; });
-    var h = UI.head('', Auth.isAdmin() ? 'Requests — poori team' : 'Meri requests',
-      'Jo bhi approval ke liye bheja hai — kab bheja, kab decide hua, sab yahan. Kisi bhi request par tap karo.');
+    /* For a rep this screen is deliberately READ-ONLY: it is the record of what he asked for and what
+       came back, nothing here is his to decide. The action buttons only ever appear for admin/HOD. */
+    var h = UI.head('', Auth.isAdmin() ? 'Requests — poori team' : 'Meri approvals',
+      Auth.isAdmin() ? 'Jo bhi approval ke liye aaya hai — kab bheja, kab decide hua, sab yahan. Kisi bhi request par tap karo.'
+        : 'Sirf dekhne ke liye — jo bheja hai, kab bheja aur kab decision aaya. Kisi bhi request par tap karke detail dekho.');
 
     h += '<div class="kpis">' + UI.kpi(all.length, 'Total', 'b') + UI.kpi(n.pending, 'HOD ke paas', 'w') +
       UI.kpi(n.approved, 'Approved', 'g') + UI.kpi(n.rejected, 'Rejected', 'r') + '</div>';
@@ -5740,10 +6615,11 @@ var Appr = {
           ' onclick="Appr.setKind(&quot;' + esc(c[0]) + '&quot;)">' + esc(c[1]) + '</button>'; }).join('') + '</div>';
 
     var byKind = all.filter(function (o) { return Appr.kindF === 'all' || o.kind === Appr.kindF; });
-    var k2 = { pending:0, approved:0, rejected:0, draft:0 };
+    var k2 = { pending:0, approved:0, rejected:0, draft:0, partial:0 };
     byKind.forEach(function (o) { k2[o.status]++; });
     var chips = [['all', 'Sab (' + byKind.length + ')'], ['pending', 'Pending (' + k2.pending + ')'],
       ['approved', 'Approved (' + k2.approved + ')'], ['rejected', 'Rejected (' + k2.rejected + ')']];
+    if (k2.partial) chips.push(['partial', 'Partly rejected (' + k2.partial + ')']);
     if (k2.draft) chips.push(['draft', 'Draft (' + k2.draft + ')']);
     h += '<div class="hint" style="margin:10px 0 6px">Status</div>' +
       '<div style="display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px">' + chips.map(function (c) {
@@ -5780,7 +6656,11 @@ var Appr = {
       h += '<div class="tl-i ok"><b>Request bheja</b><span>' + esc(sentTxt) +
         (o.approx ? ' <i>(exact time purane row me save nahi hua tha)</i>' : '') + '</span></div>';
 
-      if (o.status === 'draft') {
+      if (o.status === 'partial') {
+        h += '<div class="tl-i bad"><b>HOD ne kuch din reject kiye</b><span>' +
+          (o.doneT ? esc(Appr.when(o.doneT)) + (o.by ? ' · ' + esc(o.by) : '') : 'Time record nahi hua') +
+          '<br>Sirf wo din theek karke dobara bhejo — baaki month waise hi hai.</span></div>';
+      } else if (o.status === 'draft') {
         h += '<div class="tl-i wait"><b>HOD ko bheja nahi</b><span>PJP tab se submit karo</span></div>';
       } else if (o.doneT) {
         var dec = o.status === 'approved' ? 'HOD ne approve kiya' : o.status === 'rejected' ? 'HOD ne reject kiya' : 'HOD ne dekha';
@@ -5808,12 +6688,15 @@ var Appr = {
           '<select class="in" onclick="event.stopPropagation()"' +
           ' onchange="event.stopPropagation();Admin.setOrder(&quot;' + Appr.q(o.key) + '&quot;,this.value)">' +
           ['Order in Process','Billing Done','No Order','Cancel Order'].map(function (x) {
-            return '<option' + (x === o.statusText ? ' selected' : '') + '>' + x + '</option>'; }).join('') +
+            return '<option value="' + x + '"' + (x === o.statusText ? ' selected' : '') + '>' + x + '</option>'; }).join('') +
           '</select>';
       }
       h += Appr.btns(o, true);
-      h += '<div class="btns"><button class="btn ghost sm" onclick="event.stopPropagation();Router.go(\'' +
-        o.go + '\')">Us tab par jao </button></div>';
+      /* A PJP request IS its day list — telling an HOD to "go to that tab" was asking them to
+         re-find the thing they had just tapped. Every other kind still gets a jump link. */
+      if (o.act === 'pjp') h += '<div onclick="event.stopPropagation()">' + Admin.pjpDays(o.key, Appr.can(o)) + '</div>';
+      else h += '<div class="btns"><button class="btn ghost sm" onclick="event.stopPropagation();Router.go(\'' +
+        o.go + '\')">Open that tab</button></div>';
     }
     return h + '</div>';
   },
@@ -5822,7 +6705,8 @@ var Appr = {
        Admin/HOD → not yet decided (or, for an order, not yet moved out of "in process").
        Employee   → it came back REJECTED, so they have to redo something. Their own PENDING request
                     needs nothing from them, so it is not counted anywhere. */
-  todo: function (o) { return Auth.isAdmin() ? o.status === 'pending' : o.status === 'rejected'; },
+  todo: function (o) { return Auth.isAdmin() ? (o.status === 'pending' || o.status === 'partial')
+    : (o.status === 'rejected' || o.status === 'partial'); },
 
   /* "Approved by Admin" vs "Approved by HOD" — that trail has to be visible */
   who: function (o) { var r = String(o.role || '').trim(); return r ? ' — <i>' + esc(r) + '</i>' : ''; },
@@ -6025,10 +6909,22 @@ var Admin = {
       (d && pst.k === 'pending' && Object.keys(pub).length ? '<div class="hint" style="margin-top:6px">' +
         ' Naya submission HOD ke paas hai. Filhaal master me purane <b>' + Object.keys(pub).length +
         ' din</b> live hain \u2014 approve karne par overwrite ho jayenge.</div>' : '') +
+      (d && Admin.rejDays(d).length ? '<div class="banner w" style="margin-top:8px"><span>!</span><div><b>' +
+        Admin.rejDays(d).length + ' din reject kiye hue hain</b><br><span style="font-weight:500">' +
+        Admin.rejDays(d).map(function (k) { return dmy(k); }).join(', ') +
+        ' \u2014 rep sirf yeh din edit kar sakta hai.</span></div></div>' : '') +
       '<div class="btns"><button class="btn ghost sm" onclick="Admin.pjpEmp=&quot;&quot;;render()">\u2039 Sab employee</button>' +
-      (d && st === 'pending' ? '<button class="btn ok sm" onclick="Admin.pjpOk(&quot;' + esc(d.Key) + '&quot;)"> Approve</button>' +
-        '<button class="btn bad sm" onclick="Admin.pjpNo(&quot;' + esc(d.Key) + '&quot;)"> Reject</button>' : '') +
-      '</div></div>';
+      (d && st !== 'approved' ? '<button class="btn ok sm" onclick="Admin.pjpOk(&quot;' + esc(d.Key) + '&quot;)">Approve poora month</button>' +
+        '<button class="btn bad sm" id="pjp_part_' + Appr.jid(d.Key) + '" ' + (Admin.selN(d.Key) ? '' : 'disabled') +
+          ' onclick="Admin.pjpPart(&quot;' + esc(d.Key) + '&quot;)">' +
+          (Admin.selN(d.Key) ? 'Reject ' + Admin.selN(d.Key) + ' selected days' : 'Reject selected days') + '</button>' +
+        '<button class="btn ghost sm" onclick="Admin.pjpNo(&quot;' + esc(d.Key) + '&quot;)">Poora month reject</button>' : '') +
+      '</div>' +
+      (d && st !== 'approved' ? '<div class="hint" style="margin-top:6px">' +
+        'Jo din galat hai use tick karke reject selected days dabao. Baaki month waise hi rahega. ' +
+        'Ya Edit dabakar khud theek kar do, phir approve kar do.</div>' : '') +
+      '</div>' +
+      (d ? Admin.pjpDays(d.Key, true) : '');
 
     var keys = {};
     Object.keys(days).forEach(function (k) { keys[k] = 1; });
@@ -6036,7 +6932,13 @@ var Admin = {
     var list = Object.keys(keys).sort();
     if (!list.length) return h + UI.empty('', 'Is month ka koi PJP nahi \u2014 na draft, na master me');
 
-    h += '<div class="sec-title">' + list.length + ' din</div><div class="card"><div class="tw"><table>' +
+    /* When there IS a draft, the interactive day list above is the review \u2014 repeating it as a
+       read-only table underneath was the same month printed twice. This flat table stays for the
+       months that only exist in Master_PJP (July's plans were loaded straight into the sheet and
+       have no draft row to tick). */
+    if (d) return h;
+
+    h += '<div class="sec-title">Master_PJP me ' + list.length + ' din</div><div class="card"><div class="tw"><table>' +
       '<thead><tr><th>Date</th><th>Din</th><th>Working with</th><th>Town</th><th>Beat</th><th>Master me</th></tr></thead><tbody>';
     var DAY = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     list.forEach(function (k) {
@@ -6104,49 +7006,9 @@ var Admin = {
   role: function () { return String((Auth.session() || {}).rights || ''); },
   stamp: function () { return { HodBy:DB.me.name, HodRole:Admin.role(), HodAt:new Date().toISOString() }; },
 
-  /* STORE OPENING — approve / reject a new-outlet request */
-  storeOk: function (id, ok) {
-    var r = DB.find('NewStores', id); if (!r || Busy.busy('ns_' + id)) return;
-    var ask = ok
-      ? UI.confirm({ icon:'', title:'Naya outlet approve karein?',
-          msg:'<b>' + esc(r.StoreName || '') + '</b><br>' + esc((r.Town || '') + ' \u00b7 ' + (r.DbName || '')) +
-              '<br>Approve ke baad ye store enrol ho jayega.', ok:'Haan, approve', cancel:'Nahi' })
-          .then(function (go) { return go ? '' : null; })
-      : UI.prompt({ icon:'', title:'Outlet reject karein?', danger:true,
-          msg:'<b>' + esc(r.StoreName || '') + '</b> \u2014 rep ko reason dikhega.',
-          label:'Reject reason', multiline:true, required:true,
-          requiredMsg:'Reason likhna zaroori hai', ok:'Reject karo' });
-    ask.then(function (rem) {
-      if (rem === null || rem === undefined || rem === false) return;
-      return DB.save('NewStores', Object.assign({}, r, Admin.stamp(),
-        { Status:ok ? 'Approved' : 'Rejected', StatusReason:rem || '' })).then(function () {
-        Log.add('NewStore', ok ? 'Approved' : 'Rejected', id, r.StoreName + ' \u00b7 ' + Admin.role());
-        Nav._c = null; Nav.build(); render(); toast(ok ? ' Outlet approve ho gaya' : ' Outlet reject \u2014 rep ko dikh jayega');
-      });
-    });
-  },
-
-  /* POSM REQUEST — approve / reject what the rep asked for */
-  posmOk: function (id, ok) {
-    var r = DB.find('PosmRequirement', id); if (!r || Busy.busy('pq_' + id)) return;
-    var ask = ok
-      ? UI.confirm({ icon:'', title:'POSM request approve karein?',
-          msg:'<b>' + esc(r.StoreName || '') + '</b><br>' + esc((r.Element || '') + ' \u2014 ' + (r.Remarks || '')) +
-              '<br>Approve ke baad dispatch ke liye bhej sakte ho.', ok:'Haan, approve', cancel:'Nahi' })
-          .then(function (go) { return go ? '' : null; })
-      : UI.prompt({ icon:'', title:'POSM request reject karein?', danger:true,
-          msg:'<b>' + esc(r.StoreName || '') + '</b> \u2014 rep ko reason dikhega.',
-          label:'Reject reason', multiline:true, required:true,
-          requiredMsg:'Reason likhna zaroori hai', ok:'Reject karo' });
-    ask.then(function (rem) {
-      if (rem === null || rem === undefined || rem === false) return;
-      return DB.save('PosmRequirement', Object.assign({}, r, Admin.stamp(),
-        { Status:ok ? 'Approved' : 'Rejected', StatusReason:rem || '' })).then(function () {
-        Log.add('POSM', ok ? 'Req approved' : 'Req rejected', id, r.StoreName + ' \u00b7 ' + Admin.role());
-        Nav._c = null; Nav.build(); render(); toast(ok ? ' POSM request approve' : ' POSM request reject');
-      });
-    });
-  },
+  /* A new outlet and a POSM requirement are the employee's OWN records now — he opens the store,
+     asks his ASM himself and marks the stage in the Tracker tab. There is deliberately no admin/HOD
+     handler for either: two authorities writing one Status column is how a sheet starts lying. */
 
   /* TA/DA claim */
   tadaOk: function (id, ok) {
@@ -6174,6 +7036,131 @@ var Admin = {
       DeliveredAt:st === 'Billing Done' ? new Date().toISOString() : (o.DeliveredAt || '') });
     Sec.commit(nu, lines, ' ' + o.StoreName + ' \u2192 ' + st).then(function () {
       Log.add('Order', 'Status ' + st + ' by ' + Admin.role(), po, o.StoreName);
+    });
+  },
+
+  /* ══════════ PJP REVIEW — the day-by-day plan, for the person who has to decide ══════════
+     ONE renderer, used by the Approvals card AND the Admin console's PJP tab, so the two can never
+     show a different plan. An HOD does not want to be told to "go to that tab": the days are here.
+       • every day is listed with its Working-With, State, Town and Beat;
+       • any day can be TICKED for rejection — reject the three days that are wrong instead of
+         throwing a whole month back;
+       • an HOD or Admin can also just FIX a day themselves and approve.
+     Selection lives per draft key so opening a second employee cannot inherit the first one's ticks. */
+  pjpSel:{}, pjpOpen:'',
+  sel: function (key) { return (Admin.pjpSel[key] = Admin.pjpSel[key] || {}); },
+  selN: function (key) { var s = Admin.sel(key); return Object.keys(s).filter(function (k) { return s[k]; }).length; },
+  tick: function (key, d, on) { Admin.sel(key)[d] = !!on; Admin.selCount(key); },
+  /* update the button labels without a re-render — a re-render would collapse the day editor */
+  selCount: function (key) {
+    var n = Admin.selN(key), b = $('pjp_part_' + Appr.jid(key));
+    if (b) { b.disabled = !n; b.innerHTML = I18n.tr(n ? 'Reject ' + n + ' selected days' : 'Reject selected days'); }
+  },
+  edit: function (key, d) { Admin.pjpOpen = Admin.pjpOpen === key + '|' + d ? '' : key + '|' + d; render(); },
+
+  /* an HOD editing a rep's plan must be offered the REP's towns, not their own */
+  pjpDays: function (key, act) {
+    var d = DB.find('PjpDraft', key); if (!d) return '';
+    var days = {}; try { days = JSON.parse(d.DaysJson || '{}') || {}; } catch (e) {}
+    var rej = Admin.rejDays(d);
+    var st = Appr.norm(d.Status), can = act && Auth.isAdmin() && st !== 'approved';
+    var list = Object.keys(days).sort();
+    if (!list.length) return '<div class="hint">Is draft me koi din nahi hai.</div>';
+
+    var DAY = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    var jk = Appr.jid(key), sel = Admin.sel(key);
+    var h = '<div class="sec-title">Poora plan \u2014 ' + list.length + ' din</div><div class="card">';
+    list.forEach(function (k) {
+      var r = days[k] || {}, ww = Pjp.ww(r.ww), f = Pjp.isField(ww);
+      var bad = rej.indexOf(k) >= 0, open = Admin.pjpOpen === key + '|' + k;
+      h += '<div class="drow' + (bad ? ' bad' : '') + (open ? ' op' : '') + '">' +
+        '<div class="dr-h">' +
+          (can ? '<label class="ck"><input type="checkbox" ' + (sel[k] ? 'checked' : '') +
+            ' onchange="Admin.tick(\'' + Appr.q(key) + '\',\'' + k + '\',this.checked)"></label>' : '') +
+          '<div class="m"><div class="t">' + dmy(k) + ' <span class="hint">' +
+            DAY[new Date(k + 'T00:00:00').getDay()] + '</span>' +
+            (bad ? ' <span class="pill p-bad">Rejected</span>' : '') + '</div>' +
+            '<div class="s">' + esc(ww) + (f ? ' · ' + esc(r.state || '—') + ' · ' + esc(r.city || '—') +
+              ' / ' + esc(r.beat || '—') : '') + '</div></div>' +
+          (can ? '<button class="btn ghost xs" onclick="Admin.edit(\'' + Appr.q(key) + '\',\'' + k + '\')">' +
+            (open ? 'Close' : 'Edit') + '</button>' : '') +
+        '</div>' +
+        (open ? Admin.dayEdit(key, d.EmpCode, k, r) : '') +
+        '</div>';
+    });
+    h += '</div>';
+    return h;
+  },
+  /* the HOD's own editor for one day — the same three fields the rep fills, mapped to the REP */
+  dayEdit: function (key, code, k, r) {
+    var q = "'" + Appr.q(key) + "','" + k + "'";
+    var states = Plan.statesOf(code), stt = r.state || Plan.stateOfFor(code, r.city) || states[0] || '';
+    var f = Pjp.isField(Pjp.ww(r.ww));
+    return '<div class="dr-b">' +
+      '<label class="f">Working with</label>' +
+      '<select class="in" onchange="Admin.setDay(' + q + ',\'ww\',this.value)">' +
+        ['Self Working','ME Sales Team','BA Supervisor','Meeting / Activity','Weekly Off','Leave','Sick Leave','HO Holiday']
+        .map(function (o) { return '<option value="' + o + '"' + (o === Pjp.ww(r.ww) ? ' selected' : '') +
+          '>' + o + '</option>'; }).join('') + '</select>' +
+      (f ? '<div class="row two" style="margin-top:6px">' +
+        '<div><label class="f">State</label>' +
+          '<select class="in" onchange="Admin.setDay(' + q + ',\'state\',this.value)">' +
+          '<option value="">— select —</option>' +
+          states.map(function (x) { return '<option' + (x === stt ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') +
+          '</select></div>' +
+        '<div><label class="f">Town / City</label>' +
+          '<select class="in" onchange="Admin.setDay(' + q + ',\'city\',this.value)">' +
+          '<option value="">— select —</option>' +
+          Plan.townsOf(code, stt).map(function (x) {
+            return '<option' + (x === r.city ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') +
+          (r.city && Plan.townsOf(code, stt).indexOf(r.city) < 0 ? '<option selected>' + esc(r.city) + '</option>' : '') +
+          '</select></div></div>' +
+        '<label class="f">Beat / Market</label>' +
+        '<input class="in" value="' + esc(r.beat || '') + '" placeholder="Beat / market" ' +
+          'onchange="Admin.setDay(' + q + ',\'beat\',this.value)">' : '') +
+      '<div class="hint" style="margin-top:6px">Change turant draft me save ho jata hai — rep ko bhi dikhega.</div>' +
+      '</div>';
+  },
+  /* HOD/Admin edit → straight into the draft's DaysJson. The rep sees it on their next sync, and
+     approving publishes exactly what is on screen. */
+  setDay: function (key, k, field, v) {
+    var d = DB.find('PjpDraft', key); if (!d) return;
+    var days = {}; try { days = JSON.parse(d.DaysJson || '{}') || {}; } catch (e) {}
+    days[k] = days[k] || { ww:'Self Working', state:'', city:'', beat:'', st:'HQ' };
+    days[k][field] = v;
+    if (field === 'ww' && !Pjp.isField(Pjp.ww(v))) { days[k].city = ''; days[k].beat = ''; }
+    if (field === 'state') days[k].city = '';
+    DB.save('PjpDraft', Object.assign({}, d, { DaysJson:JSON.stringify(days), UpdatedAt:Date.now(),
+      EditedBy:DB.me.name, EditedAt:new Date().toISOString() }), { quiet:true }).then(function () {
+      Log.add('PJP', 'Day edited by ' + Admin.role(), key, k + ' ' + field + '=' + v);
+      render();
+    });
+  },
+  rejDays: function (d) {
+    var a = []; try { a = JSON.parse((d && d.RejectedDaysJson) || '[]') || []; } catch (e) {}
+    return a.map(function (x) { return toISO(x.date || x) || String(x); }).filter(Boolean);
+  },
+  /* PARTIAL REJECT — only the ticked days come back to the rep. The rest of the month stands, so he
+     edits three days instead of rebuilding a month. */
+  pjpPart: function (key) {
+    var d = DB.find('PjpDraft', key); if (!d) return;
+    var s = Admin.sel(key), days = Object.keys(s).filter(function (k) { return s[k]; }).sort();
+    if (!days.length) return toast('Pehle wo din tick karo jo reject karne hain');
+    UI.prompt({ icon:'', title:days.length + ' din reject karne hain?', danger:true,
+      msg:'<b>' + esc(d.EmpName || '') + '</b> — ' + esc(monthName(d.Month)) + '<br>' +
+          days.map(function (k) { return dmy(k); }).join(', ') +
+          '<br>Baaki din waise hi rahenge — rep sirf yeh din edit kar payega.',
+      label:'Reason (rep ko dikhega)', placeholder:'e.g. ye beat pichhle hafte hi kiya tha',
+      multiline:true, required:true, requiredMsg:'Reason likhna zaroori hai', ok:'Reject selected days'
+    }).then(function (r) {
+      if (!r) return;
+      return DB.save('PjpDraft', Object.assign({}, d, Admin.stamp(),
+        { Status:'Partially Rejected', RejectReason:r, RejectedDaysJson:JSON.stringify(days),
+          UpdatedAt:Date.now() })).then(function () {
+        Admin.pjpSel[key] = {};
+        Log.add('PJP', 'Partially rejected (' + days.length + ' days)', key, r);
+        render(); toast(days.length + ' din reject — rep ko sirf wahi edit karne milega', 4200);
+      });
     });
   },
 
