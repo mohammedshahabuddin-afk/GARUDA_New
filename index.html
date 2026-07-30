@@ -362,6 +362,12 @@ td.num,th.num{text-align:right}
 .drow{border-bottom:1px solid var(--line);padding:9px 0}
 .drow:last-child{border-bottom:0}
 .drow.bad{background:#fff6f5;margin:0 -14px;padding:9px 14px}
+.drow.fix{background:#f2fbf5;margin:0 -14px;padding:9px 14px;box-shadow:inset 3px 0 0 var(--ok)}
+/* a returned day's save row: state on the left, button on the right, a rule to separate it */
+.dsave{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+.dsave span{font-size:11.5px;font-weight:600;color:var(--ink-3)}
+.dsave .btn{width:auto;flex:0 0 auto;min-width:104px}
 .drow.op{background:#f7f9ff;margin:0 -14px;padding:9px 14px}
 .dr-h{display:flex;gap:8px;align-items:flex-start}
 .dr-h .m{flex:1;min-width:0}
@@ -1780,6 +1786,14 @@ I18n.D.en = I18n.EN = {
   'Jab tak rep dobara nahi bhejta, isme kuch decide nahi karna hai.':'Nothing to decide here until the rep sends it again.',
   'Theek karke dobara bhejna hai':'Fix it and send it again',
   'PJP tab me sirf reject wale din khule hain.':'Only the rejected days are open in the PJP tab.',
+  'in dino ka Town aur Beat bharo':'— fill the Town and Beat for these days',
+  'din theek karke dobara bheje hain':'days were fixed and sent again',
+  'baaki month pehle hi approve tha, wahi hai.':'the rest of the month was already approved and is unchanged.',
+  'Sirf badle hue':'Only the changed',
+  'Poora month':'Whole month',
+  'Badle hue din':'Changed days',
+  'Changed':'Changed',
+  'Save nahi hua':'Not saved yet',
   'Order punch karo':'Punch the order',
   /* live updates + the read-only plan / waiting screen */
   'HOD ne approve kar diya — aage badho':'The HOD approved it — carry on',
@@ -4435,10 +4449,12 @@ var Pjp = {
           : Pjp.geo(d, r) +
             ((r.city || '').trim() && (r.beat || '').trim() ? '' : '<div class="hint" style="margin-top:5px;color:#b7791f">! Town aur Beat dono bharo — tabhi ye din complete hoga.</div>')) : '') +
         /* a day the HOD sent back gets its own Save, so the rep can store one day at a time and see it */
-        (sentBack ? '<div class="btns" style="margin-top:8px"><button class="btn ok sm" ' +
-          'onclick="Pjp.saveDay(\'' + d + '\',this)">Is din ko save karo</button></div>' +
-          (Pjp.savedAt[d] ? '<div class="hint" style="margin-top:6px">Save ho gaya · ' +
-            esc(Pjp.savedAt[d]) + '</div>' : '') : '') +
+        /* the save row: the state on the left, the button on the right, and a rule above it so it
+           does not sit flush against the Beat field */
+        (sentBack ? '<div class="dsave">' +
+          '<span>' + (Pjp.savedAt[d] ? 'Save ho gaya · ' + esc(Pjp.savedAt[d])
+            : 'Save nahi hua') + '</span>' +
+          '<button class="btn ok sm" onclick="Pjp.saveDay(\'' + d + '\',this)">Save</button></div>' : '') +
         '</div>';
     });
 
@@ -4446,10 +4462,8 @@ var Pjp = {
        Two buttons in the order the work happens, with the state of each returned day spelled out, so
        nobody sends a month back with one day still half-typed. */
     if (part) {
-      var ready = rejD.filter(function (k) {
-        var r2 = Pjp.days[k] || {};
-        return !Pjp.isField(Pjp.ww(r2.ww)) || ((r2.city || '').trim() && (r2.beat || '').trim());
-      });
+      var gaps0 = Pjp.partialGaps();
+      var ready = rejD.filter(function (k) { return gaps0.indexOf(k) < 0; });
       h += '<div class="card"><h3>Ab dobara bhejo</h3>' +
         '<div class="sub">Reject wale din theek karke <b>save</b> karo, phir HOD ko dobara bhejo.</div>' +
         '<div class="tw" style="margin-top:10px"><table><thead><tr><th>Din</th><th>Bhara</th><th>Save</th></tr></thead><tbody>' +
@@ -4523,12 +4537,27 @@ var Pjp = {
     Pjp._dirty = true; Pjp.flush(); render();
     toast('' + mp.length + ' din Master PJP se fill ho gaye' + (doj ? ' (joining ke baad ke)' : ''));
   },
+  /* which returned days are still short of a Town or a Beat */
+  partialGaps: function () {
+    return Pjp.rejDays().filter(function (d) {
+      var r = (Pjp.days || {})[d] || {};
+      return Pjp.isField(Pjp.ww(r.ww)) && !((r.city || '').trim() && (r.beat || '').trim());
+    });
+  },
   submit: function (el) {
-    var c = Pjp.cover(), dr0 = Pjp.draft();
+    var c = Pjp.cover(), dr0 = Pjp.draft(), part = Pjp.partial();
     if (/approved|accepted/i.test(dr0.Status || '')) { render(); return toast('Ye month approve ho chuka hai'); }
     if (!c.need) return toast('Kam se kam ek field day plan karo');
-    /* full-month coverage is waived for a bypassed user */
-    if (c.miss.length && !Bypass.on()) return toast('Pehle poora month plan karo');
+    /* ── a partial re-send is judged ONLY on the days that came back ──
+       The rest of the month is already approved and locked; asking for full-month coverage here made
+       the rep re-plan work the HOD had accepted, and a real month can carry days the master left
+       blank, which would block the re-send forever. */
+    if (part) {
+      var gaps = Pjp.partialGaps();
+      if (gaps.length && !Bypass.on())
+        return toast(gaps.map(function (d) { return dmy(d); }).join(', ') +
+          ' — in dino ka Town aur Beat bharo', 4200);
+    } else if (c.miss.length && !Bypass.on()) return toast('Pehle poora month plan karo');
     /* Re-sending is allowed while the request is only PENDING — the rep fixes what HOD objected to
        and sends again; the new copy REPLACES the old one, which is why the HOD stamp and the reject
        reason are wiped and the revision is bumped. */
@@ -4541,9 +4570,13 @@ var Pjp = {
       ok:'Haan, bhej do', cancel:'Abhi nahi' }).then(function (go) {
       if (!go) return;
       Pjp._dirty = true;
+      /* the days that came back are the days the HOD has to look at next — carry them across so the
+         review can open on exactly those, highlighted */
+      var fixed = part ? Pjp.rejDays() : [];
       return Busy.run('pjp_' + Pjp.key(), el, 'Bhej raha hai…', function () { return DB.save('PjpDraft', { Key:Pjp.key(), EmpCode:DB.me.code, EmpName:DB.me.name, Month:Pjp.month,
       Status:'Pending', DaysJson:JSON.stringify(Pjp.days), Coverage:c.done + '/' + c.need,
       Revision:rev, HodAt:'', HodBy:'', HodRole:'', RejectReason:'', RejectedDaysJson:'',
+      FixedDaysJson:fixed.length ? JSON.stringify(fixed) : '',
       SubmittedAt:new Date().toISOString(), UpdatedAt:Date.now() }).then(function () {
       Log.add('PJP', again ? 'Re-submitted r' + rev : 'Submitted', Pjp.month, c.done + '/' + c.need + ' days');
       render(); toast(again ? 'Naya request bheja — purana cancel' : 'PJP HOD ko chala gaya');
@@ -7559,14 +7592,31 @@ var Admin = {
   pjpDays: function (key, act) {
     var d = DB.find('PjpDraft', key); if (!d) return '';
     var days = {}; try { days = JSON.parse(d.DaysJson || '{}') || {}; } catch (e) {}
-    var rej = Admin.rejDays(d);
+    var rej = Admin.rejDays(d), fix = Admin.fixDays(d);
     var st = Appr.norm(d.Status), can = act && Auth.isAdmin() && st === 'pending';
-    var list = Object.keys(days).sort();
-    if (!list.length) return '<div class="hint">Is draft me koi din nahi hai.</div>';
+    var all = Object.keys(days).sort();
+    if (!all.length) return '<div class="hint">Is draft me koi din nahi hai.</div>';
 
+    /* ── a re-send is about the days that CHANGED ──
+       The HOD asked for two days; making him re-read thirty-one is how a review stops happening. The
+       changed days are marked wherever they appear, and the list opens on just them. */
+    var vw = fix.length ? Admin.view(key, fix.length) : 'all';
+    var list = vw === 'fix' ? all.filter(function (k) { return fix.indexOf(k) >= 0; }) : all;
     var DAY = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     var sel = Admin.sel(key);
-    var h = '<div class="sec-title">Poora plan \u2014 ' + list.length + ' din</div>' +
+    var h = '';
+    if (fix.length) h += '<div class="banner g"><span></span><div><b>' + fix.length +
+      ' din theek karke dobara bheje hain</b><br><span style="font-weight:500">' +
+      fix.map(function (k) { return dmy(k); }).join(', ') +
+      ' — baaki month pehle hi approve tha, wahi hai.</span>' +
+      '<div class="btns"><button class="btn ' + (vw === 'fix' ? '' : 'ghost') + ' sm" ' +
+        'onclick="event.stopPropagation();Admin.setView(\'' + Appr.q(key) + '\',\'fix\')">Sirf badle hue ' +
+        fix.length + ' din</button>' +
+      '<button class="btn ' + (vw === 'all' ? '' : 'ghost') + ' sm" ' +
+        'onclick="event.stopPropagation();Admin.setView(\'' + Appr.q(key) + '\',\'all\')">Poora month (' +
+        all.length + ')</button></div></div></div>';
+    h += '<div class="sec-title">' + (vw === 'fix' ? 'Badle hue din \u2014 ' + list.length
+          : 'Poora plan \u2014 ' + list.length + ' din') + '</div>' +
       /* no markup inside the sentence: a <b> in the middle splits the text run, and half a sentence
          is all the translator can then match */
       (can ? '<div class="hint" style="margin:-6px 0 8px">' +
@@ -7574,14 +7624,15 @@ var Admin = {
       '<div class="card">';
     list.forEach(function (k) {
       var r = days[k] || {}, ww = Pjp.ww(r.ww), f = Pjp.isField(ww);
-      var bad = rej.indexOf(k) >= 0, open = Admin.pjpOpen === key + '|' + k;
-      h += '<div class="drow' + (bad ? ' bad' : '') + (open ? ' op' : '') + '">' +
+      var bad = rej.indexOf(k) >= 0, chg = fix.indexOf(k) >= 0, open = Admin.pjpOpen === key + '|' + k;
+      h += '<div class="drow' + (bad ? ' bad' : (chg ? ' fix' : '')) + (open ? ' op' : '') + '">' +
         '<div class="dr-h">' +
           (can ? '<label class="ck"><input type="checkbox" ' + (sel[k] ? 'checked' : '') +
             ' onchange="Admin.tick(\'' + Appr.q(key) + '\',\'' + k + '\',this.checked)"></label>' : '') +
           '<div class="m"><div class="t">' + dmy(k) + ' <span class="hint">' +
             DAY[new Date(k + 'T00:00:00').getDay()] + '</span>' +
-            (bad ? ' <span class="pill p-bad">Rejected</span>' : '') + '</div>' +
+            (bad ? ' <span class="pill p-bad">Rejected</span>' : '') +
+            (chg ? ' <span class="pill p-ok">Changed</span>' : '') + '</div>' +
             '<div class="s">' + esc(ww) + (f ? ' · ' + esc(r.state || '—') + ' · ' + esc(r.city || '—') +
               ' / ' + esc(r.beat || '—') : '') + '</div></div>' +
           (can ? '<button class="btn ghost xs" onclick="Admin.edit(\'' + Appr.q(key) + '\',\'' + k + '\')">' +
@@ -7644,6 +7695,19 @@ var Admin = {
     var a = []; try { a = JSON.parse((d && d.RejectedDaysJson) || '[]') || []; } catch (e) {}
     return a.map(function (x) { return toISO(x.date || x) || String(x); }).filter(Boolean);
   },
+  /* the days the rep just fixed and re-sent — written by Pjp.submit on a partial re-send */
+  fixDays: function (d) {
+    var a = []; try { a = JSON.parse((d && d.FixedDaysJson) || '[]') || []; } catch (e) {}
+    return a.map(function (x) { return toISO(x.date || x) || String(x); }).filter(Boolean);
+  },
+  /* 'fix' = only what changed, 'all' = the whole month. Per draft key, so opening a second employee
+     does not inherit the first one's view. */
+  pjpView:{},
+  view: function (key, fixN) {
+    if (Admin.pjpView[key]) return Admin.pjpView[key];
+    return fixN ? 'fix' : 'all';                    /* a re-send opens on the changed days */
+  },
+  setView: function (key, v) { Admin.pjpView[key] = v; render(); },
   /* PARTIAL REJECT — only the ticked days come back to the rep. The rest of the month stands, so he
      edits three days instead of rebuilding a month. */
   pjpPart: function (key) {
