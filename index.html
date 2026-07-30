@@ -368,6 +368,9 @@ td.num,th.num{text-align:right}
   margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
 .dsave span{font-size:11.5px;font-weight:600;color:var(--ink-3)}
 .dsave .btn{width:auto;flex:0 0 auto;min-width:104px}
+/* a header you can tap to sort */
+#app th.sortable{cursor:pointer;-webkit-user-select:none;user-select:none;white-space:nowrap}
+#app th.sortable.on{color:var(--blue)}
 .drow.op{background:#f7f9ff;margin:0 -14px;padding:9px 14px}
 .dr-h{display:flex;gap:8px;align-items:flex-start}
 .dr-h .m{flex:1;min-width:0}
@@ -1849,6 +1852,28 @@ I18n.D.en = I18n.EN = {
   'Ye live camera se hi hoga, gallery se nahi.':'It must come from the live camera, not the gallery.',
   'Internet nahi mila':'No internet',
   'Ye store list me nahi mila — Sync karo':'This store is not in the list — Sync',
+  'Stock — shop aur distributor':'Stock — shop and distributor',
+  'Jo store aap visit kar rahe ho uska stock, aur aapke distributor ka stock. Yahin se order add karo.':'The stock of the store you are visiting, and your distributor’s stock. Add the order from here.',
+  'Pehle Field tab me store select karo':'First pick a store in the Field tab',
+  'Field tab kholo':'Open the Field tab',
+  'MSL products':'MSL products',
+  'Non-MSL products':'Non-MSL products',
+  'Is filter me koi product nahi':'No product in this filter',
+  'Sirf pehle 60 dikha rahe hain — search ya filter use karo.':'Showing the first 60 only — use search or a filter.',
+  'Order banaya ja raha hai':'Order being built',
+  'Upar se product add karo — phir order complete karo.':'Add products above, then complete the order.',
+  'Order complete karo':'Complete the order',
+  'Pehle koi product add karo':'Add a product first',
+  'Order check karo, phir submit':'Check the order, then submit',
+  'unit order me add ho gaya':'units added to the order',
+  'Order se hata diya':'Removed from the order',
+  'Quantity bharo':'Fill the quantity',
+  'Product nahi mila':'Product not found',
+  'Stock refresh':'Refresh stock',
+  'Value / NSV':'Value / NSV',
+  'Stock se add karo':'Add from Stock',
+  'Stock tab me shop aur distributor ka stock dikhta hai — wahin se product add karo.':'The Stock tab shows the shop and distributor stock — add products from there.',
+  'Product ya code':'Product or code',
   'Order punch karo':'Punch the order',
   /* live updates + the read-only plan / waiting screen */
   'HOD ne approve kar diya — aage badho':'The HOD approved it — carry on',
@@ -2475,6 +2500,7 @@ var Gate = {
     var l = Gate.level();
     if (v === 'plan')  return l >= 1;
     if (v === 'field') return l >= 2;
+    if (v === 'stk') return l >= 2;                /* the shelf is part of the visit */
     if (v === 'sec' || v === 'posm' || v === 'eod') return l >= 3;
     /* PJP is a once-a-month job: open until HOD approves the month the window is for, then shut
        until the 27th comes round again */
@@ -2517,10 +2543,11 @@ var Gate = {
 /* Home carries the whole analysis: Dashboard / Calls & stores / Order vs delivery / Team, all of it
    period-switchable. The month roll-up that used to be its own tab lives inside it now. */
 var TABS = [
-  { v:'home',  g:'', t:'Home' },
   { v:'pjp',   g:'', t:'PJP' },
+  { v:'home',  g:'', t:'Summary' },
   { v:'plan',  g:'', t:'Plan' },
   { v:'field', g:'', t:'Field' },
+  { v:'stk',   g:'', t:'Stock' },
   { v:'sec',   g:'', t:'Orders' },
   { v:'posm',  g:'', t:'POSM' },
   { v:'trk',   g:'', t:'Tracker' },
@@ -2631,7 +2658,7 @@ function render() {
      restored right after the paint, while layout is still synchronous.
      A real tab change still starts at the top: Router.go scrolls AFTER calling render(). */
   var y = window.pageYOffset || document.documentElement.scrollTop || 0;
-  var f = ({ home:Home, pjp:Pjp, plan:Plan, field:Field, sec:Sec, posm:Posm, trk:Trk, eod:Eod,
+  var f = ({ home:Home, pjp:Pjp, plan:Plan, field:Field, stk:Stk, sec:Sec, posm:Posm, trk:Trk, eod:Eod,
              appr:Appr, admin:Admin })[Router.cur];
   /* first ever paint and the data is still on its way — show a skeleton, never blank cards */
   /* every screen leaves through here, so ONE call translates the whole app */
@@ -5259,11 +5286,6 @@ var Field = {
     h += '</div>';
     if (!Field.store) return h;
 
-    /* the shelf, before anything else: what this shop is holding and what the distributor has to
-       refill it with. Loaded from the sheet on pick, not from the local cache. */
-    h += Stock.html(String(Field.store.ClientId || Field.store.CompanyCode || ''),
-                    String(Field.store.DbCode || ''), Field.store.DbName || '');
-
     /* STEP 2 — how the order is coming in. Asked here, before the photo, so a telephonic order can
        skip the photo entirely instead of being blocked by it. */
     /* Two answers here, not three. "No order" belongs AFTER the photo — that is when the rep finds
@@ -5327,21 +5349,11 @@ var Field = {
       if (!Cam.ok('entry') && !Bypass.on()) return h;
     }                                        /* end of the "not telephonic" branch */
 
-    h += '<div class="card"><h3><span class="ic">' + (++sN) + '</span>Product add karo</h3>' +
-      '<div class="row two" style="margin-top:10px">' +
-        '<select class="in" id="f_brand" onchange="Field.onBrand()"><option value="">Sab brand</option>' +
-          Field.uniq('Brand').map(function (b) { return '<option value="' + esc(b) + '">' + esc(b) + '</option>'; }).join('') + '</select>' +
-        '<select class="in" id="f_msl" onchange="Field.renderProds()"><option value="">All SKU</option><option>MSL</option><option>Non-MSL</option></select>' +
-      '</div>' +
-      /* Category and Sub-category: the rep thinks in "face wash", not in SKU codes */
-      '<div class="row two" style="margin-top:8px">' +
-        '<select class="in" id="f_cat" onchange="Field.onCat()"><option value="">Sab category</option>' +
-          Field.uniq('Category').map(function (c) { return '<option value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('') + '</select>' +
-        '<select class="in" id="f_sub" onchange="Field.renderProds()"><option value="">Sab sub-category</option>' +
-          Field.uniq('SubCategory').map(function (c) { return '<option value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('') + '</select>' +
-      '</div>' +
-      '<input class="in" id="f_psearch" placeholder=" Product name ya code" oninput="Field.renderProds()" style="margin-top:10px">' +
-      '<div id="f_prods" class="slist"></div></div>';
+    /* the products come from the Stock tab now — that screen has the shelf counts next to every SKU,
+       which is the only place the choice can honestly be made. This screen is the review. */
+    h += '<div class="card"><div class="c-h"><h3>Product</h3>' +
+      '<button class="btn ghost xs" onclick="Router.go(\'stk\')">Stock se add karo</button></div>' +
+      '<div class="sub">Stock tab me shop aur distributor ka stock dikhta hai — wahin se product add karo.</div></div>';
 
     Field.lineStep = ++sN;
     h += '<div class="card"><h3><span class="ic">' + Field.lineStep + '</span>Order lines' + (Field.lines.length ? ' (' + Field.lines.length + ')' : '') + '</h3><div id="f_lines"></div></div>';
@@ -5385,18 +5397,13 @@ var Field = {
     Field.store = st;
     Cam.clear(['entry']);                       /* new store = new visit photo */
     Field.lines = [];
-    /* walking into the shop means seeing its shelf: ask the sheet for THIS store's stock and its
-       distributor's, before anything is punched */
+    Field.src = 'Store Visit';
+    Stk.open = ''; Stk.qty = {}; Stk.q = '';
+    /* walking into the shop means seeing its shelf: the stock read starts now and the rep is taken to
+       the Stock tab, which is where the order is built */
     Stock.load(String(Field.store.ClientId || Field.store.CompanyCode || ''),
                String(Field.store.DbCode || ''));
-    render();
-    /* the store list is long; after picking, put the NEXT step in front of the rep instead of leaving
-       them at the top of a list they have finished with */
-    setTimeout(function () {
-      var el = $('f_step2') || $('f_prods');
-      var card = el && el.closest ? el.closest('.card') : el;
-      if (card && card.scrollIntoView) card.scrollIntoView({ behavior:'smooth', block:'start' });
-    }, 80);
+    Router.go('stk');
   },
   /* Order source is asked BEFORE the photo, because a telephonic order has no shop to photograph —
      choosing it must skip the whole photo gate rather than fail it at the end. */
@@ -5707,55 +5714,238 @@ var Stock = {
   },
   /* Sku / SkuName / Code all appear across the two uploads; take whichever is filled */
   sku: function (r) { return String(r.Sku || r.SkuName || r.Code || r.Product || '').trim(); },
-  qty: function (r) { return num(r.Qty !== undefined && r.Qty !== '' ? r.Qty : r.Stock); },
-  /* the product master turns a code into a name the rep recognises */
-  name: function (code) {
+  qty: function (r) { return num(r.Qty !== undefined && r.Qty !== '' ? r.Qty : r.Stock); }
+};
+
+/* ═══════════════ STOCK — the shelf, and the order built from it ═══════════════
+   The rep picks a shop in Field and lands here. Two sections, MSL first and Non-MSL under it (sections,
+   not tabs — a salesman should see both without a decision), and against every product the two numbers
+   that decide whether to order it: how many are in THIS shop, and how many the distributor mapped to
+   this rep is holding. Brand / category / sub-category / search narrow the list.
+   Adding is done here too: tap Add on a product, type the quantity, see the value and the NSV it will
+   book, Save. The line goes into the order that Field is holding, so the review screen and the submit
+   path are the ones that already exist — this screen never writes to the sheet.
+   Stock_Store and Stock_Distributor are read live per store (see the Stock loader); nothing about them
+   is ever cached across days. */
+var Stk = {
+  brand:'', cat:'', sub:'', q:'', open:'', qty:{},
+  /* 3-state header sort: first click ascending, second descending, third back to the default order.
+     `col` is 'shop' or 'dist'; dir 1 = ascending, -1 = descending, 0 = off. */
+  sort:{ col:'', dir:0 },
+  head: function (col, label) {
+    var on = Stk.sort.col === col && Stk.sort.dir;
+    var mark = !on ? '' : (Stk.sort.dir > 0 ? ' ↑' : ' ↓');
+    return '<th class="num sortable' + (on ? ' on' : '') + '" onclick="Stk.bump(\'' + col + '\')">' +
+      esc(label) + mark + '</th>';
+  },
+  bump: function (col) {
+    if (Stk.sort.col !== col) Stk.sort = { col:col, dir:1 };
+    else if (Stk.sort.dir === 1) Stk.sort.dir = -1;
+    else if (Stk.sort.dir === -1) Stk.sort = { col:'', dir:0 };
+    else Stk.sort = { col:col, dir:1 };
+    render();
+  },
+
+  store: function () { return Field.store; },
+  ids: function () {
+    var s = Field.store || {};
+    return { st:String(s.ClientId || s.CompanyCode || ''), db:String(s.DbCode || ''), dbName:s.DbName || '' };
+  },
+  /* code -> qty, for both uploads */
+  maps: function () {
+    var i = Stk.ids(), c = Stock.get(i.st, i.db);
+    if (!c || c.err) return null;
+    var shop = {}, dist = {};
+    (c.store || []).forEach(function (r) { var k = Stock.sku(r); if (k) shop[k] = (shop[k] || 0) + Stock.qty(r); });
+    (c.db || []).forEach(function (r) { var k = Stock.sku(r); if (k) dist[k] = (dist[k] || 0) + Stock.qty(r); });
+    return { shop:shop, dist:dist, storeAt:c.storeAt, dbAt:c.dbAt };
+  },
+  /* how many of this product are already in the order being built */
+  inOrder: function (code) {
+    var l = (Field.lines || []).filter(function (x) { return String(x.Sku) === String(code); })[0];
+    return l ? num(l.Units) : 0;
+  },
+  /* the product list for one MSL bucket, filtered and sorted */
+  list: function (msl, m) {
+    var q = String(Stk.q || '').toUpperCase();
+    var out = DB.products().filter(function (p) {
+      if (/^msl$/i.test(String(p.MslStatus || '')) !== msl) return false;
+      if (Stk.brand && String(p.Brand || '') !== Stk.brand) return false;
+      if (Stk.cat && String(p.Category || '') !== Stk.cat) return false;
+      if (Stk.sub && String(p.SubCategory || '') !== Stk.sub) return false;
+      if (!q) return true;
+      return (String(p.Name) + ' ' + String(p.Code) + ' ' + String(p.Brand) + ' ' +
+              String(p.Category) + ' ' + String(p.SubCategory)).toUpperCase().indexOf(q) >= 0;
+    }).map(function (p) {
+      var c = String(p.Code);
+      return { code:c, name:p.Name, brand:p.Brand || '', cat:p.Category || '', sub:p.SubCategory || '',
+               mrp:num(p.MRP), shop:num((m.shop || {})[c]), dist:num((m.dist || {})[c]),
+               have:Stk.inOrder(c) };
+    });
+    var s = Stk.sort;
+    if (s.col && s.dir) out.sort(function (a, b) { return (a[s.col] - b[s.col]) * s.dir; });
+    else out.sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+    return out;
+  },
+  CAP:60,
+  section: function (title, msl, m) {
+    var rows = Stk.list(msl, m);
+    var h = '<div class="sec-title">' + esc(title) + ' (' + rows.length + ')</div><div class="card">';
+    if (!rows.length) return h + UI.empty('', 'Is filter me koi product nahi') + '</div>';
+    h += '<div class="tw"><table><thead><tr><th>Product</th>' +
+      Stk.head('shop', 'Shop') + Stk.head('dist', 'DB') + '<th class="num">Add</th></tr></thead><tbody>';
+    rows.slice(0, Stk.CAP).forEach(function (r) {
+      var op = Stk.open === r.code;
+      h += '<tr' + (op ? ' class="me"' : '') + '><td><b>' + esc(r.name) + '</b>' +
+        '<div class="hint">' + esc(r.brand) + (r.cat ? ' · ' + esc(r.cat) : '') +
+        ' · MRP ' + inr(r.mrp) + '</div></td>' +
+        '<td class="num">' + (r.shop > 0 ? r.shop : '<span class="pill p-bad">0</span>') + '</td>' +
+        '<td class="num">' + (r.dist > 0 ? r.dist : '<span class="pill p-bad">0</span>') + '</td>' +
+        '<td class="num">' + (r.have ? '<span class="pill p-ok">' + r.have + '</span> ' : '') +
+        '<button class="btn ghost xs" onclick="Stk.tap(\'' + esc(r.code) + '\')">' +
+        (op ? 'Close' : (r.have ? 'Edit' : 'Add')) + '</button></td></tr>';
+      if (op) h += '<tr class="me"><td colspan="4">' + Stk.editor(r) + '</td></tr>';
+    });
+    h += '</tbody></table></div>';
+    if (rows.length > Stk.CAP) h += '<div class="hint" style="margin-top:8px">Sirf pehle ' + Stk.CAP +
+      ' dikha rahe hain — search ya filter use karo.</div>';
+    return h + '</div>';
+  },
+  /* quantity + what it books, then Save. Nothing else — the rest of the order is the review screen. */
+  editor: function (r) {
+    var q = Stk.qty[r.code] !== undefined ? Stk.qty[r.code] : (r.have || 1);
+    var v = num(q) * r.mrp;
+    return '<div class="dsave" style="border-top:0;margin-top:0;flex-wrap:wrap">' +
+      '<div style="flex:1 1 120px;min-width:0">' +
+        '<label class="f">Quantity</label>' +
+        '<input class="in" id="stk_q_' + esc(r.code) + '" type="number" min="0" inputmode="numeric" value="' + q +
+        '" oninput="Stk.setQty(\'' + esc(r.code) + '\',this.value)">' +
+      '</div>' +
+      '<div style="flex:1 1 120px">' +
+        '<label class="f">Value / NSV</label>' +
+        '<div class="in lk" id="stk_v_' + esc(r.code) + '">' + inr(v) + ' · ' + lakh(v * .6 / 1e5) + ' L</div>' +
+      '</div>' +
+      '<div style="flex:0 0 auto;display:flex;gap:6px;align-items:flex-end">' +
+        '<button class="btn ok sm" onclick="Stk.save(\'' + esc(r.code) + '\',this)">Save</button>' +
+        (r.have ? '<button class="btn ghost sm" onclick="Stk.drop(\'' + esc(r.code) + '\')">Remove</button>' : '') +
+      '</div></div>';
+  },
+  tap: function (code) { Stk.open = Stk.open === code ? '' : code; render(); },
+  /* update the value line without a re-render, so the caret stays in the box */
+  setQty: function (code, v) {
+    Stk.qty[code] = v;
     var p = DB.products().filter(function (x) { return String(x.Code) === String(code); })[0];
-    return p ? p.Name : code;
+    var box = $('stk_v_' + code);
+    if (p && box) { var val2 = num(v) * num(p.MRP);
+      box.innerHTML = I18n.tr(inr(val2) + ' · ' + lakh(val2 * .6 / 1e5) + ' L'); }
   },
-  rows: function (arr) {
-    return (arr || []).map(function (r) {
-      var c = Stock.sku(r);
-      return { code:c, name:r.SkuName && r.Sku ? r.SkuName : Stock.name(c),
-               brand:r.Brand || r.BrandShort || '', cat:r.Category || '',
-               msl:/^msl$/i.test(String(r.MSLStatus || r.MslStatus || '')), q:Stock.qty(r) };
-    }).sort(function (x, y) { return y.q - x.q || String(x.name).localeCompare(String(y.name)); });
+  save: function (code, el) {
+    var p = DB.products().filter(function (x) { return String(x.Code) === String(code); })[0];
+    if (!p) return toast('Product nahi mila');
+    var q = num(Stk.qty[code] !== undefined ? Stk.qty[code] : val('stk_q_' + code));
+    if (q <= 0) return toast('Quantity bharo');
+    Field.lines = Field.lines || [];
+    var ex = Field.lines.filter(function (x) { return String(x.Sku) === String(code); })[0];
+    if (ex) { ex.Units = q; ex.Value = q * num(p.MRP); }
+    else Field.lines.push({ Sku:String(p.Code), SkuName:p.Name, Brand:p.Brand, Category:p.Category,
+      SubCategory:p.SubCategory, Mrp:num(p.MRP), Units:q, Value:q * num(p.MRP),
+      MslStatus:p.MslStatus || '' });
+    Stk.open = ''; delete Stk.qty[code];
+    render();
+    toast(p.Name + ' — ' + q + ' unit order me add ho gaya');
   },
-  table: function (arr, empty) {
-    var rows = Stock.rows(arr);
-    if (!rows.length) return UI.empty('', empty);
-    var zero = rows.filter(function (r) { return r.q <= 0; }).length;
-    return '<div class="tw"><table><thead><tr><th>SKU</th><th>Brand</th><th class="num">Qty</th></tr></thead><tbody>' +
-      rows.map(function (r) {
-        return '<tr><td>' + esc(r.name) + (r.msl ? ' <span class="pill p-blue">MSL</span>' : '') +
-          '</td><td>' + esc(r.brand) + '</td><td class="num">' +
-          (r.q > 0 ? r.q : '<span class="pill p-bad">0</span>') + '</td></tr>';
-      }).join('') +
-      '<tr class="tot"><td><b>' + rows.length + ' SKU</b></td><td>' +
-      (zero ? '<b>' + zero + ' zero</b>' : '') + '</td><td class="num"><b>' +
-      rows.reduce(function (a, r) { return a + r.q; }, 0) + '</b></td></tr></tbody></table></div>';
+  drop: function (code) {
+    Field.lines = (Field.lines || []).filter(function (x) { return String(x.Sku) !== String(code); });
+    Stk.open = ''; delete Stk.qty[code];
+    render(); toast('Order se hata diya');
   },
-  /* the card the rep sees the moment a store is picked */
-  html: function (st, db, dbName) {
-    var c = Stock.get(st, db);
-    var head = '<div class="c-h"><h3>Is shop ka stock</h3>' +
-      '<button class="btn ghost xs" onclick="Stock.load(\'' + esc(st) + '\',\'' + esc(db) + '\',1)">Refresh</button></div>';
-    if (!c) return '<div class="card">' + head +
-      '<div class="strip b" style="margin-top:8px"><span class="g"><span class="spin"></span></span>' +
-      '<div class="m"><b>Stock aa raha hai…</b> <i>· sheet se, aaj ka</i></div></div></div>';
-    if (c.err) return '<div class="card">' + head +
-      '<div class="banner w" style="margin-top:8px"><span>!</span><div><b>Stock nahi dikha</b><br>' +
-      '<span style="font-weight:500">' + esc(c.err) + '</span></div></div></div>';
-    return '<div class="card">' + head +
-      '<div class="sub">Sheet se live — Stock_Store. ' +
-      (c.storeAt ? 'Upload: ' + esc(Appr.when(c.storeAt) || String(c.storeAt).slice(0, 16)) : 'Upload time nahi mila') + '</div>' +
-      Stock.table(c.store, 'Is shop ka stock sheet me nahi hai') +
-      '<div class="sec-title" style="margin-top:14px">Distributor ka stock' +
-        (dbName ? ' — ' + esc(dbName) : '') + '</div>' +
-      '<div class="sub">Stock_Distributor. ' +
-      (c.dbAt ? 'Upload: ' + esc(Appr.when(c.dbAt) || String(c.dbAt).slice(0, 16)) : 'Upload time nahi mila') + '</div>' +
-      Stock.table(c.db, 'Is distributor ka stock sheet me nahi hai') +
+  set: function (k, v) {
+    Stk[k] = v;
+    if (k === 'brand' || k === 'cat') { Stk.sub = ''; }
+    render();
+  },
+  onSearch: function (v) {
+    /* typing must not re-render (the caret would jump); rebuild just the two sections */
+    Stk.q = v;
+    var m = Stk.maps(); if (!m) return;
+    var box = $('stk_list'); if (!box) return;
+    box.innerHTML = I18n.tr(Stk.section('MSL products', true, m) + Stk.section('Non-MSL products', false, m));
+  },
+
+  html: function () {
+    if (Gate.locked()) return Field.lockedHtml();
+    var s = Field.store;
+    var h = UI.head('', 'Stock — shop aur distributor',
+      'Jo store aap visit kar rahe ho uska stock, aur aapke distributor ka stock. Yahin se order add karo.');
+    if (!s) return h + '<div class="card">' + UI.empty('', 'Pehle Field tab me store select karo') +
+      '<div class="btns"><button class="btn" onclick="Router.go(\'field\')">Field tab kholo</button></div></div>';
+
+    var i = Stk.ids();
+    h += '<div class="banner b"><span></span><div><b>' + esc(s.StoreName) + '</b><br>' +
+      '<span style="font-weight:500">' + esc(s.City || '') + ' · ' + esc(s.CompanyCode || '') +
+      ' · DB: ' + esc(i.dbName || '—') + '</span></div></div>';
+
+    var m = Stk.maps();
+    if (!m) {
+      var c = Stock.get(i.st, i.db);
+      if (c && c.err) return h + '<div class="card"><div class="banner w"><span>!</span><div><b>Stock nahi dikha</b><br>' +
+        '<span style="font-weight:500">' + esc(c.err) + '</span></div>' +
+        '<div class="btns"><button class="btn sm" onclick="Stock.load(\'' + esc(i.st) + '\',\'' + esc(i.db) + '\',1)">Dobara try karo</button></div></div></div>';
+      Stock.load(i.st, i.db);
+      return h + '<div class="strip b"><span class="g"><span class="spin"></span></span>' +
+        '<div class="m"><b>Stock aa raha hai…</b> <i>· sheet se, aaj ka</i></div></div>';
+    }
+
+    /* filters — brand, category, sub-category, search */
+    var uniq = function (f, extra) {
+      var seen = {}, out = [];
+      DB.products().forEach(function (p) {
+        if (extra && !extra(p)) return;
+        var v = String(p[f] || '').trim();
+        if (v && !seen[v]) { seen[v] = 1; out.push(v); }
+      });
+      return out.sort();
+    };
+    var sel = function (k, lbl, list) {
+      return '<div><label class="f">' + lbl + '</label><select class="in" onchange="Stk.set(\'' + k + '\',this.value)">' +
+        '<option value="">Sab</option>' + list.map(function (x) {
+          return '<option' + (Stk[k] === x ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') +
+        '</select></div>';
+    };
+    h += '<div class="card" style="padding:12px">' +
+      '<div class="row two">' + sel('brand', 'Brand', uniq('Brand')) +
+        sel('cat', 'Category', uniq('Category', function (p) { return !Stk.brand || p.Brand === Stk.brand; })) + '</div>' +
+      '<div class="row two" style="margin-top:8px">' +
+        sel('sub', 'Sub-category', uniq('SubCategory', function (p) {
+          return (!Stk.brand || p.Brand === Stk.brand) && (!Stk.cat || p.Category === Stk.cat); })) +
+        '<div><label class="f">Search</label><input class="in" id="stk_q" placeholder="Product ya code" ' +
+        'value="' + esc(Stk.q) + '" oninput="Stk.onSearch(this.value)"></div></div>' +
+      '<div class="hint" style="margin-top:8px">Shop: Stock_Store' +
+        (m.storeAt ? ' · ' + esc(Appr.when(m.storeAt) || String(m.storeAt).slice(0, 16)) : '') +
+        ' &nbsp;|&nbsp; DB: Stock_Distributor' +
+        (m.dbAt ? ' · ' + esc(Appr.when(m.dbAt) || String(m.dbAt).slice(0, 16)) : '') + '</div>' +
+      '<div class="btns"><button class="btn ghost sm" onclick="Stock.load(\'' + esc(i.st) + '\',\'' + esc(i.db) + '\',1)">Stock refresh</button></div>' +
       '</div>';
+
+    h += '<div id="stk_list">' + Stk.section('MSL products', true, m) +
+      Stk.section('Non-MSL products', false, m) + '</div>';
+
+    /* the order being built, and the one way forward */
+    var n = (Field.lines || []).length;
+    var tv = (Field.lines || []).reduce(function (a, x) { return a + num(x.Value); }, 0);
+    h += '<div class="card"><div class="c-h"><h3>Order banaya ja raha hai</h3>' +
+      '<span class="pill ' + (n ? 'p-ok' : 'p-grey') + '">' + n + ' product</span></div>' +
+      (n ? '<div class="sub">' + n + ' product · ' + inr(tv) + ' · NSV ' + lakh(tv * .6 / 1e5) + ' L</div>' +
+        '<div class="btns"><button class="btn ok" onclick="Stk.done()">Order complete karo</button></div>'
+        : '<div class="sub">Upar se product add karo — phir order complete karo.</div>') +
+      '</div>';
+    return h;
+  },
+  after: function () { /* nothing to hydrate: the screen is built in one pass */ },
+  done: function () {
+    if (!(Field.lines || []).length) return toast('Pehle koi product add karo');
+    Router.go('field');
+    toast('Order check karo, phir submit', 3200);
   }
 };
 
@@ -8355,4 +8545,3 @@ var Admin = {
 </script>
 </body>
 </html>
-
