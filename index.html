@@ -1794,6 +1794,20 @@ I18n.D.en = I18n.EN = {
   'Badle hue din':'Changed days',
   'Changed':'Changed',
   'Save nahi hua':'Not saved yet',
+  'Is store par kya hua?':'What happened at this store?',
+  'No order':'No order',
+  'Order nahi mila — sirf reason':'No order — reason only',
+  'Order kyun nahi mila?':'Why was there no order?',
+  'Reason select karo — product aur photo ki zaroorat nahi. Save karte hi POSM khul jayega.':'Pick a reason — no products and no photo needed. Saving opens POSM.',
+  'Shop ne kya kaha (optional)':'What the shop said (optional)',
+  'Save karke POSM par jao':'Save and go to POSM',
+  'Order bharo':'Fill the order',
+  'no order (':'no order (',
+  ') save · ab POSM karo':') saved · now do POSM',
+  'Punch order':'Punch order',
+  'Shop ka photo ho gaya':'Shop photo done',
+  'Visit ka proof save hai. Ab sirf reason bharo.':'The visit is evidenced. Now just fill the reason.',
+  'Wapas — order punch karo':'Back — punch the order',
   'Order punch karo':'Punch the order',
   /* live updates + the read-only plan / waiting screen */
   'HOD ne approve kar diya — aage badho':'The HOD approved it — carry on',
@@ -4518,12 +4532,20 @@ var Pjp = {
       return (p || Promise.resolve()).then(function () { render(); toast('Sab din save ho gaye'); });
     });
   },
+  /* Merge over what the sheet already holds. Pjp.days only ever contains the days this device has
+     loaded or touched; writing it raw could replace a full month with the two days being fixed. */
+  merged: function () {
+    var out = {};
+    try { out = JSON.parse(Pjp.draft().DaysJson || '{}') || {}; } catch (e) { out = {}; }
+    Object.keys(Pjp.days || {}).forEach(function (k) { out[k] = Pjp.days[k]; });
+    return out;
+  },
   flush: function () {
     if (!Pjp._dirty || !Pjp.days) return null;
     Pjp._dirty = false;
     var c = Pjp.cover(), dr = Pjp.draft();
     return DB.save('PjpDraft', { Key:Pjp.key(), EmpCode:DB.me.code, EmpName:DB.me.name, Month:Pjp.month,
-      Status:dr.Status || 'Draft', DaysJson:JSON.stringify(Pjp.days),
+      Status:dr.Status || 'Draft', DaysJson:JSON.stringify(Pjp.merged()),
       Coverage:c.done + '/' + c.need, UpdatedAt:Date.now() }, { quiet:true });
   },
   autofill: function () {
@@ -4574,7 +4596,7 @@ var Pjp = {
          review can open on exactly those, highlighted */
       var fixed = part ? Pjp.rejDays() : [];
       return Busy.run('pjp_' + Pjp.key(), el, 'Bhej raha hai…', function () { return DB.save('PjpDraft', { Key:Pjp.key(), EmpCode:DB.me.code, EmpName:DB.me.name, Month:Pjp.month,
-      Status:'Pending', DaysJson:JSON.stringify(Pjp.days), Coverage:c.done + '/' + c.need,
+      Status:'Pending', DaysJson:JSON.stringify(Pjp.merged()), Coverage:c.done + '/' + c.need,
       Revision:rev, HodAt:'', HodBy:'', HodRole:'', RejectReason:'', RejectedDaysJson:'',
       FixedDaysJson:fixed.length ? JSON.stringify(fixed) : '',
       SubmittedAt:new Date().toISOString(), UpdatedAt:Date.now() }).then(function () {
@@ -5131,7 +5153,7 @@ var Field = {
     if (Gate.locked()) return Field.lockedHtml();
     var h = UI.head('', 'Field — store visit', 'Store select karo product add karo submit. Ek store ke baad POSM.');
     h += '<div class="card"><div class="btns" style="margin:0">' +
-      '<button class="btn ' + (Field.mode === 'order' ? '' : 'ghost') + '" onclick="Field.setMode(\'order\')"> Order punch</button>' +
+      '<button class="btn ' + (Field.mode === 'order' ? '' : 'ghost') + '" onclick="Field.setMode(\'order\')">Order</button>' +
       '<button class="btn ' + (Field.mode === 'new' ? '' : 'ghost') + '" onclick="Field.setMode(\'new\')"> Naya outlet</button>' +
       '</div></div>';
     return h + (Field.mode === 'order' ? Field.orderHtml() : Field.newHtml());
@@ -5170,12 +5192,36 @@ var Field = {
 
     /* STEP 2 — how the order is coming in. Asked here, before the photo, so a telephonic order can
        skip the photo entirely instead of being blocked by it. */
-    h += '<div class="card" id="f_step2"><h3><span class="ic">' + (++sN) + '</span>Order kaise aa raha hai?</h3>' +
+    h += '<div class="card" id="f_step2"><h3><span class="ic">' + (++sN) + '</span>Is store par kya hua?</h3>' +
       '<div class="seg" style="margin-top:8px">' +
-      '<button type="button" class="' + (Field.phone() ? '' : 'on') + '" onclick="Field.setSrc(\'Store Visit\')">Store visit</button>' +
+      '<button type="button" class="' + (Field.src === 'Store Visit' ? 'on' : '') + '" onclick="Field.setSrc(\'Store Visit\')">Store visit</button>' +
       '<button type="button" class="' + (Field.phone() ? 'on' : '') + '" onclick="Field.setSrc(\'Telephonic Call\')">Telephonic</button>' +
+      '<button type="button" class="' + (Field.none() ? 'on' : '') + '" onclick="Field.setSrc(\'No Order\')">No order</button>' +
       '</div><div class="seg-n"><span>Shop me ja rahe ho — photo lagega</span>' +
-      '<span class="w">Phone par order — photo aur POSM skip</span></div></div>';
+      '<span class="w">Phone par order — photo aur POSM skip</span>' +
+      '<span class="w">Order nahi mila — sirf reason</span></div></div>';
+
+    /* ── No order ──
+       A visit with nothing to punch: no products, no photo, no order lines. The reason IS the record,
+       so it is the only thing asked for, and then the rep carries straight on to POSM — the shelf still
+       has to be audited whether or not an order came out of the call. */
+    if (Field.none()) {
+      /* a photo taken before the rep found out there was no order is still evidence of the visit — it
+         is already uploaded, so say so instead of throwing the step away */
+      if (Cam.has('entry')) h += '<div class="banner g"><span></span><div><b>Shop ka photo ho gaya</b>' +
+        '<br><span style="font-weight:500">Visit ka proof save hai. Ab sirf reason bharo.</span></div></div>';
+      h += '<div class="card"><h3><span class="ic">' + (++sN) + '</span>Order kyun nahi mila?</h3>' +
+        '<div class="sub">Reason select karo — product aur photo ki zaroorat nahi. Save karte hi POSM khul jayega.</div>' +
+        '<label class="f">Reason <span class="req">*</span></label>' +
+        '<select class="in" id="f_norsn">' +
+          ['Stock Issue','Transport Issue','Overdue','Collection Issue','Damage & Expiry',
+           'Official Issue','Shop Closed','Other']
+          .map(function (o) { return '<option value="' + o + '">' + o + '</option>'; }).join('') + '</select>' +
+        '<label class="f">Remarks</label><input class="in" id="f_norm" placeholder="Shop ne kya kaha (optional)">' +
+        '<div class="btns"><button class="btn" onclick="Field.saveNone(this)">Save karke POSM par jao</button>' +
+        '<button class="btn ghost" onclick="Field.setSrc(\'Store Visit\')">Wapas — order punch karo</button></div></div>';
+      return h;
+    }
 
     if (Field.phone()) {
       /* telephonic: no shop to photograph and no shelf to audit */
@@ -5194,8 +5240,11 @@ var Field = {
       (Cam.has('entry') || Bypass.on() ? '' : '<div class="hint" style="margin-top:8px"> Photo lene ke baad hi product add kar paoge.</div>') +
       /* the explicit way forward once the photo exists — the rep should not have to guess that the
          screen has opened up below */
+      /* the photo is taken — now the visit went one of two ways, and both have to be one tap away.
+         "No order" keeps the photo (it is already uploaded) and only asks WHY, then goes to POSM. */
       (Cam.ok('entry') || Bypass.on()
-        ? '<div class="btns"><button class="btn" onclick="Field.entryDone()">Order punch karo</button></div>'
+        ? '<div class="btns two"><button class="btn" onclick="Field.entryDone()">Punch order</button>' +
+          '<button class="btn warn" onclick="Field.setSrc(\'No Order\')">No order</button></div>'
         : '') +
       '</div>';
       if (!Cam.ok('entry') && !Bypass.on()) return h;
@@ -5268,7 +5317,31 @@ var Field = {
      choosing it must skip the whole photo gate rather than fail it at the end. */
   src:'Store Visit', lineStep:5,
   phone: function () { return Field.src === 'Telephonic Call'; },
+  none: function () { return Field.src === 'No Order'; },
   setSrc: function (v) { Field.src = v; render(); },
+  /* A No-Order visit: one SecOrders row with Status 'No Order', zero lines, the reason, and on to
+     POSM. It goes through the same table and the same DFR push as every other visit, so the day's
+     call count and the reports cannot disagree with what the rep did. */
+  saveNone: function (el) {
+    var s = Field.store; if (!s) return toast('Pehle store select karo');
+    var reason = val('f_norsn');
+    if (!reason) return toast('Reason select karo');
+    var t = today(), po = Field.po(s);
+    var order = { PoNumber:po, Date:t, Source:'Store Visit', StoreType:s.StoreType || '',
+      ClientId:String(s.ClientId || ''), CompanyCode:String(s.CompanyCode || ''), StoreName:s.StoreName,
+      City:s.City || '', State:s.State || '', DbCode:String(s.DbCode || ''), DbName:s.DbName || '',
+      Status:'No Order', Reason:reason, Remarks:val('f_norm'), StatusAt:new Date().toISOString(),
+      TotSku:0, TotUnits:0, TotValue:0, TotNsvLakh:0, LinesJson:'[]' };
+    return Busy.run('order', el, 'Save ho raha hai…', function () {
+      return DB.save('SecOrders', order).then(function () { return Dfr.push(); }).then(function () {
+        Log.add('Order', 'No Order', po, s.StoreName + ' · ' + reason);
+        Posm.store = s; Field.lines = []; Field.store = null; Field.src = 'Store Visit';
+        Nav.build();
+        toast(s.StoreName + ' — no order (' + reason + ') save · ab POSM karo', 4000);
+        Router.go('posm');
+      });
+    });
+  },
   /* The shop photo GATES the visit, so filling it has to open the rest of the screen. Cam.paint only
      redraws the tile, which is why the order steps stayed hidden until the rep left the tab and came
      back. Called from the tile's own cb and from the "Order punch karo" button. */
@@ -7591,7 +7664,19 @@ var Admin = {
   /* an HOD editing a rep's plan must be offered the REP's towns, not their own */
   pjpDays: function (key, act) {
     var d = DB.find('PjpDraft', key); if (!d) return '';
-    var days = {}; try { days = JSON.parse(d.DaysJson || '{}') || {}; } catch (e) {}
+    var draft = {}; try { draft = JSON.parse(d.DaysJson || '{}') || {}; } catch (e) {}
+    /* ── "whole month" has to mean the whole month ──
+       A draft only carries the days the rep actually touched, so listing DaysJson alone could show two
+       days and call it a month. The month as it STANDS is: what is already approved in Master_PJP, with
+       the draft's version winning wherever the draft has one. */
+    var days = {}, fromMaster = {};
+    DB.pjpMonth(d.EmpCode, d.Month).forEach(function (r) {
+      var k = toISO(r.Date); if (!k) return;
+      fromMaster[k] = 1;
+      days[k] = { ww:Pjp.ww(r.Ww), state:r.State || Plan.stateOfFor(d.EmpCode, r.Town) || '',
+                  city:r.Town || '', beat:r.Beat || '', st:'HQ' };
+    });
+    Object.keys(draft).forEach(function (k) { days[k] = draft[k]; delete fromMaster[k]; });
     var rej = Admin.rejDays(d), fix = Admin.fixDays(d);
     var st = Appr.norm(d.Status), can = act && Auth.isAdmin() && st === 'pending';
     var all = Object.keys(days).sort();
@@ -7614,7 +7699,7 @@ var Admin = {
         fix.length + ' din</button>' +
       '<button class="btn ' + (vw === 'all' ? '' : 'ghost') + ' sm" ' +
         'onclick="event.stopPropagation();Admin.setView(\'' + Appr.q(key) + '\',\'all\')">Poora month (' +
-        all.length + ')</button></div></div></div>';
+        all.length + ' din)</button></div></div></div>';
     h += '<div class="sec-title">' + (vw === 'fix' ? 'Badle hue din \u2014 ' + list.length
           : 'Poora plan \u2014 ' + list.length + ' din') + '</div>' +
       /* no markup inside the sentence: a <b> in the middle splits the text run, and half a sentence
@@ -7632,7 +7717,8 @@ var Admin = {
           '<div class="m"><div class="t">' + dmy(k) + ' <span class="hint">' +
             DAY[new Date(k + 'T00:00:00').getDay()] + '</span>' +
             (bad ? ' <span class="pill p-bad">Rejected</span>' : '') +
-            (chg ? ' <span class="pill p-ok">Changed</span>' : '') + '</div>' +
+            (chg ? ' <span class="pill p-ok">Changed</span>' : '') +
+            (fromMaster[k] ? ' <span class="pill p-grey">Approved</span>' : '') + '</div>' +
             '<div class="s">' + esc(ww) + (f ? ' · ' + esc(r.state || '—') + ' · ' + esc(r.city || '—') +
               ' / ' + esc(r.beat || '—') : '') + '</div></div>' +
           (can ? '<button class="btn ghost xs" onclick="Admin.edit(\'' + Appr.q(key) + '\',\'' + k + '\')">' +
