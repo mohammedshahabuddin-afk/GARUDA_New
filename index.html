@@ -1808,6 +1808,47 @@ I18n.D.en = I18n.EN = {
   'Shop ka photo ho gaya':'Shop photo done',
   'Visit ka proof save hai. Ab sirf reason bharo.':'The visit is evidenced. Now just fill the reason.',
   'Wapas — order punch karo':'Back — punch the order',
+  'Reason likho — zaroori hai':'Write the reason — required',
+  'Other chuna hai — Remarks me reason likho':'You picked Other — write the reason in Remarks',
+  'TC (Total calls)':'TC (Total calls)',
+  'PC (Productive calls)':'PC (Productive calls)',
+  'SC (Scheduled calls)':'SC (Scheduled calls)',
+  'TC / SC':'TC / SC',
+  'Brand-wise — target vs achieved (₹ Lakh)':'Brand-wise — target vs achieved (₹ Lakh)',
+  'Achieved':'Achieved',
+  'Review':'Review',
+  'Kaunsa element chahiye — select karo':'Pick which element is needed',
+  'Honasa brand select karo':'Pick the Honasa brand',
+  'Kahan lagana hai':'Where it goes',
+  'Branding chahiye':'Branding wanted',
+  'Kitne chahiye':'How many',
+  'Store ka monthly income ₹':'Store monthly income ₹',
+  'Store ka daily sale ₹':'Store daily sale ₹',
+  'Kab tak chahiye':'Needed by',
+  'POSM type':'POSM type',
+  'Asset type':'Asset type',
+  'Email + Excel + image':'Email + Excel + image',
+  'HOD ka email Master_Config me nahi hai — draft khol diya':'The HOD email is not in Master_Config — opened a draft instead',
+  'Email bhej diya —':'Email sent —',
+  '! Email nahi gaya:':'! Email did not go:',
+  '— draft khol rahe hain':'— opening a draft',
+  '! Email nahi gaya — draft khol rahe hain':'! Email did not go — opening a draft',
+  'attachment':'attachment',
+  'Is shop ka stock':'This shop’s stock',
+  'Stock aa raha hai…':'Fetching the stock…',
+  '· sheet se, aaj ka':'· from the sheet, today’s',
+  'Stock nahi dikha':'Could not show the stock',
+  'Sheet se live — Stock_Store.':'Live from the sheet — Stock_Store.',
+  'Upload time nahi mila':'No upload time found',
+  'Is shop ka stock sheet me nahi hai':'This shop has no rows in the stock sheet',
+  'Distributor ka stock':'Distributor stock',
+  'Is distributor ka stock sheet me nahi hai':'This distributor has no rows in the stock sheet',
+  'Stock nahi mila':'Stock not found',
+  'zero':'zero',
+  'Upload:':'Upload:',
+  'Ye live camera se hi hoga, gallery se nahi.':'It must come from the live camera, not the gallery.',
+  'Internet nahi mila':'No internet',
+  'Ye store list me nahi mila — Sync karo':'This store is not in the list — Sync',
   'Order punch karo':'Punch the order',
   /* live updates + the read-only plan / waiting screen */
   'HOD ne approve kar diya — aage badho':'The HOD approved it — carry on',
@@ -2973,7 +3014,10 @@ var Xl = {
   },
 
   /* sheets = [{ name, cols, freeze, filter, merges, rows }] */
-  save: function (file, sheets) {
+  /* `opt.blob` hands the workbook back as base64 (and skips the download) so it can be attached to a
+     mail. Everything else about the file is identical - one builder, one workbook. */
+  save: function (file, sheets, opt) {
+    opt = opt || {};
     sheets = sheets.filter(Boolean);
     var enc = function (s) { return new TextEncoder().encode(s); };
     var names = {}, safe = sheets.map(function (sh, i) {
@@ -3011,7 +3055,17 @@ var Xl = {
     ];
     sheets.forEach(function (sh, i) { files.push({ name:'xl/worksheets/sheet' + (i + 1) + '.xml', data:enc(Xl.sheetXml(sh)) }); });
 
-    var blob = new Blob([Zip.make(files)], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    var TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    var blob = new Blob([Zip.make(files)], { type:TYPE });
+    if (opt.blob) return new Promise(function (res, rej) {
+      var fr = new FileReader();
+      fr.onload = function () {
+        var d = String(fr.result || ''), c = d.indexOf(',');
+        res({ name:file + '.xlsx', type:TYPE, data:c >= 0 ? d.slice(c + 1) : d });
+      };
+      fr.onerror = function () { rej(new Error('read fail')); };
+      fr.readAsDataURL(blob);
+    });
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = file + '.xlsx';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
@@ -3312,7 +3366,7 @@ var Card = {
     });
     var brands = Object.keys(a.brand).sort(function (x, y) { return a.brand[y] - a.brand[x]; })
       .slice(0, 7).map(function (b) { return [b, a.brand[b]]; });
-    var saved = DB.find('Eod', DB.me.code + '_' + a.t) || {};
+    var saved = DB.find('Eod', DB.me.code + '_' + a.t) || {}, br = Eod.brandRows(a);
     return {
       date:a.t, time:saved.ClosedAt || new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }),
       name:DB.me.name || s.name || '', code:DB.me.code || s.code || '',
@@ -3322,8 +3376,8 @@ var Card = {
       ww:I18n.s(p.WorkingWith || '—'),
       town:p.Town || '—', beat:p.Beat || '—', focus:p.Focus || '',
       /* label, target, achieved, kind: 0 = count, 1 = money, 2 = lakh */
-      kpi:[['Store calls (SC)', num(p.ScTarget) || 7, a.tc, 0],
-           ['Order mila (PC)', num(p.ScTarget) || 7, a.pc, 0],
+      kpi:[['TC (Total calls)', num(p.ScTarget) || 7, a.tc, 0],
+           ['PC (Productive calls)', num(p.ScTarget) || 7, a.pc, 0],
            ['Naye outlet (NSO)', num(p.NsoTarget), a.ns.length, 0],
            ['POSM audit', num(p.PosmTarget), a.pa.length, 0],
            ['Order value', 0, a.value, 1],
@@ -3334,6 +3388,7 @@ var Card = {
               ['Cancel Order', st('Cancel Order').length, 0]],
       stores:a.ord.map(function (o) {
         return [o.StoreName || '—', I18n.s(String(o.Status || '')), num(o.TotValue)]; }),
+      btgt:br.rows, btgtT:br.tT, btgtA:br.tA,
       brands:brands, nsv:a.nsv, mrp:mrp, units:units, sku:a.lines.length,
       msl:msl, nonMsl:nonMsl,
       posmReq:a.pr.length,
@@ -3397,8 +3452,8 @@ var Card = {
     y += 6;
 
     /* headline tiles */
-    var tiles = [[String(d.kpi[0][2]) + ' / ' + d.kpi[0][1], 'Calls'],
-                 [String(d.kpi[1][2]), 'Order mila'],
+    var tiles = [[String(d.kpi[0][2]) + ' / ' + d.kpi[0][1], 'TC / SC'],
+                 [String(d.kpi[1][2]), 'PC'],
                  ['₹' + lakh(d.nsv) + 'L', 'NSV'],
                  [String(d.kpi[2][2]), 'Naye outlet']];
     var tw = (iw - 3 * 8) / 4;
@@ -3433,8 +3488,22 @@ var Card = {
     line();
     row3('TOTAL', d.sku + ' SKU · ' + Math.round(d.units) + ' units', inr(d.mrp) + ' MRP', true);
 
+    if (d.btgt && d.btgt.length) {
+      sec('BRAND-WISE — TARGET vs ACHIEVED (₹ LAKH)');
+      Card.fnt(g, '800', 10.5);
+      put('BRAND', P, y, C.foot);
+      put('TARGET', P + iw * .62, y, C.foot, 'right');
+      put('ACHIEVE', W - P, y, C.foot, 'right');
+      y += 15;
+      d.btgt.forEach(function (b) {
+        line();
+        row3(b[0], lakh(b[1]), lakh(b[2]), false, b[1] > 0 && b[2] >= b[1] ? C.green : C.ink);
+      });
+      line();
+      row3('TOTAL', lakh(d.btgtT), lakh(d.btgtA), true);
+    }
     if (d.brands.length) {
-      sec('BRAND-WISE NSV (₹ LAKH)');
+      sec('BRAND-WISE NSV — SHARE');
       d.brands.forEach(function (b) {
         var pct = d.nsv > 0 ? Math.round(b[1] / d.nsv * 100) : 0;
         line();
@@ -3930,8 +3999,8 @@ var Home = {
 
     h += '<div class="sec-title">Snapshot — ' + esc(Home.rangeLbl()) + '</div><div class="card">' +
       Home.tbl(['What', 'Value'], [
-        ['Store calls (TC)', A.tc + (A.scT ? ' <span class="hint">/ ' + A.scT + ' target</span>' : '')],
-        ['Order mila (PC)', A.pc + ' <span class="hint">' + (A.tc ? Math.round(A.pc / A.tc * 100) : 0) + '% strike rate</span>'],
+        ['TC (Total calls)', A.tc + (A.scT ? ' <span class="hint">/ ' + A.scT + ' SC</span>' : '')],
+        ['PC (Productive calls)', A.pc + ' <span class="hint">' + (A.tc ? Math.round(A.pc / A.tc * 100) : 0) + '% strike rate</span>'],
         ['MRP value', inr(A.mrp)],
         ['NSV', lakh(A.nsv) + ' L'],
         ['Units', Math.round(A.units)],
@@ -3968,9 +4037,9 @@ var Home = {
   callsHtml: function (A) {
     var sc = num(DB.cfg('SC_Call_Target', 7)) || 7;
     var h = '<div class="sec-title">Plan vs achieved</div><div class="card">' +
-      Home.pva('Store calls (SC)', A.scT || sc * Math.max(1, A.fieldDays), A.tc,
-        A.fieldDays + ' field din × ' + sc + '/din') +
-      Home.pva('Order mila (PC)', Math.round((A.scT || sc) * .6), A.pc, 'Jitne store ne order diya') +
+      Home.pva('TC (Total calls)', A.scT || sc * Math.max(1, A.fieldDays), A.tc,
+        'SC ' + (A.scT || sc * Math.max(1, A.fieldDays)) + ' · ' + A.fieldDays + ' field din × ' + sc + '/din') +
+      Home.pva('PC (Productive calls)', Math.round((A.scT || sc) * .6), A.pc, 'Jitne store ne order diya') +
       Home.pva('Naye outlet (NSO)', A.nsoT || num(DB.cfg('NSO_Monthly_Target', 15)), A.nso, 'Plan ka NSO target') +
       Home.pva('POSM', A.posmT || A.fieldDays, A.posm, 'Audit kiye') +
       Home.pva('NSV (₹L)', num(DB.cfg('MTD @24 Days - Working', 36)), A.nsv, 'Month ka NSV target') +
@@ -5190,16 +5259,21 @@ var Field = {
     h += '</div>';
     if (!Field.store) return h;
 
+    /* the shelf, before anything else: what this shop is holding and what the distributor has to
+       refill it with. Loaded from the sheet on pick, not from the local cache. */
+    h += Stock.html(String(Field.store.ClientId || Field.store.CompanyCode || ''),
+                    String(Field.store.DbCode || ''), Field.store.DbName || '');
+
     /* STEP 2 — how the order is coming in. Asked here, before the photo, so a telephonic order can
        skip the photo entirely instead of being blocked by it. */
-    h += '<div class="card" id="f_step2"><h3><span class="ic">' + (++sN) + '</span>Is store par kya hua?</h3>' +
+    /* Two answers here, not three. "No order" belongs AFTER the photo — that is when the rep finds
+       out — so it is offered there and nowhere else. */
+    h += '<div class="card" id="f_step2"><h3><span class="ic">' + (++sN) + '</span>Order kaise aa raha hai?</h3>' +
       '<div class="seg" style="margin-top:8px">' +
-      '<button type="button" class="' + (Field.src === 'Store Visit' ? 'on' : '') + '" onclick="Field.setSrc(\'Store Visit\')">Store visit</button>' +
+      '<button type="button" class="' + (Field.phone() ? '' : 'on') + '" onclick="Field.setSrc(\'Store Visit\')">Store visit</button>' +
       '<button type="button" class="' + (Field.phone() ? 'on' : '') + '" onclick="Field.setSrc(\'Telephonic Call\')">Telephonic</button>' +
-      '<button type="button" class="' + (Field.none() ? 'on' : '') + '" onclick="Field.setSrc(\'No Order\')">No order</button>' +
       '</div><div class="seg-n"><span>Shop me ja rahe ho — photo lagega</span>' +
-      '<span class="w">Phone par order — photo aur POSM skip</span>' +
-      '<span class="w">Order nahi mila — sirf reason</span></div></div>';
+      '<span class="w">Phone par order — photo aur POSM skip</span></div></div>';
 
     /* ── No order ──
        A visit with nothing to punch: no products, no photo, no order lines. The reason IS the record,
@@ -5212,12 +5286,15 @@ var Field = {
         '<br><span style="font-weight:500">Visit ka proof save hai. Ab sirf reason bharo.</span></div></div>';
       h += '<div class="card"><h3><span class="ic">' + (++sN) + '</span>Order kyun nahi mila?</h3>' +
         '<div class="sub">Reason select karo — product aur photo ki zaroorat nahi. Save karte hi POSM khul jayega.</div>' +
+        /* no pre-selected first option: a reason that was never chosen is not a reason */
         '<label class="f">Reason <span class="req">*</span></label>' +
-        '<select class="in" id="f_norsn">' +
+        '<select class="in" id="f_norsn" onchange="Field.noRsn(this.value)">' +
+          '<option value="">— select —</option>' +
           ['Stock Issue','Transport Issue','Overdue','Collection Issue','Damage & Expiry',
            'Official Issue','Shop Closed','Other']
           .map(function (o) { return '<option value="' + o + '">' + o + '</option>'; }).join('') + '</select>' +
-        '<label class="f">Remarks</label><input class="in" id="f_norm" placeholder="Shop ne kya kaha (optional)">' +
+        '<label class="f">Remarks <span class="req" id="f_norm_r" style="display:none">*</span></label>' +
+        '<input class="in" id="f_norm" placeholder="Shop ne kya kaha (optional)">' +
         '<div class="btns"><button class="btn" onclick="Field.saveNone(this)">Save karke POSM par jao</button>' +
         '<button class="btn ghost" onclick="Field.setSrc(\'Store Visit\')">Wapas — order punch karo</button></div></div>';
       return h;
@@ -5234,7 +5311,7 @@ var Field = {
     h += '<div class="card"><h3><span class="ic">' + (++sN) + '</span>Shop ka photo</h3>' +
       '<div class="sub">Dukaan me andar jaane se <b>pehle</b> shop ke bahar ka ek photo lo — board aur entry ' +
       'dono dikhne chahiye. ' + (Bypass.on() ? 'Aapke liye ye <b>optional</b> hai (bypass ON) — gallery se bhi chalega.'
-                                             : 'Ye <b>live camera</b> se hi hoga, gallery se nahi.') + '</div>' +
+                                             : 'Ye live camera se hi hoga, gallery se nahi.') + '</div>' +
       '<div class="ph-g" style="margin-top:10px">' +
         Cam.tile('entry', 'Shop ka photo', true, { live:true, sendJs:'Field.photoMeta()', cbJs:'Field.entryDone' }) + '</div>' +
       (Cam.has('entry') || Bypass.on() ? '' : '<div class="hint" style="margin-top:8px"> Photo lene ke baad hi product add kar paoge.</div>') +
@@ -5301,9 +5378,17 @@ var Field = {
     }).join('') : UI.empty('', q ? 'Koi store nahi mila' : 'Aapke naam par koi store mapped nahi hai'));
   },
   pick: function (i) {
-    Field.store = DB.myStores()[i];
+    /* an index that no longer exists (the store list changed under a stale render) must not take the
+       screen down with it */
+    var st = DB.myStores()[i];
+    if (!st) return toast('Ye store list me nahi mila — Sync karo');
+    Field.store = st;
     Cam.clear(['entry']);                       /* new store = new visit photo */
     Field.lines = [];
+    /* walking into the shop means seeing its shelf: ask the sheet for THIS store's stock and its
+       distributor's, before anything is punched */
+    Stock.load(String(Field.store.ClientId || Field.store.CompanyCode || ''),
+               String(Field.store.DbCode || ''));
     render();
     /* the store list is long; after picking, put the NEXT step in front of the rep instead of leaving
        them at the top of a list they have finished with */
@@ -5322,15 +5407,24 @@ var Field = {
   /* A No-Order visit: one SecOrders row with Status 'No Order', zero lines, the reason, and on to
      POSM. It goes through the same table and the same DFR push as every other visit, so the day's
      call count and the reports cannot disagree with what the rep did. */
+  /* "Other" is not a reason — it is the absence of one, so the words become compulsory. Toggled in
+     place, because a re-render here would throw away whatever the rep has already typed. */
+  noRsn: function (v) {
+    var star = $('f_norm_r'), box = $('f_norm'), other = v === 'Other';
+    if (star) star.style.display = other ? '' : 'none';
+    if (box) box.placeholder = I18n.s(other ? 'Reason likho — zaroori hai' : 'Shop ne kya kaha (optional)');
+  },
   saveNone: function (el) {
     var s = Field.store; if (!s) return toast('Pehle store select karo');
-    var reason = val('f_norsn');
+    var reason = val('f_norsn'), rem = val('f_norm');
     if (!reason) return toast('Reason select karo');
+    if (reason === 'Other' && !String(rem || '').trim())
+      return toast('Other chuna hai — Remarks me reason likho', 4000);
     var t = today(), po = Field.po(s);
     var order = { PoNumber:po, Date:t, Source:'Store Visit', StoreType:s.StoreType || '',
       ClientId:String(s.ClientId || ''), CompanyCode:String(s.CompanyCode || ''), StoreName:s.StoreName,
       City:s.City || '', State:s.State || '', DbCode:String(s.DbCode || ''), DbName:s.DbName || '',
-      Status:'No Order', Reason:reason, Remarks:val('f_norm'), StatusAt:new Date().toISOString(),
+      Status:'No Order', Reason:reason, Remarks:rem, StatusAt:new Date().toISOString(),
       TotSku:0, TotUnits:0, TotValue:0, TotNsvLakh:0, LinesJson:'[]' };
     return Busy.run('order', el, 'Save ho raha hai…', function () {
       return DB.save('SecOrders', order).then(function () { return Dfr.push(); }).then(function () {
@@ -5581,6 +5675,90 @@ var Field = {
   }
 };
 
+/* ═══════════════ STOCK — what is on the shelf, and at the distributor ═══════════════
+   Both stock tabs are re-uploaded daily and are far too big to ship with the pull, so this asks the
+   sheet for ONE store and ONE distributor at the moment the rep picks the shop. Nothing is kept across
+   days: the cache is keyed by store + date, so the first look on any given day is always a fresh read,
+   and the card shows what the sheet's UpdatedAt says so the rep can see whether today's upload is in.
+   No writes, ever — these two tabs belong to whoever uploads them. */
+var Stock = {
+  cache:{}, busy:'',
+  key: function (st, db) { return today() + '|' + String(st || '') + '|' + String(db || ''); },
+  get: function (st, db) { return Stock.cache[Stock.key(st, db)] || null; },
+  /* fire-and-render: called from Field when a store is picked */
+  load: function (st, db, loud) {
+    var k = Stock.key(st, db), s = Auth.session();
+    if (!s || (!st && !db)) return;
+    if (loud) delete Stock.cache[k];
+    else if (Stock.cache[k] || Stock.busy === k) return;
+    Stock.busy = k;
+    return Api.get({ action:'stock', email:s.email, store:st || '', db:db || '' }, true)
+      .then(function (r) {
+        Stock.busy = '';
+        Stock.cache[k] = (r && r.ok) ? { store:r.store || [], db:r.db || [], storeAt:r.storeAt || '',
+                                         dbAt:r.dbAt || '', at:Date.now() }
+                                     : { err:(r && r.error) || 'Stock nahi mila' };
+        if (Router.cur === 'field') render();
+      }, function () {
+        Stock.busy = '';
+        Stock.cache[k] = { err:'Internet nahi mila' };
+        if (Router.cur === 'field') render();
+      });
+  },
+  /* Sku / SkuName / Code all appear across the two uploads; take whichever is filled */
+  sku: function (r) { return String(r.Sku || r.SkuName || r.Code || r.Product || '').trim(); },
+  qty: function (r) { return num(r.Qty !== undefined && r.Qty !== '' ? r.Qty : r.Stock); },
+  /* the product master turns a code into a name the rep recognises */
+  name: function (code) {
+    var p = DB.products().filter(function (x) { return String(x.Code) === String(code); })[0];
+    return p ? p.Name : code;
+  },
+  rows: function (arr) {
+    return (arr || []).map(function (r) {
+      var c = Stock.sku(r);
+      return { code:c, name:r.SkuName && r.Sku ? r.SkuName : Stock.name(c),
+               brand:r.Brand || r.BrandShort || '', cat:r.Category || '',
+               msl:/^msl$/i.test(String(r.MSLStatus || r.MslStatus || '')), q:Stock.qty(r) };
+    }).sort(function (x, y) { return y.q - x.q || String(x.name).localeCompare(String(y.name)); });
+  },
+  table: function (arr, empty) {
+    var rows = Stock.rows(arr);
+    if (!rows.length) return UI.empty('', empty);
+    var zero = rows.filter(function (r) { return r.q <= 0; }).length;
+    return '<div class="tw"><table><thead><tr><th>SKU</th><th>Brand</th><th class="num">Qty</th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        return '<tr><td>' + esc(r.name) + (r.msl ? ' <span class="pill p-blue">MSL</span>' : '') +
+          '</td><td>' + esc(r.brand) + '</td><td class="num">' +
+          (r.q > 0 ? r.q : '<span class="pill p-bad">0</span>') + '</td></tr>';
+      }).join('') +
+      '<tr class="tot"><td><b>' + rows.length + ' SKU</b></td><td>' +
+      (zero ? '<b>' + zero + ' zero</b>' : '') + '</td><td class="num"><b>' +
+      rows.reduce(function (a, r) { return a + r.q; }, 0) + '</b></td></tr></tbody></table></div>';
+  },
+  /* the card the rep sees the moment a store is picked */
+  html: function (st, db, dbName) {
+    var c = Stock.get(st, db);
+    var head = '<div class="c-h"><h3>Is shop ka stock</h3>' +
+      '<button class="btn ghost xs" onclick="Stock.load(\'' + esc(st) + '\',\'' + esc(db) + '\',1)">Refresh</button></div>';
+    if (!c) return '<div class="card">' + head +
+      '<div class="strip b" style="margin-top:8px"><span class="g"><span class="spin"></span></span>' +
+      '<div class="m"><b>Stock aa raha hai…</b> <i>· sheet se, aaj ka</i></div></div></div>';
+    if (c.err) return '<div class="card">' + head +
+      '<div class="banner w" style="margin-top:8px"><span>!</span><div><b>Stock nahi dikha</b><br>' +
+      '<span style="font-weight:500">' + esc(c.err) + '</span></div></div></div>';
+    return '<div class="card">' + head +
+      '<div class="sub">Sheet se live — Stock_Store. ' +
+      (c.storeAt ? 'Upload: ' + esc(Appr.when(c.storeAt) || String(c.storeAt).slice(0, 16)) : 'Upload time nahi mila') + '</div>' +
+      Stock.table(c.store, 'Is shop ka stock sheet me nahi hai') +
+      '<div class="sec-title" style="margin-top:14px">Distributor ka stock' +
+        (dbName ? ' — ' + esc(dbName) : '') + '</div>' +
+      '<div class="sub">Stock_Distributor. ' +
+      (c.dbAt ? 'Upload: ' + esc(Appr.when(c.dbAt) || String(c.dbAt).slice(0, 16)) : 'Upload time nahi mila') + '</div>' +
+      Stock.table(c.db, 'Is distributor ka stock sheet me nahi hai') +
+      '</div>';
+  }
+};
+
 /* ═══════════════ CAMERA ═══════════════
    One photo component for the whole app. Two rules the customer set:
      • a photo taken for TODAY's beat must come from the LIVE camera — `capture="environment"`
@@ -5770,7 +5948,7 @@ var Rep = {
   },
 
   /* ─── EOD: what was the target, what actually happened ─── */
-  eod: function () {
+  eod: function (opt) {
     var a = Eod.agg(), me = DB.me, e = DB.emp(me.code) || {}, p = a.plan || {};
     var st = function (s) { return a.ord.filter(function (o) { return String(o.Status) === s; }); };
     var sum = function (g, f) { return g.reduce(function (x, o) { return x + num(o[f]); }, 0); };
@@ -5799,8 +5977,8 @@ var Rep = {
     rows.push([], [Xl.b('TARGET vs ACHIEVEMENT')]);
     rows.push(['Kya', 'Target', 'Achieve', 'Gap', '%', 'Status', ''].map(Xl.h));
     var kpi = [
-      ['Store calls (SC)',      num(p.ScTarget) || 7,   a.tc,             0],
-      ['Order mile (PC)',       num(p.ScTarget) || 7,   a.pc,             0],
+      ['TC (Total calls)',      num(p.ScTarget) || 7,   a.tc,             0],
+      ['PC (Productive calls)', num(p.ScTarget) || 7,   a.pc,             0],
       ['Naye outlet (NSO)',     num(p.NsoTarget),       a.ns.length,      0],
       ['POSM audit',            num(p.PosmTarget),      a.pa.length,      0],
       ['Order value (₹)',       0,                      a.value,          1],
@@ -5948,7 +6126,7 @@ var Rep = {
         cols:[16, 28, 14, 22, 14, 16, 13, 13, 13, 24, 12, 12], freeze:1 } : null
     ]);
 
-    Xl.save('EOD_' + me.code + '_' + a.t, [
+    return Xl.save('EOD_' + me.code + '_' + a.t, [
       { name:I18n.s('Din ka Report'), cols:[30, 18, 16, 14, 12, 14, 13, 12, 12, 12, 12, 12],
         rows:rows, merges:t1.merges },
       { name:I18n.s('Store visits'), cols:[16, 11, 30, 12, 14, 22, 13, 16, 16, 7, 8, 14, 13, 10, 26, 12],
@@ -5956,7 +6134,7 @@ var Rep = {
       { name:I18n.s('Order lines'),
         cols:[16, 11, 18, 11, 11, 11, 18, 18, 18, 18, 28, 12, 13, 20, 14, 44, 14, 14, 16, 10, 8, 14, 14, 10, 7, 15],
         rows:l, freeze:1, filter:'A1:Z' + l.length }
-    ].concat(extra.map(function (t) { t.name = I18n.s(t.name); return t; })));
+    ].concat(extra.map(function (t) { t.name = I18n.s(t.name); return t; })), opt);
   },
   /* ── fold a short table into the main sheet instead of giving it a tab of its own ── */
   FOLD:8,
@@ -6627,12 +6805,11 @@ var Posm = {
       '<select class="in" id="pr_need" onchange="Posm.need=this.value;render()">' +
         ['Yes','No'].map(function (o) { return '<option value="' + o + '"' + (Posm.need === o ? ' selected' : '') + '>' + o + '</option>'; }).join('') +
       '</select>' +
-      /* "No" means there is nothing to ask about: the element list, and the question of which
-         element, both disappear. Only the reason stays — that is the useful part of a "No". */
-      (Posm.need === 'No' ? '' :
-        '<label class="f">Kaunsa element</label><select class="in" id="pr_el">' +
-        ['Wobbler','Shelf Strip','Dangler','Poster','Standee','FSU','CTU','Vinyl','Glow Sign','Other']
-        .map(function (o) { return '<option value="' + o + '">' + o + '</option>'; }).join('') + '</select>') +
+      /* ── Yes: the same questionnaire the audit uses, in the previous app's words, plus what the
+         store is worth — a POSM request is a spend decision, and whoever approves it needs the
+         element, where it goes, for which brand, and how much the shop actually sells.
+         "No" means there is nothing to ask about: all of it disappears and only the reason stays. */
+      (Posm.need === 'No' ? '' : Posm.reqFields()) +
       '<label class="f">Remarks <span class="req">*</span></label><textarea class="in" id="pr_rm" rows="2" placeholder="' +
         (Posm.need === 'No' ? 'Kyun zaroorat nahi hai' : 'Kyun chahiye / store ka kya kehna hai') + '"></textarea>' +
       Posm.reqPhotos() +
@@ -6643,17 +6820,50 @@ var Posm = {
         '> Requirement save karo</button>' +
       '<button class="btn ghost" onclick="Posm.ans=null;render()"> Wapas</button></div></div>';
   },
+  /* the requirement questionnaire — same option lists as the store audit, so the two describe the
+     same world, and the same numbering the previous app used */
+  reqFields: function () {
+    var S = { El:['Wobbler','Shelf Strip','Dangler','Poster','Standee','FSU','CTU','Vinyl','Glow Sign','Other'],
+      Ty:['Soft POSM','Hard Asset'], Lo:['Brand Block','Category Block','Both'],
+      Br:['Mamaearth','The Derma Co.','BBlunt','Aqualogica',"Dr. Sheth's",'ME Color Care'],
+      As:['FSU','CTU','Shelf Unit','Display Rack','Gondola','Counter Display','Wall Unit'],
+      Do:['Board Branding','Light Branding','Header','Fixture Branding','Wall Branding','Pillar','Window'] };
+    var sel = function (id, arr, lbl, req) {
+      return '<div><label class="f">' + lbl + (req ? ' <span class="req">*</span>' : '') +
+        '</label><select class="in" id="' + id + '">' + '<option value="">— Select —</option>' +
+        arr.map(function (o) { return '<option value="' + esc(o) + '">' + esc(o) + '</option>'; }).join('') +
+        '</select></div>'; };
+    return '<div class="row two">' + sel('pr_el', S.El, 'Kaunsa element', 1) + sel('pr_ty', S.Ty, 'POSM type') + '</div>' +
+      '<div class="row two">' + sel('pr_lo', S.Lo, 'Kahan lagana hai') + sel('pr_br', S.Br, 'Honasa brand', 1) + '</div>' +
+      '<div class="row two">' + sel('pr_as', S.As, 'Asset type') + sel('pr_do', S.Do, 'Branding chahiye') + '</div>' +
+      '<div class="row two"><div><label class="f">Kitne chahiye</label>' +
+        '<input class="in" id="pr_qty" type="number" min="1" value="1"></div>' +
+        '<div><label class="f">Store ka monthly income ₹</label>' +
+        '<input class="in" id="pr_inc" type="number" inputmode="numeric" placeholder="e.g. 250000"></div></div>' +
+      '<div class="row two"><div><label class="f">Store ka daily sale ₹</label>' +
+        '<input class="in" id="pr_day" type="number" inputmode="numeric" placeholder="e.g. 8000"></div>' +
+        '<div><label class="f">Kab tak chahiye</label><input class="in" id="pr_by" type="date"></div></div>';
+  },
   reqReady: function () { return Bypass.on() || Cam.ok(Posm.need === 'No' ? 'shop' : 'shelf'); },
   saveReq: function (el) {
     if (Busy.busy('posm')) return toast('Ruko — save ho raha hai');
     if (!val('pr_rm')) return toast('Remarks likho');
     if (!Posm.reqReady()) return toast(Posm.need === 'No' ? 'Poore shop ka photo compulsory hai'
                                                          : 'Shelf ka photo compulsory hai');
-    var s = Posm.store, id = uid('REQ');
+    /* a request without an element or a brand cannot be acted on by anyone downstream */
+    if (Posm.need !== 'No') {
+      if (!val('pr_el')) return toast('Kaunsa element chahiye — select karo');
+      if (!val('pr_br')) return toast('Honasa brand select karo');
+    }
+    var s = Posm.store, id = uid('REQ'), yes = Posm.need !== 'No';
     var row = { Id:id, Date:Posm.day(), ClientId:String(s.ClientId || ''), CompanyCode:String(s.CompanyCode || ''),
       StoreName:s.StoreName, StoreType:s.StoreType || '', City:s.City || '', Requirement:val('pr_need'),
-      /* no element question was asked when nothing is needed, so nothing is recorded for it */
-      Element:Posm.need === 'No' ? '' : val('pr_el'), Remarks:val('pr_rm') };
+      /* nothing was asked when nothing is needed, so nothing is recorded for it */
+      Element:yes ? val('pr_el') : '', PosmType:yes ? val('pr_ty') : '', Location:yes ? val('pr_lo') : '',
+      Brand:yes ? val('pr_br') : '', AssetType:yes ? val('pr_as') : '', Dominance:yes ? val('pr_do') : '',
+      Qty:yes ? num(val('pr_qty')) : '', MonthlyIncome:yes ? num(val('pr_inc')) : '',
+      DaySale:yes ? num(val('pr_day')) : '', NeededBy:yes ? val('pr_by') : '',
+      Remarks:val('pr_rm') };
     return Busy.run('posm', el, 'Save ho raha hai…', function () {
       return DB.save('PosmRequirement', row).then(function () { return Dfr.push(); }).then(function () {
         Log.add('POSM', 'Requirement', id, s.StoreName);
@@ -6703,8 +6913,8 @@ var Eod = {
       (Store.get(K.lock, {}).at ? ' (' + esc(Store.get(K.lock, {}).at) + ')' : '') +
       '.<div class="btns"><button class="btn sm ghost" onclick="Field.reopen()"> Dobara kholo</button></div></div></div>';
 
-    h += '<div class="kpis">' + UI.kpi(a.tc + '/' + a.sc, 'Calls (TC/SC)', a.tc >= a.sc ? 'g' : 'w') +
-      UI.kpi(a.pc, 'Order mila', 'g') + UI.kpi(lakh(a.nsv), 'NSV ₹L', 'b') + UI.kpi(a.ns.length, 'Naye outlet', 'w') + '</div>';
+    h += '<div class="kpis">' + UI.kpi(a.tc + ' / ' + a.sc, 'TC / SC', a.tc >= a.sc ? 'g' : 'w') +
+      UI.kpi(a.pc, 'PC', 'g') + UI.kpi(lakh(a.nsv), 'NSV ₹L', 'b') + UI.kpi(a.ns.length, 'Naye outlet', 'w') + '</div>';
     h += '<div class="kpis" style="margin-top:10px">' + UI.kpi(a.pa.length, 'POSM audit', '') +
       UI.kpi(a.pr.length, 'POSM req', '') + UI.kpi(a.msl, 'MSL lines', '') + UI.kpi(inr(a.value), 'Order value', 'b') + '</div>';
 
@@ -6722,6 +6932,12 @@ var Eod = {
     h += '<tr style="background:var(--blue-l)"><td><b>TOTAL</b></td><td class="num"><b>' + tt.toFixed(2) + '</b></td>' +
       '<td class="num"><b>' + lakh(ta) + '</b></td><td class="num"><b>' + (tt ? Math.round(ta / tt * 100) : 0) + '%</b></td></tr>';
     h += '</tbody></table></div></div>';
+
+    /* ── brand-wise: what the morning plan asked for, against what the day delivered ──
+       Every brand from the plan is listed even when nothing came — a zero against a target is the
+       whole point of the report; hiding it would flatter the day. */
+    h += '<div class="sec-title">Brand-wise — target vs achieved (₹ Lakh)</div><div class="card">' +
+      Eod.brandRows(a).html + '</div>';
 
     h += '<div class="sec-title">Order status</div><div class="card">' +
       ['Billing Done','Order in Process','No Order','Cancel Order'].map(function (s) {
@@ -6744,13 +6960,45 @@ var Eod = {
       '<div id="eod_card" style="margin-top:12px"><div class="skel" style="height:180px;border-radius:12px"></div></div>' +
       '<div class="btns two"><button class="btn ok two" onclick="Card.sendEod(this)">WhatsApp par image bhejo' +
         '<span class="who">HOD · ZM · RSM · ASM</span></button>' +
-      '<button class="btn ghost" onclick="Card.zoom(\'eod\')">Bada karke dekho</button></div>' +
+      '<button class="btn ghost" onclick="Card.zoom(\'eod\')">Review</button></div>' +
       '<div class="btns"><button class="btn ghost sm" onclick="Eod.share(\'wa\')">Text bhejo</button>' +
-      '<button class="btn ghost sm" onclick="Eod.share(\'mail\')">Email</button>' +
+      '<button class="btn ghost sm" onclick="Eod.mail(this)">Email + Excel + image</button>' +
       '<button class="btn ghost sm" onclick="Eod.excel()">Excel</button></div></div>';
     return h;
   },
   after: function () { Card.preview('eod'); },
+  /* ONE brand-wise builder for the screen, the image and the workbook, so the three can never
+     disagree about a brand's target or its achievement. */
+  brandRows: function (a) {
+    var tgt = Plan.tgt(), rows = [], tT = 0, tA = 0;
+    tgt.forEach(function (x) {
+      var got = 0;
+      Object.keys(a.brand).forEach(function (b) { if (Eod.match(b, x[0])) got += num(a.brand[b]); });
+      /* a TDC target row is one of six slices of the same brand, so the achievement cannot be split
+         across them — it is credited to the whole TDC group once, on the first TDC row */
+      rows.push([x[0], num(x[1]), got]);
+      tT += num(x[1]);
+    });
+    /* de-duplicate the TDC credit: keep it on the first matching row only */
+    var seen = {};
+    rows.forEach(function (r) {
+      var k = /^TDC/i.test(r[0]) ? 'TDC' : r[0];
+      if (seen[k]) r[2] = 0; else seen[k] = 1;
+      tA += r[2];
+    });
+    var html = '<div class="tw"><table><thead><tr><th>Brand</th><th class="num">Target</th>' +
+      '<th class="num">Achieved</th><th class="num">%</th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        var p = r[1] > 0 ? Math.round(r[2] / r[1] * 100) : 0;
+        return '<tr><td>' + esc(r[0]) + '</td><td class="num">' + lakh(r[1]) + '</td>' +
+          '<td class="num">' + lakh(r[2]) + '</td><td class="num"><span class="pill ' +
+          (p >= 100 ? 'p-ok' : p > 0 ? 'p-warn' : 'p-bad') + '">' + p + '%</span></td></tr>';
+      }).join('') +
+      '<tr class="tot"><td><b>TOTAL</b></td><td class="num"><b>' + lakh(tT) + '</b></td>' +
+      '<td class="num"><b>' + lakh(tA) + '</b></td><td class="num"><b>' +
+      (tT > 0 ? Math.round(tA / tT * 100) : 0) + '%</b></td></tr></tbody></table></div>';
+    return { rows:rows, tT:tT, tA:tA, html:html };
+  },
   match: function (brand, label) {
     var b = String(brand).toUpperCase(), l = label.toUpperCase();
     if (l.indexOf('BB') >= 0) return b.indexOf('BBLUNT') >= 0;
@@ -6773,7 +7021,7 @@ var Eod = {
     var a = Eod.agg(), p = a.plan;
     var L = ['*GARUDA — EOD Report*', dmy(a.t) + ' · ' + DB.me.name + ' (' + DB.me.code + ')', ''];
     L.push('Beat  : ' + (p.Town || '—') + ' / ' + (p.Beat || '—'));
-    L.push('Calls : ' + a.tc + ' / ' + a.sc + '(order mila: ' + a.pc + ')');
+    L.push('TC/SC : ' + a.tc + ' / ' + a.sc + '  (PC: ' + a.pc + ')');
     L.push('Value : ' + inr(a.value) + 'NSV: ₹' + lakh(a.nsv) + ' L');
     L.push('NSO   : ' + a.ns.length + 'POSM: ' + a.pa.length + ' audit, ' + a.pr.length + ' req');
     L.push('');
@@ -6791,8 +7039,43 @@ var Eod = {
   },
   share: function (how) {
     var txt = Eod.msg();
-    if (how === 'wa') Share.wa(txt);
-    else Share.mail('EOD ' + dmy(today()) + ' — ' + DB.me.name, txt, DB.cfg('HOD_Email_ID', ''));
+    if (how === 'wa') return Share.wa(txt);
+    return Eod.mail(null);
+  },
+  /* ── the EOD mail, with the report attached ──
+     The rep should not have to find a file and attach it: the workbook and the card image are built
+     here, posted to the backend and sent as attachments. If the send fails we fall back to opening a
+     mail draft with the text, so there is always a way out. */
+  mail: function (el) {
+    var to = String(DB.cfg('HOD_Email_ID', '') || '').trim();
+    var a = Eod.agg(), subject = 'EOD ' + dmy(a.t) + ' — ' + DB.me.name + ' (' + DB.me.code + ')';
+    var body = Eod.msg().replace(/\*/g, '');
+    if (!to) { Share.mail(subject, body, ''); return toast('HOD ka email Master_Config me nahi hai — draft khol diya', 5000); }
+    return Busy.run('eodmail_' + a.t, el, 'Bhej raha hai…', function () {
+      /* the workbook first (it also downloads a copy for the rep), then the card */
+      return Promise.resolve(Rep.eod({ blob:true })).then(function (xl) {
+        return Card.png('eod').then(function (img) { return [xl, img]; },
+                                    function () { return [xl, null]; });
+      }).then(function (out) {
+        var files = [];
+        if (out[0] && out[0].data) files.push({ name:out[0].name, type:out[0].type, data:out[0].data });
+        if (out[1] && out[1].data) files.push({ name:out[1].name, type:'image/png', data:out[1].data });
+        if (!files.length) throw new Error('nothing to attach');
+        return Api.post({ action:'mail', email:Auth.session().email, to:to,
+          subject:subject, body:body, files:files });
+      }).then(function (r) {
+        if (r && r.ok) {
+          Log.add('Eod', 'Mailed', a.t, to + ' · ' + r.attached + ' attachment');
+          toast('Email bhej diya — ' + to + ' (' + r.attached + ' attachment)', 4500);
+        } else {
+          toast('! Email nahi gaya: ' + ((r && r.error) || 'server') + ' — draft khol rahe hain', 5000);
+          Share.mail(subject, body, to);
+        }
+      }).catch(function (e) {
+        toast('! Email nahi gaya — draft khol rahe hain', 4000);
+        Share.mail(subject, body, to);
+      });
+    });
   },
   excel: function () { return Rep.eod(); }
 };
