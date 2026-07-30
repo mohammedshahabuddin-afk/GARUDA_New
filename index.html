@@ -825,18 +825,21 @@ var I18n = {
   /* "12 din", "4 store" — a count and its unit are built by concatenation, so the unit alone is the
      only translatable part. Only ever applied right after a number, which is what makes it safe:
      a bare "din" inside another word or sentence is never touched. */
-  RX:[[/(\d+)\s+din\b/g, '$1 days'], [/(\d+)\s+DIN\b/g, '$1 DAYS'],
-      [/(\d+)\s+ghante\b/g, '$1 hours'], [/(\d+)\s+minute\b/g, '$1 min'],
-      [/(\d+)\s+store\b/g, '$1 stores'], [/(\d+)\s+audit\b/g, '$1 audits'],
-      [/(\d+)\s+dukaan\b/g, '$1 shops'], [/(\d+)\s+request\b/g, '$1 requests'],
-      [/(\d+)\s+photo\b/g, '$1 photos'], [/(\d+)\s+user\b/g, '$1 users']],
+  /* singular and plural: "1 stores" reads like a bug to the person holding the phone */
+  RX:[[/(\d+)\s+din\b/g, 'day', 'days'], [/(\d+)\s+DIN\b/g, 'DAY', 'DAYS'],
+      [/(\d+)\s+ghante\b/g, 'hour', 'hours'], [/(\d+)\s+minute\b/g, 'min', 'min'],
+      [/(\d+)\s+store\b/g, 'store', 'stores'], [/(\d+)\s+audit\b/g, 'audit', 'audits'],
+      [/(\d+)\s+dukaan\b/g, 'shop', 'shops'], [/(\d+)\s+request\b/g, 'request', 'requests'],
+      [/(\d+)\s+photo\b/g, 'photo', 'photos'], [/(\d+)\s+user\b/g, 'user', 'users']],
   /* translate a plain string (a toast, a dialog title, a canvas label) */
   s: function (str) {
     if (I18n.lang === 'hing' || str == null) return str;
     var re = I18n.re(); if (!re) return str;
     var out = String(str).replace(re, I18n.look);
     /* the "N din" rules produce English, so they only apply when English is what we are showing */
-    if (I18n.lang === 'en') for (var i = 0; i < I18n.RX.length; i++) out = out.replace(I18n.RX[i][0], I18n.RX[i][1]);
+    if (I18n.lang === 'en') I18n.RX.forEach(function (r) {
+      out = out.replace(r[0], function (m, n) { return n + ' ' + (+n === 1 ? r[1] : r[2]); });
+    });
     return out;
   },
   /* translate an HTML fragment: text runs and reader-facing attributes only */
@@ -1734,6 +1737,32 @@ I18n.D.en = I18n.EN = {
   'Sirf yeh ek din reject karo':'Reject only this one day',
   'Ek din select kiya hai':'One day selected',
   'Jo din galat hai unke box tick karo, phir niche wala reject button dabao. Ya Edit dabakar khud theek kar do.':'Tick the box on each day that is wrong, then press the reject button below. Or press Edit and fix it yourself.',
+  'Din ka report — WhatsApp image':'Day report — WhatsApp image',
+  'Subah wali card ki tarah, lekin aaj ke poore numbers ke saath. Text nahi, image jaati hai.':'The same card as the morning one, with the day’s full numbers. An image goes, not text.',
+  'Text bhejo':'Send as text',
+  'EOD image bhej di':'EOD image sent',
+  'AUR BHI':'ALSO',
+  'KYA':'WHAT',
+  'Naye outlet:':'New outlets:',
+  'Kyun zaroorat nahi hai':'Why it is not needed',
+  'Aaj ka POSM':'Today’s POSM',
+  'Kaunsa element':'Which element',
+  'Kyun chahiye / store ka kya kehna hai':'Why it is needed / what the store says',
+  'aur store':'more stores',
+  'STORE-WISE':'STORE-WISE',
+  'Approve — plan dekho':'Approve — see the plan',
+  'Reject — plan dekho':'Reject — see the plan',
+  'Poora plan dekho — niche se poora month ya sirf kuch din reject karo':'Read the whole plan — then reject the whole month, or only some days, from below',
+  'Poora plan dekho — niche se approve karo':'Read the whole plan — then approve it from below',
+  'Ab decide karo':'Now decide',
+  'kuch select nahi':'nothing selected',
+  'din select':'selected',
+  'Approve all':'Approve all',
+  'Reject all':'Reject all',
+  'Ya kisi din par Edit dabakar khud theek kar do, phir Approve all.':'Or press Edit on a day, fix it yourself, then Approve all.',
+  'Jo din galat hai unke box tick karo — niche reject selected days chalu ho jayega.':'Tick the box on each day that is wrong — reject selected days switches on below.',
+  'Poora plan niche hai — padho, galat din tick karo, phir niche se decide karo.':'The whole plan is below — read it, tick the wrong days, then decide from there.',
+  'Galat din tick karo, phir yahan se decide karo':'Tick the wrong days, then decide from here',
   'Order punch karo':'Punch the order',
   /* live updates + the read-only plan / waiting screen */
   'HOD ne approve kar diya — aage badho':'The HOD approved it — carry on',
@@ -1749,8 +1778,8 @@ I18n.D.en = I18n.EN = {
   'Approve hone par ye screen apne aap khul jayegi — reload karne ki zaroorat nahi. Tab tak target aur WhatsApp band hai.':
     'This screen opens by itself once it is approved — no need to reload. Until then the target and WhatsApp are closed.',
   'Check for approval':'Check for approval',
-  '*Approved by HOD — kuch bhi badalna ho to <b>Change PJP</b> dabao, sidha edit nahi hota.':
-    '*Approved by HOD — to change anything press <b>Change PJP</b>; it cannot be edited directly.',
+  '*Approved by HOD — kuch bhi badalna ho to Change PJP dabao, sidha edit nahi hota.':
+    '*Approved by HOD — to change anything press Change PJP; it cannot be edited directly.',
   'Yahi ek jagah hai jahan plan badal sakte ho. Mapping sheet se aati hai — na mile to':
     'This is the only place the plan can be changed. The mapping comes from the sheet — if it is missing, choose',
   'chuno, HOD approval ke baad master me add hoga.':'and it is added to the master after the HOD approves.',
@@ -2985,7 +3014,16 @@ var Card = {
   C:{ dark:'#0f2e1d', head2:'#cfe6d6', code:'#7a8b7e', meta:'#5a6b5e', ink:'#1a2b1e',
       tile:'#f0f6f1', line:'#e3ece5', row:'#eef2ee', band:'#edf5ef', green:'#2f7048',
       foot:'#8a9b8e', dash:'#cfe0d4', warnBg:'#fff6e6', warnInk:'#8a5a00' },
-  _png:null,                       /* { key, blob, url } — warmed by the preview */
+  _png:{},                         /* kind -> { key, blob, url } — warmed by the preview */
+  /* Two cards, one drawing engine. The morning card is what the customer signed off on, so it keeps
+     its own draw(); the EOD card reuses the header band, the name block and the row helpers so the
+     two are visibly the same family of document. */
+  KIND:{
+    plan:{ data:'data',    draw:'draw',    sub:'Today Plan',       file:'plan',
+           title:'Emerging Brand — Today Plan',  box:'pl_card' },
+    eod: { data:'eodData', draw:'eodDraw', sub:'Day Report (EOD)', file:'eod',
+           title:'Emerging Brand — Day Report',  box:'eod_card' }
+  },
 
   /* ---------- helpers ---------- */
   fnt: function (g, w, s) { g.font = w + ' ' + s + 'px ' + Card.F; },
@@ -3065,6 +3103,29 @@ var Card = {
     };
   },
 
+  /* the dark band with the logo, the company line and the date — identical on both cards */
+  band: function (g, d, dry, sub, W, P, C, fill, put) {
+    var hh = 68;
+    fill(C.dark, 0, 0, W, hh);
+    var lx = P;
+    if (Card._logo) {
+      var ih = 34, iwd = Math.round(ih * (Card._logo.naturalWidth || 476) / (Card._logo.naturalHeight || 133));
+      var tw = iwd + 12, th = ih + 10;
+      fill('#ffffff', P, (hh - th) / 2, tw, th, 8);
+      if (!dry) g.drawImage(Card._logo, P + 6, (hh - ih) / 2, iwd, ih);
+      lx = P + tw + 12;
+    }
+    Card.fnt(g, '800', 16);
+    put('Honasa Consumer Limited', lx, 30, '#ffffff');
+    Card.fnt(g, '800', 13.5);
+    put('Emerging Brand · ' + sub, lx, 49, '#ffffff');
+    Card.fnt(g, '800', 13);
+    put(dmy(d.date), W - P, 28, '#ffffff', 'right');
+    Card.fnt(g, '400', 11);
+    put(d.time, W - P, 45, C.head2, 'right');
+    return hh;
+  },
+
   /* ---------- ONE draw routine, run twice ----------
      Pass 1 measures with dry=true (measureText still works, nothing is painted) so the canvas can be
      created at exactly the right height; pass 2 paints. One routine ⇒ the measured height and the
@@ -3084,26 +3145,8 @@ var Card = {
       g.fillText(I18n.s(String(s)), x, yy);
     };
 
-    /* ── header band ── */
-    var hh = 68;
-    fill(C.dark, 0, 0, W, hh);
-    var lx = P;
-    if (Card._logo) {
-      var ih = 34, iwd = Math.round(ih * (Card._logo.naturalWidth || 476) / (Card._logo.naturalHeight || 133));
-      var tw = iwd + 12, th = ih + 10;
-      fill('#ffffff', P, (hh - th) / 2, tw, th, 8);
-      if (!dry) g.drawImage(Card._logo, P + 6, (hh - ih) / 2, iwd, ih);
-      lx = P + tw + 12;
-    }
-    Card.fnt(g, '800', 16);
-    put('Honasa Consumer Limited', lx, 30, '#ffffff');
-    Card.fnt(g, '800', 13.5);
-    put('Emerging Brand · Today Plan', lx, 49, '#ffffff');
-    Card.fnt(g, '800', 13);
-    put(dmy(d.date), W - P, 28, '#ffffff', 'right');
-    Card.fnt(g, '400', 11);
-    put(d.time, W - P, 45, C.head2, 'right');
-    y = hh + 22;
+    /* ── header band ── (shared with the EOD card, so the two look like one family) */
+    y = Card.band(g, d, dry, 'Today Plan', W, P, C, fill, put) + 22;
 
     /* ── who / where ── */
     Card.fnt(g, '800', 19);
@@ -3209,17 +3252,209 @@ var Card = {
     return y + 14;
   },
 
+  /* ══════════ the EOD card ══════════
+     Everything the Excel's first tab says, in the order a reader asks for it: who and where, target vs
+     achievement, where the orders stand, the brand split, and the day's extras. An image nobody can
+     edit is the whole point, so it carries numbers, not inputs. */
+  eodData: function () {
+    var a = Eod.agg(), p = a.plan || {}, e = DB.emp(DB.me.code) || {}, s = Auth.session() || {};
+    var st = function (x) { return a.ord.filter(function (o) { return String(o.Status) === x; }); };
+    var sum = function (g2, f) { return g2.reduce(function (x, o) { return x + num(o[f]); }, 0); };
+    var mrp = 0, units = 0, msl = 0, nonMsl = 0;
+    a.lines.forEach(function (l) {
+      units += num(l.Units); mrp += num(l.Units) * num(l.Mrp);
+      if (/^msl$/i.test(String(l.MslStatus || ''))) msl += num(l.NsvLakh); else nonMsl += num(l.NsvLakh);
+    });
+    var brands = Object.keys(a.brand).sort(function (x, y) { return a.brand[y] - a.brand[x]; })
+      .slice(0, 7).map(function (b) { return [b, a.brand[b]]; });
+    var saved = DB.find('Eod', DB.me.code + '_' + a.t) || {};
+    return {
+      date:a.t, time:saved.ClosedAt || new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }),
+      name:DB.me.name || s.name || '', code:DB.me.code || s.code || '',
+      week:p.Week || '', zone:e.Zone || s.zone || '', hq:e.HQ || s.hq || '',
+      desig:e.Designation || s.desig || '',
+      asm:e.AsmName || '', hod:e.HodName || '',
+      ww:I18n.s(p.WorkingWith || '—'),
+      town:p.Town || '—', beat:p.Beat || '—', focus:p.Focus || '',
+      /* label, target, achieved, kind: 0 = count, 1 = money, 2 = lakh */
+      kpi:[['Store calls (SC)', num(p.ScTarget) || 7, a.tc, 0],
+           ['Order mila (PC)', num(p.ScTarget) || 7, a.pc, 0],
+           ['Naye outlet (NSO)', num(p.NsoTarget), a.ns.length, 0],
+           ['POSM audit', num(p.PosmTarget), a.pa.length, 0],
+           ['Order value', 0, a.value, 1],
+           ['NSV (₹ Lakh)', 0, a.nsv, 2]],
+      status:[['Billing Done', st('Billing Done').length, sum(st('Billing Done'), 'TotValue')],
+              ['Order in Process', st('Order in Process').length, sum(st('Order in Process'), 'TotValue')],
+              ['No Order', st('No Order').length, 0],
+              ['Cancel Order', st('Cancel Order').length, 0]],
+      stores:a.ord.map(function (o) {
+        return [o.StoreName || '—', I18n.s(String(o.Status || '')), num(o.TotValue)]; }),
+      brands:brands, nsv:a.nsv, mrp:mrp, units:units, sku:a.lines.length,
+      msl:msl, nonMsl:nonMsl,
+      posmReq:a.pr.length,
+      nso:a.ns.map(function (x) { return (x.StoreName || '') + (x.Town ? ' · ' + x.Town : ''); }),
+      closed:saved.ClosedAt || '', remarks:saved.Remarks || '',
+      group:DB.cfg('Group_Name', 'Honasa Emerging Brands')
+    };
+  },
+  eodDraw: function (g, d, dry) {
+    var W = Card.W - Card.M * 2, P = 17, iw = W - P * 2, C = Card.C, y = 0;
+    var fill = function (col, x, yy, w, h, r) {
+      if (dry) return; g.fillStyle = col;
+      if (r) { Card.rr(g, x, yy, w, h, r); g.fill(); } else g.fillRect(x, yy, w, h);
+    };
+    var put = function (t, x, yy, col, align) {
+      if (dry) return; g.fillStyle = col; g.textAlign = align || 'left'; g.textBaseline = 'alphabetic';
+      g.fillText(I18n.s(String(t)), x, yy);
+    };
+    var sec = function (label) {
+      y += 6;
+      fill(C.band, 0, y - 12, W, 24);
+      Card.fnt(g, '800', 11.5);
+      put(label, P, y + 4, C.green);
+      y += 24;
+    };
+    var row3 = function (a2, b2, c2, bold, col) {
+      Card.fnt(g, bold ? '800' : '400', 12.5);
+      put(a2, P, y, col || C.ink);
+      put(b2, P + iw * .62, y, col || C.ink, 'right');
+      put(c2, W - P, y, col || C.ink, 'right');
+      y += 18;
+    };
+    var line = function () {
+      if (!dry) { g.strokeStyle = C.line; g.lineWidth = 1;
+        g.beginPath(); g.moveTo(P, y - 12.5); g.lineTo(W - P, y - 12.5); g.stroke(); }
+    };
+
+    y = Card.band(g, d, dry, 'Day Report (EOD)', W, P, C, fill, put) + 22;
+
+    /* who / where — the same block as the morning card */
+    Card.fnt(g, '800', 19);
+    put(d.name, P, y, C.dark);
+    var nw = g.measureText(d.name).width;
+    Card.fnt(g, '600', 13);
+    put('(' + d.code + ')', P + nw + 7, y, C.code);
+    y += 19;
+    Card.fnt(g, '400', 12.5);
+    put([dmy(d.date), d.week, (d.zone ? d.zone + ' / ' + d.hq : d.hq), d.desig]
+        .filter(Boolean).join(' · '), P, y, C.meta);
+    y += 17;
+    Card.fnt(g, '400', 12);
+    put([d.town, d.beat].filter(function (x) { return x && x !== '—'; }).join(' / ') +
+        (d.ww && d.ww !== '—' ? '  ·  ' + d.ww : ''), P, y, C.meta);
+    y += 15;
+    if (d.hod || d.asm) {
+      Card.fnt(g, '400', 11.5);
+      put([d.asm ? 'ASM: ' + d.asm : '', d.hod ? 'HOD: ' + d.hod : ''].filter(Boolean).join('  ·  '),
+          P, y, C.foot);
+      y += 15;
+    }
+    y += 6;
+
+    /* headline tiles */
+    var tiles = [[String(d.kpi[0][2]) + ' / ' + d.kpi[0][1], 'Calls'],
+                 [String(d.kpi[1][2]), 'Order mila'],
+                 ['₹' + lakh(d.nsv) + 'L', 'NSV'],
+                 [String(d.kpi[2][2]), 'Naye outlet']];
+    var tw = (iw - 3 * 8) / 4;
+    tiles.forEach(function (t, i) {
+      var x = P + i * (tw + 8);
+      fill(C.tile, x, y, tw, 46, 8);
+      Card.fnt(g, '800', 15);
+      put(t[0], x + tw / 2, y + 21, C.dark, 'center');
+      Card.fnt(g, '600', 9.5);
+      put(t[1], x + tw / 2, y + 36, C.meta, 'center');
+    });
+    y += 56;
+
+    sec('TARGET vs ACHIEVEMENT');
+    Card.fnt(g, '800', 10.5);
+    put('KYA', P, y, C.foot);
+    put('TARGET', P + iw * .62, y, C.foot, 'right');
+    put('ACHIEVE', W - P, y, C.foot, 'right');
+    y += 15;
+    d.kpi.forEach(function (k) {
+      var fmt = function (v) { return k[3] === 1 ? inr(v) : k[3] === 2 ? lakh(v) + ' L' : String(v); };
+      var ok = k[1] > 0 && k[2] >= k[1];
+      line();
+      row3(k[0], k[1] > 0 ? fmt(k[1]) : '—', fmt(k[2]), false, ok ? C.green : C.ink);
+    });
+
+    sec('ORDER STATUS');
+    d.status.forEach(function (r) {
+      line();
+      row3(r[0], r[1] + ' store', r[2] ? inr(r[2]) : '—');
+    });
+    line();
+    row3('TOTAL', d.sku + ' SKU · ' + Math.round(d.units) + ' units', inr(d.mrp) + ' MRP', true);
+
+    if (d.brands.length) {
+      sec('BRAND-WISE NSV (₹ LAKH)');
+      d.brands.forEach(function (b) {
+        var pct = d.nsv > 0 ? Math.round(b[1] / d.nsv * 100) : 0;
+        line();
+        row3(b[0], pct + '%', lakh(b[1]));
+      });
+    }
+
+    if (d.stores.length) {
+      sec('STORE-WISE');
+      d.stores.slice(0, 12).forEach(function (o) {
+        line();
+        row3(o[0], o[1], o[2] ? inr(o[2]) : '—');
+      });
+      if (d.stores.length > 12) {
+        line();
+        Card.fnt(g, '400', 11.5);
+        put('+ ' + (d.stores.length - 12) + ' aur store', P, y, C.foot);
+        y += 18;
+      }
+    }
+
+    sec('AUR BHI');
+    line(); row3('MSL / Non-MSL (₹L)', lakh(d.msl), lakh(d.nonMsl));
+    line(); row3('POSM chahiye', d.posmReq + ' store', '');
+    d.nso.forEach(function (t, i) {
+      line();
+      Card.fnt(g, '400', 12);
+      put((i === 0 ? 'Naye outlet: ' : '') + t, P, y, C.ink);
+      y += 18;
+    });
+    if (d.remarks) {
+      Card.fnt(g, '400', 12);
+      var rl = Card.wrap(g, 'Remarks: ' + d.remarks, iw);
+      y += 4;
+      rl.forEach(function (t) { put(t, P, y, C.meta); y += 16; });
+    }
+
+    y += 8;
+    if (!dry) {
+      g.strokeStyle = C.dash; g.lineWidth = 1;
+      if (g.setLineDash) g.setLineDash([4, 4]);
+      g.beginPath(); g.moveTo(P, y + .5); g.lineTo(W - P, y + .5); g.stroke();
+      if (g.setLineDash) g.setLineDash([]);
+    }
+    y += 16;
+    Card.fnt(g, '600', 11);
+    put(d.group + ' · Day Report (EOD) · ' + dmy(d.date) +
+        (d.closed ? ' · closed ' + d.closed : ''), P, y, C.foot);
+    return y + 14;
+  },
+
   /* ---------- canvas → PNG ---------- */
-  png: function () {
-    var d = Card.data();
+  png: function (kind) {
+    kind = kind || 'plan';
+    var K = Card.KIND[kind];
+    var d = Card[K.data]();
     var key = JSON.stringify(d);
-    if (Card._png && Card._png.key === key) return Promise.resolve(Card._png);
+    var have = Card._png[kind];
+    if (have && have.key === key) return Promise.resolve(have);
     return Card.logo().then(function () {
       var c = document.createElement('canvas'), S = Card.S, M = Card.M, CW = Card.W - M * 2;
       c.width = Card.W * S; c.height = 10;
       var g = c.getContext('2d');
       g.setTransform(S, 0, 0, S, 0, 0);
-      var h = Card.draw(g, d, true);                       /* measure — nothing is painted */
+      var h = Card[K.draw](g, d, true);                    /* measure — nothing is painted */
       var H = h + M * 2;
       c.height = Math.ceil(H * S);                         /* resizing clears the canvas */
       g = c.getContext('2d');
@@ -3230,17 +3465,18 @@ var Card = {
       g.save();
       g.translate(M, M);
       Card.rr(g, 0, 0, CW, h, Card.R); g.clip();           /* rounds the dark header too */
-      Card.draw(g, d, false);                              /* paint */
+      Card[K.draw](g, d, false);                           /* paint */
       g.restore();
       g.strokeStyle = Card.C.line; g.lineWidth = 1;
       Card.rr(g, M + .5, M + .5, CW - 1, h - 1, Card.R); g.stroke();
       return new Promise(function (res, rej) {
         var done = function (b) {
           if (!b) return rej(new Error('blob fail'));
-          if (Card._png && Card._png.url) URL.revokeObjectURL(Card._png.url);
-          Card._png = { key:key, blob:b, url:URL.createObjectURL(b), data:c.toDataURL('image/png'),
-                        name:'plan-' + d.code + '-' + d.date + '.png' };
-          res(Card._png);
+          if (Card._png[kind] && Card._png[kind].url) URL.revokeObjectURL(Card._png[kind].url);
+          Card._png[kind] = { key:key, blob:b, url:URL.createObjectURL(b),
+                        data:c.toDataURL('image/png'),
+                        name:K.file + '-' + d.code + '-' + d.date + '.png' };
+          res(Card._png[kind]);
         };
         if (c.toBlob) c.toBlob(done, 'image/png');
         else done(null);
@@ -3250,14 +3486,15 @@ var Card = {
 
   /* the preview both shows the rep what will be sent AND warms the blob, so the Send tap can call
      navigator.share inside its own user gesture (a share fired after a long async gap is refused) */
-  preview: function () {
-    var box = $('pl_card'); if (!box) return;
-    Card.png().then(function (o) {
-      var b = $('pl_card'); if (!b) return;
-      b.innerHTML = I18n.tr('<img src="' + o.data + '" alt="Today Plan" ' +
+  preview: function (kind) {
+    kind = kind || 'plan';
+    var K = Card.KIND[kind], box = $(K.box); if (!box) return;
+    Card.png(kind).then(function (o) {
+      var b = $(K.box); if (!b) return;
+      b.innerHTML = I18n.tr('<img src="' + o.data + '" alt="' + K.sub + '" ' +
         'style="width:100%;display:block;border:1px solid var(--line);border-radius:12px">');
     }).catch(function () {
-      var b = $('pl_card'); if (b) b.innerHTML = I18n.tr('<div class="hint">Preview nahi ban paya — image ab bhi bhej sakte ho.</div>');
+      var b = $(K.box); if (b) b.innerHTML = I18n.tr('<div class="hint">Preview nahi ban paya — image ab bhi bhej sakte ho.</div>');
     });
   },
 
@@ -3302,11 +3539,37 @@ var Card = {
           'aur WhatsApp khul gaya hai — wahan <b>attach</b> karke bhej do.' });
   },
   /* full-size look before sending */
-  zoom: function () {
-    Card.png().then(function (o) {
+  zoom: function (kind) {
+    Card.png(kind || 'plan').then(function (o) {
       UI.dialog({ icon:'', title:'Aisi image jayegi',
         msg:'<img src="' + o.data + '" style="width:100%;display:block;border-radius:10px;border:1px solid var(--line)">',
         ok:'Theek hai', cancel:false });
+    });
+  },
+
+  /* ── share the EOD card ──
+     The morning card also stamps NotifiedAt, which unlocks Field; an EOD image has nothing to unlock,
+     so this is the same share flow with none of the gate machinery. */
+  sendEod: function (el) {
+    return Busy.run('eodimg_' + today(), el, 'Image bhej rahe hain…', function () {
+      return Card.png('eod').then(function (o) {
+        var cap = Eod.msg();
+        var f = null;
+        try { f = new File([o.blob], o.name, { type:'image/png' }); } catch (e) {}
+        if (f && navigator.canShare && navigator.canShare({ files:[f] }) && navigator.share) {
+          return navigator.share({ files:[f], title:'Emerging Brand — Day Report', text:cap })
+            .then(function () { toast('EOD image bhej di', 3000); })
+            .catch(function (e) {
+              if (e && (e.name === 'AbortError' || /abort|cancel/i.test(e.message || '')))
+                return toast('Bhejna cancel ho gaya');
+              return Card.fallback(o, cap);
+            });
+        }
+        return Card.fallback(o, cap);
+      }).catch(function () {
+        toast('! Image nahi ban payi — text bhej rahe hain');
+        Share.wa(Eod.msg());
+      });
     });
   }
 };
@@ -3926,7 +4189,7 @@ var Pjp = {
       /* seed any day the draft doesn't cover from the published Master_PJP */
       DB.pjpMonth(DB.me.code, Pjp.month).forEach(function (r) {
         var d = toISO(r.Date);
-        if (!Pjp.days[d]) Pjp.days[d] = { ww:Pjp.ww(r.Ww), state:r.State || Plan.stateOf(r.Town) || '',
+        if (!Pjp.days[d]) Pjp.days[d] = { ww:Pjp.ww(r.Ww), state:Plan.stateFor(null, r, r.Town),
           city:r.Town || '', beat:r.Beat || '', st:'HQ' };
       });
       /* A day before this rep JOINED is not theirs to plan: the day list already refuses to render an
@@ -4180,7 +4443,7 @@ var Pjp = {
     var mp = DB.pjpMonth(DB.me.code, Pjp.month).filter(function (r) { return !doj || toISO(r.Date) >= doj; });
     if (!mp.length) return toast('Master_PJP me is month ka (joining ke baad ka) data nahi hai');
     mp.forEach(function (r) { var d = toISO(r.Date);
-      Pjp.days[d] = { ww:Pjp.ww(r.Ww), state:r.State || Plan.stateOf(r.Town) || '',
+      Pjp.days[d] = { ww:Pjp.ww(r.Ww), state:Plan.stateFor(null, r, r.Town),
         city:r.Town || '', beat:r.Beat || '', st:(Pjp.days[d] && Pjp.days[d].st) || 'HQ' }; });
     Pjp._dirty = true; Pjp.flush(); render();
     toast('' + mp.length + ' din Master PJP se fill ho gaye' + (doj ? ' (joining ke baad ke)' : ''));
@@ -4278,11 +4541,7 @@ var Plan = {
       .map(function (p) { return p.Town; });
     return Plan.uniq(fromStores.concat(fromPjp).filter(function (x) {
       return !/^(leave|sunday|off day|weekly off|holiday|meeting.*)$/i.test(String(x || '').trim()); })); },
-  stateOfFor: function (code, town) {
-    var t = String(town || '').toUpperCase().trim(); if (!t) return '';
-    var hit = Plan.empStores(code).filter(function (s) {
-      return String(s.City || '').toUpperCase().trim() === t; })[0];
-    return hit ? (hit.State || '') : ''; },
+  stateOfFor: function (code, town) { return Plan.stateIn(Plan.empStores(code), town); },
   states: function () {
     return Plan.uniq(DB.myStores().map(function (s) { return s.State; })); },
   towns: function (state) {
@@ -4303,10 +4562,37 @@ var Plan = {
              (!tw || String(p.Town || '').toUpperCase().trim() === tw); })
       .map(function (p) { return p.Beat; })
       .filter(function (b) { return !/^(leave|sunday|off day|weekly off|holiday|meeting.*)$/i.test(String(b || '').trim()); })); },
-  stateOf: function (town) {
-    var t = String(town || '').toUpperCase().trim(); if (!t) return '';
-    var hit = DB.myStores().filter(function (s) { return String(s.City || '').toUpperCase().trim() === t; })[0];
-    return hit ? (hit.State || '') : ''; },
+  /* ── which state is this town in? ──
+     Master_PJP's Town is typed by a human and Master_Stores' City is typed by another, so an exact
+     match is not good enough: "Gurgaon" vs "GURGAON ", "New Delhi" vs "Delhi", "Lucknow (East)" vs
+     "Lucknow". Exact first, then a contains-either-way match, and it never guesses across states. */
+  norm: function (v) { return String(v == null ? '' : v).toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim(); },
+  stateIn: function (list, town) {
+    var t = Plan.norm(town); if (!t) return '';
+    var hit = list.filter(function (s) { return Plan.norm(s.City) === t; })[0];
+    if (hit && hit.State) return String(hit.State).trim();
+    hit = list.filter(function (s) {
+      var c = Plan.norm(s.City);
+      return c && (c.indexOf(t) === 0 || t.indexOf(c) === 0); })[0];
+    if (hit && hit.State) return String(hit.State).trim();
+    hit = list.filter(function (s) {
+      var c = Plan.norm(s.City);
+      return c && (c.indexOf(t) >= 0 || t.indexOf(c) >= 0); })[0];
+    return hit ? String(hit.State || '').trim() : '';
+  },
+  stateOf: function (town) { return Plan.stateIn(DB.myStores(), town); },
+  /* the whole chain, in the order the answers are trustworthy:
+       what the rep already saved today -> what the MASTER says for today's beat -> the store master
+       -> and if this rep only ever works in one state, that one. */
+  stateFor: function (r, pjp, town) {
+    var v = (r && r.State) || (pjp && (pjp.State || pjp.ChangedState)) || '';
+    v = String(v || '').trim();
+    if (v) return v;
+    v = Plan.stateOf(town);
+    if (v) return v;
+    var all = Plan.states();
+    return all.length === 1 ? all[0] : '';
+  },
 
   /* a select built from the master, with the escape hatch as the last option */
   pickSel: function (kind, list, cur) {
@@ -4433,14 +4719,14 @@ var Plan = {
     h += '<div class="card"><div class="c-h"><h3>PJP approved</h3>' +
       '<button class="btn ghost xs" onclick="Plan.changeOpen()"' + (left ? '' : ' disabled') + '>' +
         (left ? 'Change PJP' : 'Change limit over') + '</button></div>' +
-      '<div class="hint">*Approved by HOD — kuch bhi badalna ho to <b>Change PJP</b> dabao, sidha edit nahi hota.' +
+      '<div class="hint">*Approved by HOD — kuch bhi badalna ho to Change PJP dabao, sidha edit nahi hota.' +
       (dev && num(dev.TryCount) ? ' Aaj ' + num(dev.TryCount) + '/' + Plan.MAXCHG + ' change ho chuke hain' +
         (left ? ' — ' + left + ' bacha hai.' : ' — limit poori.') : '') + '</div>';
 
     var shTown = (r.OffPjp && r.Town) || (pjp ? pjp.Town : '') || '';
     var shBeat = (r.OffPjp && r.Beat) || (pjp ? pjp.Beat : '') || '';
     if (pjp || r.OffPjp) h += '<div style="margin-top:10px"><label class="f">State</label>' +
-        '<input class="in lk" readonly value="' + esc(r.State || Plan.stateOf(shTown) || '—') + '"></div>' +
+        '<input class="in lk" readonly value="' + esc(Plan.stateFor(r, pjp, shTown) || '—') + '"></div>' +
         '<div class="row two"><div><label class="f">Town / City</label>' +
         '<input class="in lk" id="pl_town" readonly value="' + esc(shTown || '—') + '"></div>' +
         '<div><label class="f">Beat / Market</label>' +
@@ -4522,7 +4808,7 @@ var Plan = {
     if (ex && /pending/i.test(ex.Status || '')) return toast('Request already sent — HOD approval ka wait karo');
     if (!Plan.left(ex)) return toast('Aaj ' + Plan.MAXCHG + ' change ho chuke hain — kal se naya din', 4200);
     var curTw = (r.OffPjp && r.Town) || (pjp ? pjp.Town : '') || '';
-    var curSt = r.State || Plan.stateOf(curTw) || (Plan.states()[0] || '');
+    var curSt = Plan.stateFor(r, pjp, curTw) || (Plan.states()[0] || '');
     var curWw = Plan.ww();
     Plan.picked = null;
     UI.prompt({
@@ -4566,7 +4852,8 @@ var Plan = {
     if (g) {
       var pjp = DB.pjpFor(DB.me.code, today()), r = Plan.row();
       var tw = (r.OffPjp && r.Town) || (pjp ? pjp.Town : '') || '';
-      g.innerHTML = I18n.tr(Plan.geoFields(v, r.State || Plan.stateOf(tw) || (Plan.states()[0] || ''), tw));
+      g.innerHTML = I18n.tr(Plan.geoFields(v, Plan.stateFor(r, DB.pjpFor(DB.me.code, today()), tw) ||
+        (Plan.states()[0] || ''), tw));
     }
   },
   /* read whichever bracket fields the chosen Working-With put on screen */
@@ -5515,7 +5802,18 @@ var Rep = {
     var sum = function (g, f) { return g.reduce(function (x, o) { return x + num(o[f]); }, 0); };
 
     var t = Rep.ttl('GARUDA — Mere orders', monthName(m) + '·  ' + DB.me.name + ' (' + DB.me.code + ')', 6);
-    var s1 = t.rows;
+    var s1 = t.rows, e0 = DB.emp(DB.me.code) || {};
+    /* the same block the EOD workbook opens with — whoever this file is forwarded to has to be able
+       to tell whose month it is and who it rolls up to, without asking */
+    s1.push([Xl.b('EMPLOYEE & REPORTING')]);
+    s1.push(['Employee', Xl.t(DB.me.name), 'Code', Xl.t(DB.me.code)]);
+    s1.push(['Designation', Xl.t(e0.Designation || DB.me.desig || '—'), 'Date of joining', Xl.t(dmy(DB.doj(DB.me.code)))]);
+    s1.push(['HQ', Xl.t(e0.HQ || '—'), 'Zone', Xl.t(e0.Zone || '—')]);
+    s1.push(['ASM', Xl.t(e0.AsmName || '—'), 'Mobile', Xl.t(e0.AsmMobile || '—')]);
+    s1.push(['RSM', Xl.t(e0.RsmName || '—'), 'Mobile', Xl.t(e0.RsmMobile || '—')]);
+    s1.push(['ZSM', Xl.t(e0.ZmName || '—'), 'Mobile', Xl.t(e0.ZmMobile || '—')]);
+    s1.push(['HOD', Xl.t(e0.HodName || '—'), 'Mobile', Xl.t(e0.HodMobile || '—')]);
+    s1.push([], [Xl.b('MONTH TOTAL')]);
     s1.push(['Total visits', Xl.n(ord.length)]);
     s1.push(['Order mila', Xl.n(ord.filter(function (o) { return num(o.TotUnits) > 0; }).length)]);
     s1.push(['Order value', Xl.m(sum(ord, 'TotValue'))]);
@@ -5537,10 +5835,12 @@ var Rep = {
     o2.push([Xl.t('TOTAL', Xl.S.tot), '', '', '', '', '', '', '', '', Xl.n(sum(ord, 'TotUnits'), Xl.S.totI),
       Xl.m(sum(ord, 'TotValue'), Xl.S.totM), Xl.d2(sum(ord, 'TotNsvLakh'), Xl.S.totD), '', '']);
 
-    var l2 = [['Date', 'PO', 'Store', 'SKU code', 'Product', 'Brand', 'Units', 'Value (₹)', 'NSV (₹L)', 'MSL'].map(Xl.h)];
+    var l2 = [['Date', 'Employee', 'Code', 'PO', 'Store', 'SKU code', 'Product', 'Brand', 'Category',
+               'MRP (₹)', 'Units', 'MRP value (₹)', 'Order value (₹)', 'NSV (₹L)', 'MSL'].map(Xl.h)];
     lines.forEach(function (x) {
-      l2.push([Xl.dt(x.Date), Xl.t(x.PoNumber), Xl.t(x.StoreName), Xl.t(x.Sku), Xl.t(x.SkuName),
-        Xl.t(x.Brand), Xl.n(x.Units), Xl.m(x.Value), Xl.d2(x.NsvLakh),
+      l2.push([Xl.dt(x.Date), Xl.t(DB.me.name), Xl.t(DB.me.code), Xl.t(x.PoNumber), Xl.t(x.StoreName),
+        Xl.t(x.Sku), Xl.t(x.SkuName), Xl.t(x.Brand), Xl.t(x.Category),
+        Xl.m(x.Mrp), Xl.n(x.Units), Xl.m(num(x.Units) * num(x.Mrp)), Xl.m(x.Value), Xl.d2(x.NsvLakh),
         Xl.t(/^msl$/i.test(String(x.MslStatus || '')) ? 'MSL' : '')]);
     });
 
@@ -6146,10 +6446,14 @@ var Posm = {
       '<select class="in" id="pr_need" onchange="Posm.need=this.value;render()">' +
         ['Yes','No'].map(function (o) { return '<option value="' + o + '"' + (Posm.need === o ? ' selected' : '') + '>' + o + '</option>'; }).join('') +
       '</select>' +
-      '<label class="f">Kaunsa element</label><select class="in" id="pr_el">' +
+      /* "No" means there is nothing to ask about: the element list, and the question of which
+         element, both disappear. Only the reason stays — that is the useful part of a "No". */
+      (Posm.need === 'No' ? '' :
+        '<label class="f">Kaunsa element</label><select class="in" id="pr_el">' +
         ['Wobbler','Shelf Strip','Dangler','Poster','Standee','FSU','CTU','Vinyl','Glow Sign','Other']
-        .map(function (o) { return '<option value="' + o + '">' + o + '</option>'; }).join('') + '</select>' +
-      '<label class="f">Remarks <span class="req">*</span></label><textarea class="in" id="pr_rm" rows="2" placeholder="Kyun chahiye / store ka kya kehna hai"></textarea>' +
+        .map(function (o) { return '<option value="' + o + '">' + o + '</option>'; }).join('') + '</select>') +
+      '<label class="f">Remarks <span class="req">*</span></label><textarea class="in" id="pr_rm" rows="2" placeholder="' +
+        (Posm.need === 'No' ? 'Kyun zaroorat nahi hai' : 'Kyun chahiye / store ka kya kehna hai') + '"></textarea>' +
       Posm.reqPhotos() +
       '<div class="banner w" id="pr_need_note" style="margin-top:10px;display:' + (Posm.reqReady() ? 'none' : '') + '">' +
         '<span></span><div><b>' + (Posm.need === 'No' ? 'Poore shop ka photo lo' : 'Shelf ka photo lo') +
@@ -6167,7 +6471,8 @@ var Posm = {
     var s = Posm.store, id = uid('REQ');
     var row = { Id:id, Date:Posm.day(), ClientId:String(s.ClientId || ''), CompanyCode:String(s.CompanyCode || ''),
       StoreName:s.StoreName, StoreType:s.StoreType || '', City:s.City || '', Requirement:val('pr_need'),
-      Element:val('pr_el'), Remarks:val('pr_rm') };
+      /* no element question was asked when nothing is needed, so nothing is recorded for it */
+      Element:Posm.need === 'No' ? '' : val('pr_el'), Remarks:val('pr_rm') };
     return Busy.run('posm', el, 'Save ho raha hai…', function () {
       return DB.save('PosmRequirement', row).then(function () { return Dfr.push(); }).then(function () {
         Log.add('POSM', 'Requirement', id, s.StoreName);
@@ -6248,12 +6553,23 @@ var Eod = {
     h += '<div class="card"><label class="f">Remarks (optional)</label><textarea class="in" id="eod_rm" rows="2">' +
       esc(saved ? saved.Remarks || '' : '') + '</textarea>' +
       '<div class="btns"><button class="btn" onclick="Eod.save(this)"> EOD save &amp; din close</button></div>' +
-      '<div class="btns"><button class="btn ghost" onclick="Eod.share(\'wa\')"> WhatsApp</button>' +
-      '<button class="btn ghost" onclick="Eod.share(\'mail\')"> Email</button>' +
-      '<button class="btn ghost" onclick="Eod.excel()"> Excel</button></div>' +
       (saved ? '<div class="hint" style="margin-top:8px">Last save: ' + esc(saved.ClosedAt || saved.Ts || '') + '</div>' : '') + '</div>';
+
+    /* ── the EOD image ──
+       Same card as the morning one, with the day's real numbers. It is the report a manager actually
+       reads on WhatsApp, so it carries the detail the Excel carries, and it cannot be edited. */
+    h += '<div class="card"><h3>Din ka report — WhatsApp image</h3>' +
+      '<div class="sub">Subah wali card ki tarah, lekin aaj ke poore numbers ke saath. Text nahi, image jaati hai.</div>' +
+      '<div id="eod_card" style="margin-top:12px"><div class="skel" style="height:180px;border-radius:12px"></div></div>' +
+      '<div class="btns two"><button class="btn ok two" onclick="Card.sendEod(this)">WhatsApp par image bhejo' +
+        '<span class="who">HOD · ZM · RSM · ASM</span></button>' +
+      '<button class="btn ghost" onclick="Card.zoom(\'eod\')">Bada karke dekho</button></div>' +
+      '<div class="btns"><button class="btn ghost sm" onclick="Eod.share(\'wa\')">Text bhejo</button>' +
+      '<button class="btn ghost sm" onclick="Eod.share(\'mail\')">Email</button>' +
+      '<button class="btn ghost sm" onclick="Eod.excel()">Excel</button></div></div>';
     return h;
   },
+  after: function () { Card.preview('eod'); },
   match: function (brand, label) {
     var b = String(brand).toUpperCase(), l = label.toUpperCase();
     if (l.indexOf('BB') >= 0) return b.indexOf('BBLUNT') >= 0;
@@ -6520,6 +6836,19 @@ var Appr = {
   },
   btns: function (o, big) {
     if (!Appr.can(o)) return '';
+    /* ── a PJP is a MONTH, not a yes/no ──
+       Approve and Reject at the top open the plan instead of deciding it: the HOD reads the days, ticks
+       the ones that are wrong, and commits at the bottom — where "reject only these days" lives. A
+       month approved from a collapsed card is a month nobody read. */
+    if (o.act === 'pjp') {
+      var r = 'onclick="event.stopPropagation();Appr.review(\'' + o.id + '\',';
+      return big
+        ? '<div class="btns"><button class="btn ok" ' + r + '\'ok\')">Approve — plan dekho</button>' +
+          '<button class="btn bad" ' + r + '\'no\')">Reject — plan dekho</button></div>'
+        : '<div style="display:flex;gap:6px;flex:0 0 auto">' +
+          '<button class="btn ok xs" ' + r + '\'ok\')">Approve</button>' +
+          '<button class="btn bad xs" ' + r + '\'no\')">Reject</button></div>';
+    }
     var c = 'onclick="event.stopPropagation();Appr.act(\'' + o.act + '\',\'' + Appr.q(o.key) + '\',';
     /* the compact pair used to be a bare ✓ / ✗ pill; with the glyphs gone they need words, or an HOD
        is choosing between two blank buttons */
@@ -6528,6 +6857,17 @@ var Appr = {
         '<button class="btn bad" ' + c + '0)">Reject karo</button></div>'
       : '<div style="display:flex;gap:6px;flex:0 0 auto"><button class="btn ok xs" ' + c + '1)">Approve</button>' +
         '<button class="btn bad xs" ' + c + '0)">Reject</button></div>';
+  },
+  /* open the month and take the reader to the decision bar under it */
+  review: function (id, want) {
+    Appr.open[id] = true;
+    render();
+    setTimeout(function () {
+      var b = document.querySelector('#view .pjp-bar');
+      if (b && b.scrollIntoView) b.scrollIntoView({ block:'center' });
+    }, 60);
+    toast(want === 'no' ? 'Poora plan dekho — niche se poora month ya sirf kuch din reject karo'
+                        : 'Poora plan dekho — niche se approve karo', 3800);
   },
 
   list: function () {
@@ -6714,7 +7054,9 @@ var Appr = {
             return '<option value="' + x + '"' + (x === o.statusText ? ' selected' : '') + '>' + x + '</option>'; }).join('') +
           '</select>';
       }
-      h += Appr.btns(o, true);
+      /* the big pair is the way IN to a PJP; with the month already open the decision bar under the
+         day list is the only place a decision is made */
+      if (o.act !== 'pjp') h += Appr.btns(o, true);
       /* A PJP request IS its day list — telling an HOD to "go to that tab" was asking them to
          re-find the thing they had just tapped. Every other kind still gets a jump link. */
       if (o.act === 'pjp') h += '<div onclick="event.stopPropagation()">' + Admin.pjpDays(o.key, Appr.can(o)) + '</div>';
@@ -6938,7 +7280,12 @@ var Admin = {
         Admin.rejDays(d).length + ' din reject kiye hue hain</b><br><span style="font-weight:500">' +
         Admin.rejDays(d).map(function (k) { return dmy(k); }).join(', ') +
         ' \u2014 rep sirf yeh din edit kar sakta hai.</span></div></div>' : '') +
-      '<div class="btns"><button class="btn ghost sm" onclick="Admin.pjpEmp=&quot;&quot;;render()">\u2039 Sab employee</button></div>' +
+      '<div class="btns"><button class="btn ghost sm" onclick="Admin.pjpEmp=&quot;&quot;;render()">\u2039 Sab employee</button>' +
+      (d && st !== 'approved' ?
+        '<button class="btn ok sm" onclick="Admin.toBar()">Approve</button>' +
+        '<button class="btn bad sm" onclick="Admin.toBar()">Reject</button>' : '') + '</div>' +
+      (d && st !== 'approved' ? '<div class="hint" style="margin-top:6px">Poora plan niche hai \u2014 ' +
+        'padho, galat din tick karo, phir niche se decide karo.</div>' : '') +
       '</div>' +
       (d ? Admin.pjpDays(d.Key, true) : '');
 
@@ -7078,8 +7425,19 @@ var Admin = {
     var txt = I18n.s(Admin.selLbl(n));
     var all = document.querySelectorAll('.pjp-sel[data-k="' + jk + '"]');
     for (var i = 0; i < all.length; i++) { all[i].disabled = !n; all[i].innerHTML = txt; }
+    var chips = document.querySelectorAll('.pjp-cnt[data-k="' + jk + '"]');
+    for (var j = 0; j < chips.length; j++) {
+      chips[j].className = 'pill ' + (n ? 'p-bad' : 'p-grey') + ' pjp-cnt';
+      chips[j].innerHTML = I18n.s(n ? n + ' din select' : 'kuch select nahi');
+    }
   },
   edit: function (key, d) { Admin.pjpOpen = Admin.pjpOpen === key + '|' + d ? '' : key + '|' + d; render(); },
+  /* the top pair does not decide — it takes the reader to the bar under the day list */
+  toBar: function () {
+    var b = document.querySelector('#view .pjp-bar');
+    if (b && b.scrollIntoView) b.scrollIntoView({ block:'center' });
+    toast('Galat din tick karo, phir yahan se decide karo', 3200);
+  },
 
   /* Approve / reject, as a row of buttons. Rendered ABOVE the day list and again BELOW it, because
      the decision is taken at the bottom of a 31-day list and nobody should have to scroll back up to
@@ -7089,24 +7447,23 @@ var Admin = {
     if (Appr.norm(d.Status) === 'approved') return '';
     var n = Admin.selN(key), q = esc(key), jk = Appr.jid(key) + '_' + pos;
     return '<div class="card pjp-bar" onclick="event.stopPropagation()">' +
-      (n ? '<div class="banner r" style="margin:0 0 8px"><span>' + n + '</span><div><b>' +
+      '<div class="c-h"><h3>Ab decide karo</h3><span class="pill ' + (n ? 'p-bad' : 'p-grey') +
+        ' pjp-cnt" data-k="' + Appr.jid(key) + '">' +
+        (n ? n + ' din select' : 'kuch select nahi') + '</span></div>' +
+      (n ? '<div class="banner r" style="margin:8px 0 0"><span>' + n + '</span><div><b>' +
         (n === 1 ? 'Ek din select kiya hai' : n + ' din select kiye hain') +
-        '</b><br><span style="font-weight:500">Sirf yehi din reject honge — ' +
+        '</b><br><span style="font-weight:500">Sirf yehi din reject honge \u2014 ' +
         'baaki month approve rahega.</span></div></div>' : '') +
-      '<div class="btns" style="margin-top:0">' +
+      '<div class="btns">' +
         '<button class="btn bad pjp-sel" data-k="' + Appr.jid(key) + '" id="pjp_part_' + jk + '"' +
           (n ? '' : ' disabled') + ' onclick="Admin.pjpPart(&quot;' + q + '&quot;)">' +
           Admin.selLbl(n) + '</button>' +
       '</div>' +
       '<div class="btns">' +
-        '<button class="btn ok" onclick="Admin.pjpOk(&quot;' + q + '&quot;)">Poora PJP approve</button>' +
-        '<button class="btn ghost" onclick="Admin.pjpNo(&quot;' + q + '&quot;)">Poora PJP reject</button>' +
+        '<button class="btn ok" onclick="Admin.pjpOk(&quot;' + q + '&quot;)">Approve all</button>' +
+        '<button class="btn bad ghost" onclick="Admin.pjpNo(&quot;' + q + '&quot;)">Reject all</button>' +
       '</div>' +
-      /* ONE sentence in ONE string: quoting the button's own label inside it meant the label got
-         translated as a fragment and the sentence came out half English ("press sirf ye days below") */
-      (pos === 'top' ? '<div class="hint" style="margin-top:6px">' +
-        'Jo din galat hai unke box tick karo, phir niche wala reject button dabao. ' +
-        'Ya Edit dabakar khud theek kar do.</div>' : '') +
+      '<div class="hint" style="margin-top:6px">Ya kisi din par Edit dabakar khud theek kar do, phir Approve all.</div>' +
       '</div>';
   },
 
@@ -7121,8 +7478,12 @@ var Admin = {
 
     var DAY = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     var sel = Admin.sel(key);
-    var h = (can ? Admin.pjpBar(key, 'top') : '') +
-      '<div class="sec-title">Poora plan \u2014 ' + list.length + ' din</div><div class="card">';
+    var h = '<div class="sec-title">Poora plan \u2014 ' + list.length + ' din</div>' +
+      /* no markup inside the sentence: a <b> in the middle splits the text run, and half a sentence
+         is all the translator can then match */
+      (can ? '<div class="hint" style="margin:-6px 0 8px">' +
+        'Jo din galat hai unke box tick karo \u2014 niche reject selected days chalu ho jayega.</div>' : '') +
+      '<div class="card">';
     list.forEach(function (k) {
       var r = days[k] || {}, ww = Pjp.ww(r.ww), f = Pjp.isField(ww);
       var bad = rej.indexOf(k) >= 0, open = Admin.pjpOpen === key + '|' + k;
@@ -7230,6 +7591,9 @@ var Admin = {
       return Api.post({ action:'publishPjp', email:Auth.session().email, key:key });
     }).then(function (r) {
       Log.add('PJP', 'Approved+Published', key, r && r.ok ? (r.written + ' rows') : 'publish failed');
+      /* repaint NOW: the decision bar has to disappear the moment the month is approved, not when the
+         sync round-trip returns */
+      Admin.pjpSel[key] = {}; Nav._c = null; render();
       if (r && r.ok) toast('Approve + publish — Master_PJP me' + r.written + ' din (' + dmy(r.from) + '' + dmy(r.to) + ')', 4200);
       else toast('! Approve ho gaya par publish fail:' + ((r && r.error) || 'unknown'), 5000);
       return Sync.now(false);
