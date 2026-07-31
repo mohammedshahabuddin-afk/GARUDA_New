@@ -72,6 +72,11 @@ input,select,textarea{font:inherit;color:var(--ink)}
 label.f{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin:10px 0 5px}
 label.f .req{color:var(--bad)}
 .in,select.in,textarea.in{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:var(--r-s);background:#fff;outline:0}
+/* iOS Safari zooms into any field whose text is smaller than 16px and does NOT zoom back out when the
+   field loses focus — the page is left magnified and the layout looks broken. 16px is the whole fix;
+   locking the viewport instead would also stop a rep pinching a photo, which is worse. */
+.in,select.in,textarea.in{font-size:16px}
+input.in[type=number]{font-size:16px}
 .in:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l)}
 select.in{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' stroke='%23475069' stroke-width='2' fill='none'/></svg>");
   background-repeat:no-repeat;background-position:right 12px center;padding-right:34px}
@@ -368,10 +373,34 @@ td.num,th.num{text-align:right}
   margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
 .dsave span{font-size:11.5px;font-weight:600;color:var(--ink-3)}
 .dsave .btn{width:auto;flex:0 0 auto;min-width:104px}
+.drow.fix{background:#f2fbf5;margin:0 -14px;padding:9px 14px;box-shadow:inset 3px 0 0 var(--ok)}
+/* a returned day's save row: state on the left, button on the right, a rule to separate it */
+.dsave{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+.dsave span{font-size:11.5px;font-weight:600;color:var(--ink-3)}
+.dsave .btn{width:auto;flex:0 0 auto;min-width:104px}
+/* ── a stock section is a PANE, not a page-long table ──
+   Six rows of products and then scroll, with the header row pinned, so the filters above and the order
+   summary below stay reachable without paging through ninety SKUs. */
+.pane{max-height:404px;overflow:auto;-webkit-overflow-scrolling:touch;margin:0 -14px;padding:0 14px;
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.pane table{min-width:100%}
+.pane thead th{position:sticky;top:0;z-index:2;background:#f4f7fc;box-shadow:0 1px 0 var(--line)}
+/* a product name runs to sixty characters; two lines of it plus the brand line keeps six rows in view,
+   which is the point of the pane. The full name is still one tap away in the editor. */
+.pane td .nm{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  font-size:13px;line-height:1.22}
+.pane td,.pane th{padding-top:6px;padding-bottom:6px}
+.pane td .hint{font-size:11px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pane::-webkit-scrollbar{width:6px;height:6px}
+.pane::-webkit-scrollbar-thumb{background:#c9d2e3;border-radius:3px}
 /* a header you can tap to sort */
 #app th.sortable{cursor:pointer;-webkit-user-select:none;user-select:none;white-space:nowrap}
 #app th.sortable.on{color:var(--blue)}
 .drow.op{background:#f7f9ff;margin:0 -14px;padding:9px 14px}
+/* the same tint, but kept inside the card instead of bleeding to its edge — used where the row sits in
+   a card whose padding is not the 14px the full-bleed version assumes */
+.drow.op.inset,.drow.bad.inset{margin:0;padding:9px 10px;border-radius:10px}
 .dr-h{display:flex;gap:8px;align-items:flex-start}
 .dr-h .m{flex:1;min-width:0}
 .dr-h .t{font-weight:700;font-size:13px}
@@ -1883,6 +1912,96 @@ I18n.D.en = I18n.EN = {
   '· shop ka photo ho gaya':'· shop photo taken',
   '· photo bypass':'· photo bypassed',
   'badlo':'change',
+  'Shop ya DB heading par tap karo — ek baar ascending, dobara descending, teesri baar normal.':'Tap the Shop or DB heading — once for ascending, again for descending, a third time for normal.',
+  'List scroll karo —':'Scroll the list —',
+  'Shop stock kam hai':'Shop stock is low',
+  'Yahin se order add karo.':'Add the order right here.',
+  'Shop stock':'Shop stock',
+  'Sab stock':'All stock',
+  'se kam':'or less',
+  'Filter hatao':'Clear filters',
+  'TA / DA claim':'TA / DA claim',
+  'Policy ke hisaab se apne mahine ka travel claim banao — din ka station plan se aa jata hai, aap sirf amount aur bills confirm karo.':'Your month’s travel claim, by the policy — each day’s station comes from your plan, you just confirm the amounts and the bills.',
+  'Aapka slab:':'Your slab:',
+  'Aapka entitlement':'Your entitlement',
+  'Metro cities: Delhi NCR, Mumbai, Kolkata, Hyderabad, Chennai, Bangalore. Mumbai ka lodging rate alag hai.':'Metro cities: Delhi NCR, Mumbai, Kolkata, Hyderabad, Chennai, Bangalore. Mumbai has its own lodging rate.',
+  'Female employee — lodging ek level upar claim kar sakti hain.':'Female employee — lodging can be claimed one level up.',
+  'Ye claim approve ho gaya':'This claim is approved',
+  '5 tarikh tak approve hua to 17 ko, 15 tak hua to 30 ko payment.':'Approved by the 5th → paid on the 17th; by the 15th → paid on the 30th.',
+  'Approve hone tak edit kar sakte ho — dobara bhej dena.':'You can keep editing until it is approved — just send it again.',
+  'Mahine ka total':'Month total',
+  'Total claim':'Total claim',
+  'Claim din':'Claim days',
+  'Warning':'Warnings',
+  'Daily allowance':'Daily allowance',
+  'Travel (km / ticket / cab)':'Travel (km / ticket / cab)',
+  'Station tak':'To the station',
+  'Team meeting':'Team meeting',
+  'per month. HQ, Ex-HQ aur outstation ka food isi me aata hai.':'per month. HQ, Ex-HQ and outstation food all come out of this.',
+  'cap se zyada':'over the cap',
+  'Team meeting bill':'Team meeting bill',
+  'Cap se zyada':'Over the cap',
+  'Cap ke andar':'Within the cap',
+  'Bills lagenge:':'Bills needed:',
+  'koi nahi (sirf DA)':'none (DA only)',
+  '. DA ke liye bill ki zaroorat nahi hoti.':'. DA needs no bill.',
+  'Is month ka koi din abhi nahi aaya':'No day of this month has happened yet',
+  'Kisi bhi din par Edit dabao.':'Tap Edit on any day.',
+  'plan se':'from the plan',
+  'Ek mahine ka ek hi claim jata hai. 5 tarikh tak approve hua to 17 ko payment, 15 tarikh tak hua to 30 ko.':'One claim per month. Approved by the 5th → paid on the 17th; by the 15th → paid on the 30th.',
+  'Sab theek':'All good',
+  'Ye din kya tha':'What was this day',
+  'Town / city':'Town / city',
+  'Kaise gaye':'How you travelled',
+  'Kitni raat ruke':'Nights stayed',
+  'Kitne km (logbook)':'Km (logbook)',
+  'Ticket amount ₹':'Ticket amount ₹',
+  'Cab amount ₹':'Cab amount ₹',
+  'Food bill ₹':'Food bill ₹',
+  'Hotel ₹ (GST ke saath)':'Hotel ₹ (with GST)',
+  'Din ka total':'Day total',
+  'Bill lagega:':'Bill needed:',
+  'Off / leave / holiday — policy me DA nahi milta':'Off / leave / holiday — no DA under the policy',
+  'Meeting day — DA aur food dono lagu nahi hote':'Meeting day — neither DA nor food applies',
+  'Is role ke liye outstation DA nahi hai — tickets ya per-km chuno':'This role has no fixed outstation DA — pick tickets or per-km',
+  'Is role ke liye fixed DA nahi hai — per-km, ticket ya cab chuno':'This role has no fixed DA — pick per-km, ticket or cab',
+  'Is role ke liye cab allowed nahi hai':'Cab is not allowed for this role',
+  'Per-km is station par allowed nahi hai':'Per-km is not allowed at this station type',
+  'HQ me ticket claim policy me nahi hai — DA ya per-km chuno':'A ticket claim at HQ is not in the policy — pick DA or per-km',
+  'se zyada — uske aage public transport hi allowed hai':'exceeded — beyond that only public transport is allowed',
+  'Food cap':'Food cap',
+  'Lodging cap':'Lodging cap',
+  'DA me food shamil hai':'Food is included in the DA',
+  'Station tak aane-jaane ka':'To and from the station',
+  'Station tak ka cab bill alag se claim karo':'Claim the cab to the station separately',
+  'Logbook':'Logbook',
+  'Ticket / cab bill':'Ticket / cab bill',
+  'Hotel bill (GST of the state)':'Hotel bill (with that state’s GST)',
+  'Food bill':'Food bill',
+  'Ticket':'Ticket',
+  'Cab bill':'Cab bill',
+  'TA/DA claim bhejna hai?':'Send the TA/DA claim?',
+  'ka claim,':'claim,',
+  'Mahine me ek hi claim jata hai.':'Only one claim goes per month.',
+  'Isme':'It has',
+  'warning hai — cap se zyada amount cut ho jayega.':'warnings — anything over a cap will be trimmed.',
+  'Ye claim approve ho chuka hai':'This claim is already approved',
+  'Claim me kuch nahi hai — pehle din bharo':'There is nothing in the claim — fill the days first',
+  'Claim HOD ko chala gaya —':'The claim has gone to the HOD —',
+  'Meeting budget cap':'Meeting budget cap',
+  'Policy':'Policy',
+  'Day-wise':'Day-wise',
+  'Claim':'Claim',
+  'HQ (base city)':'HQ (base city)',
+  'Ex-HQ (same-day return)':'Ex-HQ (same-day return)',
+  'Outstation (night stay)':'Outstation (night stay)',
+  'Off / leave / holiday':'Off / leave / holiday',
+  'Own vehicle (per km)':'Own vehicle (per km)',
+  'Bus / train / metro / auto':'Bus / train / metro / auto',
+  'Cab (Ola / Uber / Rapido)':'Cab (Ola / Uber / Rapido)',
+  'km/din':'km/day',
+  ' / din':' / day',
+  'bills only — fixed DA nahi':'bills only — no fixed DA',
   'Order punch karo':'Punch the order',
   /* live updates + the read-only plan / waiting screen */
   'HOD ne approve kar diya — aage badho':'The HOD approved it — carry on',
@@ -2510,6 +2629,8 @@ var Gate = {
     if (v === 'plan')  return l >= 1;
     if (v === 'field') return l >= 2;
     if (v === 'stk') return l >= 2;                /* the shelf is part of the visit */
+    /* a travel claim is about days ALREADY worked, so it is never gated on today's plan */
+    if (v === 'tada') return true;
     if (v === 'sec' || v === 'posm' || v === 'eod') return l >= 3;
     /* PJP is a once-a-month job: open until HOD approves the month the window is for, then shut
        until the 27th comes round again */
@@ -2561,6 +2682,7 @@ var TABS = [
   { v:'posm',  g:'', t:'POSM' },
   { v:'trk',   g:'', t:'Tracker' },
   { v:'eod',   g:'', t:'EOD' },
+  { v:'tada',  g:'', t:'TA/DA' },
   { v:'appr',  g:'', t:'Approvals' }
 ];
 /* An admin/HOD does not punch orders — their nav is the console and the approval queue.
@@ -2668,7 +2790,7 @@ function render() {
      A real tab change still starts at the top: Router.go scrolls AFTER calling render(). */
   var y = window.pageYOffset || document.documentElement.scrollTop || 0;
   var f = ({ home:Home, pjp:Pjp, plan:Plan, field:Field, stk:Stk, sec:Sec, posm:Posm, trk:Trk, eod:Eod,
-             appr:Appr, admin:Admin })[Router.cur];
+             tada:Tada, appr:Appr, admin:Admin })[Router.cur];
   /* first ever paint and the data is still on its way — show a skeleton, never blank cards */
   /* every screen leaves through here, so ONE call translates the whole app */
   if (f && !DB.pulledAt && Api.n > 0) { $('view').innerHTML = I18n.tr(UI.skel()); return; }
@@ -3424,6 +3546,7 @@ var Card = {
               ['Cancel Order', st('Cancel Order').length, 0]],
       stores:a.ord.map(function (o) {
         return [o.StoreName || '—', I18n.s(String(o.Status || '')), num(o.TotValue)]; }),
+      btgt:br.rows, btgtT:br.tT, btgtA:br.tA,
       btgt:br.rows, btgtT:br.tT, btgtA:br.tA,
       brands:brands, nsv:a.nsv, mrp:mrp, units:units, sku:a.lines.length,
       msl:msl, nonMsl:nonMsl,
@@ -5760,6 +5883,9 @@ var Stock = {
    is ever cached across days. */
 var Stk = {
   brand:'', cat:'', sub:'', q:'', open:'', qty:{},
+  /* "show me what this shop is running out of": 1–15, and a row qualifies when the SHOP has fewer
+     than that many. The distributor column is untouched — it is what he would refill from. */
+  below:'', fopen:false,
   /* 3-state header sort: first click ascending, second descending, third back to the default order.
      `col` is 'shop' or 'dist'; dir 1 = ascending, -1 = descending, 0 = off. */
   sort:{ col:'', dir:0 },
@@ -5804,6 +5930,7 @@ var Stk = {
       if (Stk.brand && String(p.Brand || '') !== Stk.brand) return false;
       if (Stk.cat && String(p.Category || '') !== Stk.cat) return false;
       if (Stk.sub && String(p.SubCategory || '') !== Stk.sub) return false;
+      if (Stk.below && num((m.shop || {})[String(p.Code)]) >= num(Stk.below)) return false;
       if (!q) return true;
       return (String(p.Name) + ' ' + String(p.Code) + ' ' + String(p.Brand) + ' ' +
               String(p.Category) + ' ' + String(p.SubCategory)).toUpperCase().indexOf(q) >= 0;
@@ -5823,11 +5950,14 @@ var Stk = {
     var rows = Stk.list(msl, m);
     var h = '<div class="sec-title">' + esc(title) + ' (' + rows.length + ')</div><div class="card">';
     if (!rows.length) return h + UI.empty('', 'Is filter me koi product nahi') + '</div>';
-    h += '<div class="tw"><table><thead><tr><th>Product</th>' +
+    /* said once per section, right where the tap happens */
+    h += '<div class="hint" style="margin:-2px 0 8px">Shop ya DB heading par tap karo — ek baar ' +
+      'ascending, dobara descending, teesri baar normal.</div>';
+    h += '<div class="pane"><table><thead><tr><th>Product</th>' +
       Stk.head('shop', 'Shop') + Stk.head('dist', 'DB') + '<th class="num">Add</th></tr></thead><tbody>';
     rows.slice(0, Stk.CAP).forEach(function (r) {
       var op = Stk.open === r.code;
-      h += '<tr' + (op ? ' class="me"' : '') + '><td><b>' + esc(r.name) + '</b>' +
+      h += '<tr' + (op ? ' class="me"' : '') + '><td><b class="nm">' + esc(r.name) + '</b>' +
         '<div class="hint">' + esc(r.brand) + (r.cat ? ' · ' + esc(r.cat) : '') +
         ' · MRP ' + inr(r.mrp) + '</div></td>' +
         '<td class="num">' + (r.shop > 0 ? r.shop : '<span class="pill p-bad">0</span>') + '</td>' +
@@ -5838,8 +5968,9 @@ var Stk = {
       if (op) h += '<tr class="me"><td colspan="4">' + Stk.editor(r) + '</td></tr>';
     });
     h += '</tbody></table></div>';
-    if (rows.length > Stk.CAP) h += '<div class="hint" style="margin-top:8px">Sirf pehle ' + Stk.CAP +
-      ' dikha rahe hain — search ya filter use karo.</div>';
+    h += '<div class="hint" style="margin-top:8px">' +
+      (rows.length > Stk.CAP ? 'Sirf pehle ' + Stk.CAP + ' dikha rahe hain — search ya filter use karo.'
+                             : 'List scroll karo — ' + rows.length + ' product') + '</div>';
     return h + '</div>';
   },
   /* quantity + what it books, then Save. Nothing else — the rest of the order is the review screen. */
@@ -5895,6 +6026,21 @@ var Stk = {
     if (k === 'brand' || k === 'cat') { Stk.sub = ''; }
     render();
   },
+  clear: function () { Stk.brand = ''; Stk.cat = ''; Stk.sub = ''; Stk.below = ''; Stk.q = ''; render(); },
+  fold: function () { Stk.fopen = !Stk.fopen; render(); },
+  /* how many filters are narrowing the list right now — the folded button has to say so, or a rep stares
+     at a short list and never thinks to look inside */
+  applied: function () {
+    return (Stk.brand ? 1 : 0) + (Stk.cat ? 1 : 0) + (Stk.sub ? 1 : 0) + (Stk.below ? 1 : 0);
+  },
+  appliedText: function () {
+    var a = [];
+    if (Stk.brand) a.push(Stk.brand);
+    if (Stk.cat) a.push(Stk.cat);
+    if (Stk.sub) a.push(Stk.sub);
+    if (Stk.below) a.push(I18n.s('Shop stock') + ' < ' + Stk.below);
+    return a.join(' · ');
+  },
   onSearch: function (v) {
     /* typing must not re-render (the caret would jump); rebuild just the two sections */
     Stk.q = v;
@@ -5906,8 +6052,8 @@ var Stk = {
   html: function () {
     if (Gate.locked()) return Field.lockedHtml();
     var s = Field.store;
-    var h = UI.head('', 'Stock — shop aur distributor',
-      'Jo store aap visit kar rahe ho uska stock, aur aapke distributor ka stock. Yahin se order add karo.');
+    /* kept to one line on purpose: every line here pushes the first product further down the phone */
+    var h = UI.head('', 'Stock — shop aur distributor', 'Yahin se order add karo.');
     if (!s) return h + '<div class="card">' + UI.empty('', 'Pehle Field tab me store select karo') +
       '<div class="btns"><button class="btn" onclick="Router.go(\'field\')">Field tab kholo</button></div></div>';
 
@@ -5943,19 +6089,42 @@ var Stk = {
           return '<option' + (Stk[k] === x ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') +
         '</select></div>';
     };
+    /* On a phone these five fields stack, and 350px of dropdowns before the first product means the rep
+       scrolls to see anything. Search stays out — it is the one he uses every visit — and the rest fold
+       away behind a count of what is currently applied. */
+    var on = Stk.applied();
     h += '<div class="card" style="padding:12px">' +
-      '<div class="row two">' + sel('brand', 'Brand', uniq('Brand')) +
-        sel('cat', 'Category', uniq('Category', function (p) { return !Stk.brand || p.Brand === Stk.brand; })) + '</div>' +
-      '<div class="row two" style="margin-top:8px">' +
-        sel('sub', 'Sub-category', uniq('SubCategory', function (p) {
-          return (!Stk.brand || p.Brand === Stk.brand) && (!Stk.cat || p.Category === Stk.cat); })) +
-        '<div><label class="f">Search</label><input class="in" id="stk_q" placeholder="Product ya code" ' +
-        'value="' + esc(Stk.q) + '" oninput="Stk.onSearch(this.value)"></div></div>' +
-      '<div class="hint" style="margin-top:8px">Shop: Stock_Store' +
-        (m.storeAt ? ' · ' + esc(Appr.when(m.storeAt) || String(m.storeAt).slice(0, 16)) : '') +
-        ' &nbsp;|&nbsp; DB: Stock_Distributor' +
-        (m.dbAt ? ' · ' + esc(Appr.when(m.dbAt) || String(m.dbAt).slice(0, 16)) : '') + '</div>' +
-      '<div class="btns"><button class="btn ghost sm" onclick="Stock.load(\'' + esc(i.st) + '\',\'' + esc(i.db) + '\',1)">Stock refresh</button></div>' +
+      /* side by side even on a narrow phone: .row.two stacks below 560px, and two stacked rows here push
+         the first product off the screen */
+      '<div style="display:flex;gap:8px;align-items:flex-end">' +
+        '<div style="flex:1 1 auto;min-width:0"><input class="in" id="stk_q" placeholder="Product ya code" ' +
+        'value="' + esc(Stk.q) + '" oninput="Stk.onSearch(this.value)"></div>' +
+        '<button class="btn ' + (on ? '' : 'ghost') + '" style="flex:0 0 auto;width:auto;min-width:104px" ' +
+          'onclick="Stk.fold()">Filter' +
+          (on ? ' (' + on + ')' : '') + (Stk.fopen ? ' ▲' : ' ▼') + '</button></div>' +
+      (Stk.fopen ?
+        '<div class="row two" style="margin-top:8px">' + sel('brand', 'Brand', uniq('Brand')) +
+          sel('cat', 'Category', uniq('Category', function (p) { return !Stk.brand || p.Brand === Stk.brand; })) + '</div>' +
+        '<div class="row two" style="margin-top:8px">' +
+          sel('sub', 'Sub-category', uniq('SubCategory', function (p) {
+            return (!Stk.brand || p.Brand === Stk.brand) && (!Stk.cat || p.Category === Stk.cat); })) +
+          '<div><label class="f">Shop stock kam hai</label>' +
+            '<select class="in" onchange="Stk.set(\'below\',this.value)">' +
+            '<option value="">Sab stock</option>' +
+            [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15].map(function (n) {
+              return '<option value="' + n + '"' + (String(Stk.below) === String(n) ? ' selected' : '') +
+                '>' + n + ' se kam</option>'; }).join('') +
+            '</select></div></div>' +
+        (on ? '<div class="btns"><button class="btn ghost sm" onclick="Stk.clear()">Filter hatao</button></div>' : '')
+        : (on ? '<div class="hint" style="margin-top:8px">' + esc(Stk.appliedText()) + '</div>' : '')) +
+      /* where the numbers came from, and the way to re-read them — one line, not a card of its own */
+      '<div style="display:flex;gap:8px;align-items:center;margin-top:8px">' +
+        '<div class="hint" style="flex:1 1 auto;min-width:0">Shop: Stock_Store' +
+          (m.storeAt ? ' · ' + esc(Appr.when(m.storeAt) || String(m.storeAt).slice(0, 16)) : '') +
+          ' | DB: Stock_Distributor' +
+          (m.dbAt ? ' · ' + esc(Appr.when(m.dbAt) || String(m.dbAt).slice(0, 16)) : '') + '</div>' +
+        '<button class="btn ghost xs" style="flex:0 0 auto;width:auto" onclick="Stock.load(\'' +
+          esc(i.st) + '\',\'' + esc(i.db) + '\',1)">Stock refresh</button></div>' +
       '</div>';
 
     h += '<div id="stk_list">' + Stk.section('MSL products', true, m) +
@@ -6375,6 +6544,74 @@ var Rep = {
   },
 
   /* ─── my orders for a month ─── */
+  /* the TA/DA claim as a workbook: the summary the finance team reads, then every day with what was
+     claimed and why, so an approver never has to ask how a number was reached */
+  tada: function (m) {
+    var S = Tada.slab(), e = DB.emp(DB.me.code) || {}, t = Tada.total(), r = Tada.row();
+    var ttl = Rep.ttl('GARUDA \u2014 TA / DA claim', monthName(m) + '\u00b7  ' + DB.me.name +
+      ' (' + DB.me.code + ')', 7);
+    var s1 = ttl.rows;
+    s1.push([Xl.b('EMPLOYEE')]);
+    s1.push(['Employee', Xl.t(DB.me.name), 'Code', Xl.t(DB.me.code)]);
+    s1.push(['Designation', Xl.t(e.Designation || DB.me.desig || '\u2014'), 'Policy slab', Xl.t(S.name)]);
+    s1.push(['HQ', Xl.t(e.HQ || '\u2014'), 'Zone', Xl.t(e.Zone || '\u2014')]);
+    s1.push(['ASM', Xl.t(e.AsmName || '\u2014'), 'HOD', Xl.t(e.HodName || '\u2014')]);
+    s1.push(['Status', Xl.t(r.Status || 'Draft'), 'Month', Xl.t(monthName(m))]);
+    s1.push([], [Xl.b('CLAIM')]);
+    s1.push(['Head', 'Amount (\u20b9)', '', '', '', '', ''].map(Xl.h));
+    [['Daily allowance', t.da], ['Food', t.food], ['Travel (km / ticket / cab)', t.travel],
+     ['Station transfer', t.station], ['Lodging', t.lodge], ['Team meeting', t.meet]]
+      .forEach(function (x) { s1.push([Xl.t(x[0]), Xl.m(x[1])]); });
+    s1.push([Xl.t('TOTAL', Xl.S.tot), Xl.m(t.grand, Xl.S.totM)]);
+    s1.push([], [Xl.b('DAYS')]);
+    s1.push(['Claim days', Xl.n(t.days), 'Outstation nights', Xl.n(t.nights)]);
+    s1.push(['HQ days', Xl.n(t.byStation.hq), 'Ex-HQ days', Xl.n(t.byStation.ex)]);
+    s1.push(['Outstation days', Xl.n(t.byStation.out), 'Meeting days', Xl.n(t.byStation.meet)]);
+    s1.push(['Off / leave', Xl.n(t.byStation.off), 'Warnings', Xl.n(t.warn)]);
+
+    var d2 = [['Date', 'Day', 'Station', 'Town', 'Mode', 'Km', 'Nights', 'DA (\u20b9)', 'Food (\u20b9)',
+               'Travel (\u20b9)', 'Station (\u20b9)', 'Lodging (\u20b9)', 'Day total (\u20b9)',
+               'Bills needed', 'How it was worked out', 'Warning', 'Note'].map(Xl.h)];
+    var DAY = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    Tada.dates().forEach(function (d) {
+      var row = Tada.days[d], c = Tada.calc(d);
+      var lbl = (Tada.ST.filter(function (x) { return x[0] === row.st; })[0] || Tada.ST[0])[1];
+      var mode = (Tada.MODE.filter(function (x) { return x[0] === row.mode; })[0] || Tada.MODE[0])[1];
+      d2.push([Xl.dt(d), Xl.t(DAY[new Date(d + 'T00:00:00').getDay()]), Xl.t(lbl), Xl.t(row.town),
+        Xl.t(row.st === 'off' || row.st === 'meet' ? '\u2014' : mode), Xl.n(row.km), Xl.n(row.night),
+        Xl.m(c.da), Xl.m(c.food), Xl.m(c.travel), Xl.m(c.station), Xl.m(c.lodge),
+        Xl.m(c.da + c.food + c.travel + c.station + c.lodge),
+        Xl.t(c.bills.join(', '), Xl.S.wrap), Xl.t(c.why.join(' \u00b7 '), Xl.S.wrap),
+        Xl.t(c.warn.join(' \u00b7 '), Xl.S.wrap), Xl.t(row.note, Xl.S.wrap)]);
+    });
+    d2.push([Xl.t('TOTAL', Xl.S.tot), '', '', '', '', Xl.n(0), Xl.n(t.nights, Xl.S.totI),
+      Xl.m(t.da, Xl.S.totM), Xl.m(t.food, Xl.S.totM), Xl.m(t.travel, Xl.S.totM),
+      Xl.m(t.station, Xl.S.totM), Xl.m(t.lodge, Xl.S.totM),
+      Xl.m(t.grand - t.meet, Xl.S.totM), '', '', '', '']);
+
+    var p2r = [['Station', 'Travel', 'Food'].map(Xl.h)];
+    [['HQ', S.hq], ['Ex-HQ', S.ex], ['Outstation', S.out]].forEach(function (x) {
+      var P2 = x[1], bits = [];
+      if (P2.da) bits.push('DA ' + P2.da);
+      if (P2.metro || P2.nonMetro) bits.push('DA ' + P2.metro + ' metro / ' + P2.nonMetro + ' non-metro');
+      if (P2.perKm) bits.push(P2.perKm + '/km' + (P2.kmCap ? ' upto ' + P2.kmCap : ''));
+      if (P2.tickets) bits.push('tickets on actuals');
+      if (P2.cab) bits.push('cab on actuals');
+      var food = P2.foodMonth ? P2.foodMonth + ' / month' : P2.food ? P2.food + ' / day'
+        : (P2.foodMetro ? P2.foodMetro + ' metro / ' + P2.foodNonMetro + ' non-metro' : '\u2014');
+      p2r.push([Xl.t(x[0]), Xl.t(bits.join(' \u00b7 ')), Xl.t(food)]);
+    });
+    p2r.push([Xl.t('Lodging', Xl.S.tot), Xl.t(S.lodge.nonMetro + ' non-metro \u00b7 ' + S.lodge.metro +
+      ' metro \u00b7 ' + S.lodge.mumbai + ' Mumbai'), Xl.t('')]);
+    p2r.push([Xl.t('Travel class'), Xl.t(S.travel, Xl.S.wrap), Xl.t('')]);
+
+    return Xl.save('TADA_' + DB.me.code + '_' + m, [
+      { name:I18n.s('Claim'), cols:[26, 16, 16, 14, 10, 10, 10], rows:s1, merges:ttl.merges },
+      { name:I18n.s('Day-wise'), cols:[11, 6, 20, 16, 18, 7, 7, 11, 11, 11, 11, 11, 12, 22, 34, 26, 22],
+        rows:d2, freeze:1, filter:'A1:Q' + d2.length },
+      { name:I18n.s('Policy'), cols:[16, 52, 30], rows:p2r, freeze:1 }
+    ]);
+  },
   orders: function (m) {
     var ord = DB.mine('SecOrders').filter(function (r) { return toISO(r.Date).slice(0, 7) === m; })
       .sort(function (a, b) { return String(a.Date).localeCompare(String(b.Date)); });
@@ -7160,6 +7397,12 @@ var Eod = {
     h += '<div class="sec-title">Brand-wise — target vs achieved (₹ Lakh)</div><div class="card">' +
       Eod.brandRows(a).html + '</div>';
 
+    /* ── brand-wise: what the morning plan asked for, against what the day delivered ──
+       Every brand from the plan is listed even when nothing came — a zero against a target is the
+       whole point of the report; hiding it would flatter the day. */
+    h += '<div class="sec-title">Brand-wise — target vs achieved (₹ Lakh)</div><div class="card">' +
+      Eod.brandRows(a).html + '</div>';
+
     h += '<div class="sec-title">Order status</div><div class="card">' +
       ['Billing Done','Order in Process','No Order','Cancel Order'].map(function (s) {
         var g = a.ord.filter(function (o) { return o.Status === s; });
@@ -7188,6 +7431,38 @@ var Eod = {
     return h;
   },
   after: function () { Card.preview('eod'); },
+  /* ONE brand-wise builder for the screen, the image and the workbook, so the three can never
+     disagree about a brand's target or its achievement. */
+  brandRows: function (a) {
+    var tgt = Plan.tgt(), rows = [], tT = 0, tA = 0;
+    tgt.forEach(function (x) {
+      var got = 0;
+      Object.keys(a.brand).forEach(function (b) { if (Eod.match(b, x[0])) got += num(a.brand[b]); });
+      /* a TDC target row is one of six slices of the same brand, so the achievement cannot be split
+         across them — it is credited to the whole TDC group once, on the first TDC row */
+      rows.push([x[0], num(x[1]), got]);
+      tT += num(x[1]);
+    });
+    /* de-duplicate the TDC credit: keep it on the first matching row only */
+    var seen = {};
+    rows.forEach(function (r) {
+      var k = /^TDC/i.test(r[0]) ? 'TDC' : r[0];
+      if (seen[k]) r[2] = 0; else seen[k] = 1;
+      tA += r[2];
+    });
+    var html = '<div class="tw"><table><thead><tr><th>Brand</th><th class="num">Target</th>' +
+      '<th class="num">Achieved</th><th class="num">%</th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        var p = r[1] > 0 ? Math.round(r[2] / r[1] * 100) : 0;
+        return '<tr><td>' + esc(r[0]) + '</td><td class="num">' + lakh(r[1]) + '</td>' +
+          '<td class="num">' + lakh(r[2]) + '</td><td class="num"><span class="pill ' +
+          (p >= 100 ? 'p-ok' : p > 0 ? 'p-warn' : 'p-bad') + '">' + p + '%</span></td></tr>';
+      }).join('') +
+      '<tr class="tot"><td><b>TOTAL</b></td><td class="num"><b>' + lakh(tT) + '</b></td>' +
+      '<td class="num"><b>' + lakh(tA) + '</b></td><td class="num"><b>' +
+      (tT > 0 ? Math.round(tA / tT * 100) : 0) + '%</b></td></tr></tbody></table></div>';
+    return { rows:rows, tT:tT, tA:tA, html:html };
+  },
   /* ONE brand-wise builder for the screen, the image and the workbook, so the three can never
      disagree about a brand's target or its achievement. */
   brandRows: function (a) {
@@ -7446,6 +7721,522 @@ var Trk = {
   },
   go: function (k) { Trk.kind = k; render(); },
   set: function (f) { Trk.filter = f; render(); }
+};
+
+/* ═══════════════ TA / DA — the travel claim, built from the policy ═══════════════
+   Honasa "Offline and Retail Travel Policy" v1, effective 1 Feb 2026. Every number below comes from
+   that document; nothing here is invented, because a claim screen that guesses a rate is worse than no
+   claim screen at all. The rules that decide entitlement (not just the rates) are encoded too:
+
+     • HQ and Ex-HQ: the daily travel allowance AND the food allowance are both claimable;
+     • a MEETING day pays neither — "on days when meetings are planned, Daily allowance whether travel
+       or food would not be applicable";
+     • a weekly off, a holiday or leave pays nothing;
+     • outstation pays by NIGHTS: a 3-day / 2-night tour is 2 outstation days, and the return day is paid
+       at the Ex-HQ rate;
+     • per-km is capped per station type (75 / 150 / 250 km) and needs a logbook, so the km go on the row;
+     • the senior slabs have no per-day food figure at all — they have a MONTHLY food budget which has
+       to cover HQ, Ex-HQ and outstation together, so the screen tracks it as a budget, not a per-day sum;
+     • women may claim lodging one level up (non-metro at the metro rate);
+     • Mumbai has its own lodging rate, above the other metros.
+
+   The month is pre-filled from what the rep already told the app: the DayPlan's station and
+   working-with. That is the difference between a form and a claim — he corrects it, he does not type it.
+   One row per employee-month in TaDa (policy: "only one expense report to be raised for all expenses
+   incurred in a month"), sent to HOD from here and decided in Approvals. */
+var Tada = {
+  month:'', days:null, open:'', _dirty:false, _t:null,
+
+  /* ── the policy ──
+     Each slab: the designations it covers (short codes as they appear in LoginConfig, and the long
+     names from the policy), then HQ / Ex-HQ / Outstation entitlements and lodging. */
+  METRO:['DELHI','NEW DELHI','DELHI NCR','NCR','GURGAON','GURUGRAM','NOIDA','GHAZIABAD','FARIDABAD',
+         'MUMBAI','KOLKATA','HYDERABAD','CHENNAI','BANGALORE','BENGALURU'],
+  SLABS:[
+    { id:'s1', name:'BDO / BDE / Sales Activation Officer',
+      /* SBDE and ISR are carried by the older app's designation list; both sit at the field-officer
+         level, so they resolve here rather than to the senior slab */
+      codes:['BDO','BDE','SAO','SBDE','SBDE-GT','BDE-GT','BDE-MT','BDO-GT','BDO-MT','ISR',
+             'BUSINESS DEVELOPMENT OFFICER','BUSINESS DEVELOPMENT EXECUTIVE',
+             'SALES ACTIVATION OFFICER'],
+      hq:{ da:300, food:150 },
+      ex:{ da:450, food:150, tickets:true, station:200 },
+      out:{ metro:1250, nonMetro:1000, foodMetro:400, foodNonMetro:250, tickets:true, station:200 },
+      lodge:{ nonMetro:1800, metro:2500, mumbai:3000 },
+      travel:'3AC train / sleeper / non-Volvo bus (on actuals)' },
+    { id:'s2', name:'Senior BDE / Sales Automation Specialist / MT / RSDM',
+      codes:['SSE','SR BDE','SENIOR BDE','SAS','MT','RSDM','SR. BDE',
+             'SALES AUTOMATION SPECIALIST','MANAGEMENT TRAINEE',
+             'RETAIL SALES DEVELOPMENT MANAGER'],
+      hq:{ da:400, food:200 },
+      ex:{ da:500, food:200, tickets:true, station:200 },
+      out:{ metro:1500, nonMetro:1200, foodMetro:750, foodNonMetro:500, tickets:true, station:200 },
+      lodge:{ nonMetro:2500, metro:3000, mumbai:5000 },
+      travel:'3AC train / sleeper / non-Volvo bus (on actuals)' },
+    { id:'s3', name:'ASM / Sr ASM / ASM Trainee / Regional BA Lead / Area Manager / Area Trainer / Regional BD-VM-Planner-Projects',
+      codes:['ASM','SR ASM','SENIOR ASM','ASMT','ASM TRAINEE','RBL','AM','AM-RETAIL','AT','RBD',
+             'RVM','RP','RPJ','AREA SALES MANAGER','SENIOR AREA SALES MANAGER','AREA MANAGER',
+             'AREA TRAINER','REGIONAL BA LEAD','REGIONAL BD','REGIONAL VM','REGIONAL PLANNER',
+             'REGIONAL PROJECTS'],
+      hq:{ da:400, food:250, perKm:9, kmCap:75 },
+      ex:{ da:750, food:250, tickets:true, perKm:9, kmCap:150, cab:true },
+      out:{ metro:1800, nonMetro:1500, foodMetro:1000, foodNonMetro:750, tickets:true,
+            perKm:9, kmCap:250, cab:true },
+      lodge:{ nonMetro:4000, metro:5000, mumbai:6000 },
+      travel:'Within 500 km: Volvo bus / 2AC train. Beyond 500 km: economy air, manager approval 7 days ahead' },
+    { id:'s4', name:'Regional KAM',
+      codes:['RKAM','R-KAM','REGIONAL KAM','REGIONAL KEY ACCOUNT MANAGER'],
+      hq:{ da:400, food:250, perKm:9, kmCap:75 },
+      ex:{ da:750, food:250, tickets:true, perKm:9, kmCap:150, cab:true },
+      out:{ metro:0, nonMetro:0, foodMetro:1250, foodNonMetro:1000, tickets:true,
+            perKm:9, kmCap:250, cab:true, billsOnly:true },
+      lodge:{ nonMetro:4000, metro:5000, mumbai:6000 },
+      travel:'Within 500 km: Volvo bus / 2AC train. Beyond 500 km: economy air, manager approval 7 days ahead' },
+    { id:'s5', name:'Acting RSM / RSM / Regional Manager (Retail)',
+      codes:['RSM','ACTING RSM','RM','RM-RETAIL','REGIONAL SALES MANAGER','REGIONAL MANAGER'],
+      hq:{ perKm:9, kmCap:75, cab:true, foodMonth:15000 },
+      ex:{ tickets:true, perKm:9, kmCap:150, cab:true, foodMonth:15000 },
+      out:{ metro:0, nonMetro:0, tickets:true, perKm:9, kmCap:250, cab:true, billsOnly:true,
+            foodMonth:15000 },
+      lodge:{ nonMetro:6000, metro:7000, mumbai:8000 },
+      travel:'Within 500 km: Volvo bus / 2AC train. Beyond 500 km: economy air, manager approval 7 days ahead' },
+    { id:'s6', name:'Zonal Sales Manager',
+      codes:['ZSM','ZM','ZONAL SALES MANAGER','ZONAL MANAGER','ZONAL BUSINESS MANAGER'],
+      hq:{ perKm:10, kmCap:0, cab:true, foodMonth:20000 },
+      ex:{ tickets:true, perKm:10, kmCap:0, cab:true, foodMonth:20000 },
+      out:{ metro:0, nonMetro:0, tickets:true, perKm:10, kmCap:0, cab:true, billsOnly:true,
+            foodMonth:20000 },
+      lodge:{ nonMetro:6000, metro:7000, mumbai:8000 },
+      travel:'Prior manager approval at least 5 days ahead; under 5 days needs the Chief Business Officer' }
+  ],
+  MEET:{ s3:700, s4:700, s5:8000, s6:8000 },      /* team-meeting budget per month */
+
+  /* the designation comes from LoginConfig / Master_Employees in short form; match on the code list
+     first, then on any word of the long name, and fall back to the junior-most slab so a claim is never
+     silently generous */
+  slab: function (d) {
+    var v = String(d || (DB.me && DB.me.desig) || '').toUpperCase().replace(/[^A-Z0-9 -]/g, ' ').trim();
+    if (!v) return Tada.SLABS[0];
+    for (var i = 0; i < Tada.SLABS.length; i++) {
+      if (Tada.SLABS[i].codes.some(function (c) { return v === c; })) return Tada.SLABS[i];
+    }
+    /* a longer designation string: look for the code as a whole word. Senior slabs are tried first so
+       "SR ASM" does not stop at "ASM", and a spelled-out title matches its own entry, not a fragment of
+       a bigger one. */
+    for (var j = Tada.SLABS.length - 1; j >= 0; j--) {
+      var hit = Tada.SLABS[j].codes.some(function (c) {
+        return new RegExp('(^| )' + c.replace(/[-]/g, '[- ]?') + '( |$)').test(v); });
+      if (hit) return Tada.SLABS[j];
+    }
+    return Tada.SLABS[0];
+  },
+  isMetro: function (town) {
+    var t = String(town || '').toUpperCase();
+    return Tada.METRO.some(function (m) { return t.indexOf(m) >= 0; });
+  },
+  isMumbai: function (town) { return /MUMBAI/i.test(String(town || '')); },
+  /* the policy's own words for a woman's lodging entitlement: one level up */
+  female: function () {
+    var e = DB.emp(DB.me.code) || {};
+    return /^f|female|woman|ms\b|mrs\b/i.test(String(e.Gender || e.Sex || ''));
+  },
+
+  /* ── the month ── */
+  key: function () { return DB.me.code + '_' + Tada.mon(); },
+  mon: function () {
+    var t = today().slice(0, 7);
+    if (!Tada.month || Tada.month > t) Tada.month = t;
+    return Tada.month;
+  },
+  row: function () {
+    return DB.find('TaDa', Tada.key()) ||
+      { Id:Tada.key(), EmpCode:DB.me.code, EmpName:DB.me.name, Month:Tada.mon(), Status:'Draft' };
+  },
+  dates: function () {
+    var a = Tada.mon().split('-'), y = +a[0], m = +a[1], n = new Date(y, m, 0).getDate(), out = [];
+    var t = today(), doj = DB.doj(DB.me.code);
+    for (var d = 1; d <= n; d++) {
+      var k = y + '-' + p2(m) + '-' + p2(d);
+      if (k > t) break;                                   /* a claim for a day not yet worked */
+      if (doj && k < doj) continue;
+      out.push(k);
+    }
+    return out;
+  },
+  /* STATIONS: what kind of day it was. 'off' pays nothing by policy. */
+  ST:[['hq', 'HQ (base city)'], ['ex', 'Ex-HQ (same-day return)'],
+      ['out', 'Outstation (night stay)'], ['meet', 'Team meeting'], ['off', 'Off / leave / holiday']],
+  MODE:[['da', 'Daily allowance'], ['km', 'Own vehicle (per km)'],
+        ['ticket', 'Bus / train / metro / auto'], ['cab', 'Cab (Ola / Uber / Rapido)']],
+
+  /* pre-fill a day from what the rep already told the app */
+  seed: function (k) {
+    var p = DB.find('DayPlan', DB.me.code + '_' + k) || {};
+    var ww = String(p.WorkingWith || '');
+    var st = /meeting|activity/i.test(ww) ? 'meet'
+      : /weekly off|leave|holiday/i.test(ww) ? 'off'
+      : /outstation/i.test(String(p.Station || '')) ? 'out'
+      : /ex.?hq/i.test(String(p.Station || '')) ? 'ex' : 'hq';
+    /* an RSM / ZSM has no fixed DA at all — opening their month on "Daily allowance" would show a
+       warning against every single day, so start them on per-km, which is what the policy pays them */
+    var mode = Tada.slab().hq.da ? 'da' : 'km';
+    return { st:st, mode:mode, km:0, ticket:0, cab:0, food:0, lodge:0, night:st === 'out' ? 1 : 0,
+             town:p.Town || '', note:'', from:'plan' };
+  },
+  load: function () {
+    var r = Tada.row(), k = Tada.key();
+    if (Tada.days && Tada._for === k) return r;
+    var saved = {};
+    try { saved = JSON.parse(r.DaysJson || '{}') || {}; } catch (e) {}
+    Tada.days = {};
+    Tada.dates().forEach(function (d) {
+      Tada.days[d] = saved[d] ? Object.assign(Tada.seed(d), saved[d]) : Tada.seed(d);
+    });
+    Tada._for = k;
+    return r;
+  },
+  set: function (d, f, v) {
+    Tada.load();
+    if (!Tada.days[d]) Tada.days[d] = Tada.seed(d);
+    Tada.days[d][f] = (f === 'st' || f === 'mode' || f === 'note' || f === 'town') ? v : num(v);
+    Tada.days[d].from = 'rep';
+    if (f === 'st') {
+      /* a station change resets what cannot apply: an off day claims nothing, and only an outstation
+         day has nights and lodging */
+      var r = Tada.days[d];
+      if (v === 'off' || v === 'meet') { r.km = 0; r.ticket = 0; r.cab = 0; r.food = 0; r.lodge = 0; r.night = 0; }
+      if (v !== 'out') { r.lodge = 0; r.night = 0; }
+      if (v === 'out' && !r.night) r.night = 1;
+    }
+    Tada._dirty = true;
+    clearTimeout(Tada._t);
+    if (f === 'st' || f === 'mode') { Tada.flush(); render(); }
+    else Tada._t = setTimeout(Tada.flush, 900);
+  },
+
+  /* ── what one day is worth ──
+     Returns the amounts AND the reasons, so the screen can explain itself and an auditor can see why. */
+  calc: function (d) {
+    var S = Tada.slab(), r = (Tada.days || {})[d] || Tada.seed(d);
+    var out = { da:0, food:0, travel:0, lodge:0, station:0, why:[], warn:[], bills:[] };
+    if (r.st === 'off') { out.why.push('Off / leave / holiday — policy me DA nahi milta'); return out; }
+    if (r.st === 'meet') { out.why.push('Meeting day — DA aur food dono lagu nahi hote'); return out; }
+    var P = r.st === 'hq' ? S.hq : r.st === 'ex' ? S.ex : S.out;
+    var metro = Tada.isMetro(r.town);
+
+    if (r.st === 'out') {
+      var nights = Math.max(1, num(r.night));
+      if (r.mode === 'da') {
+        /* an RSM / ZSM / R-KAM has no fixed outstation DA — the policy pays their actuals. Say so instead
+           of falling through to the bills branch, which would quietly total up stale ticket amounts. */
+        var per = P.billsOnly ? 0 : (metro ? P.metro : P.nonMetro);
+        if (per > 0) { out.da = per * nights; out.why.push(nights + ' night × ' + inr(per) + ' (' + (metro ? 'metro' : 'non-metro') + ')'); }
+        else out.warn.push('Is role ke liye outstation DA nahi hai — tickets ya per-km chuno');
+      } else if (r.mode === 'km') {
+        var km = num(r.km), cap = P.kmCap || 0;
+        var okKm = cap ? Math.min(km, cap * nights) : km;
+        out.travel = okKm * P.perKm;
+        out.why.push(okKm + ' km × ' + inr(P.perKm) + (cap ? ' (cap ' + cap + ' km/din)' : ''));
+        if (cap && km > cap * nights) out.warn.push(cap + ' km/din se zyada — uske aage public transport hi allowed hai');
+        out.bills.push('Logbook');
+      } else {
+        out.travel = num(r.ticket) + num(r.cab);
+        if (out.travel) out.bills.push('Ticket / cab bill');
+      }
+      /* food: a per-day figure for the junior slabs, a monthly budget for the senior ones */
+      if (P.foodMonth) { out.food = num(r.food); if (out.food) out.bills.push('Food bill'); }
+      else {
+        var fc = (metro ? P.foodMetro : P.foodNonMetro) * nights;
+        if (r.mode !== 'da' || P.billsOnly) {
+          out.food = Math.min(num(r.food), fc);
+          if (num(r.food) > fc) out.warn.push('Food cap ' + inr(fc) + ' (' + nights + ' din)');
+          if (out.food) out.bills.push('Food bill');
+        } else out.why.push('DA me food shamil hai');
+      }
+      /* lodging, with the woman-one-level-up rule */
+      var L = S.lodge, capL = Tada.isMumbai(r.town) ? L.mumbai : (metro ? L.metro : L.nonMetro);
+      if (Tada.female() && !metro && !Tada.isMumbai(r.town)) capL = L.metro;
+      out.lodge = Math.min(num(r.lodge), capL * nights);
+      if (num(r.lodge) > capL * nights) out.warn.push('Lodging cap ' + inr(capL) + '/din');
+      if (out.lodge) out.bills.push('Hotel bill (GST of the state)');
+      return out;
+    }
+
+    /* HQ and Ex-HQ: travel allowance AND food allowance, both */
+    if (r.mode === 'da') {
+      if (P.da) { out.da = P.da; out.why.push('Daily allowance ' + inr(P.da)); }
+      else out.warn.push('Is role ke liye fixed DA nahi hai — per-km, ticket ya cab chuno');
+    } else if (r.mode === 'km') {
+      if (!P.perKm) out.warn.push('Per-km is station par allowed nahi hai');
+      else {
+        var km2 = num(r.km), cap2 = P.kmCap || 0;
+        var ok2 = cap2 ? Math.min(km2, cap2) : km2;
+        out.travel = ok2 * P.perKm;
+        out.why.push(ok2 + ' km × ' + inr(P.perKm) + (cap2 ? ' (cap ' + cap2 + ' km)' : ''));
+        if (cap2 && km2 > cap2) out.warn.push('Cap ' + cap2 + ' km/din');
+        out.bills.push('Logbook');
+      }
+    } else if (r.mode === 'ticket') {
+      if (r.st === 'hq') out.warn.push('HQ me ticket claim policy me nahi hai — DA ya per-km chuno');
+      else { out.travel = num(r.ticket); if (out.travel) out.bills.push('Ticket'); }
+    } else if (r.mode === 'cab') {
+      if (!P.cab) out.warn.push('Is role ke liye cab allowed nahi hai');
+      else { out.travel = num(r.cab); if (out.travel) out.bills.push('Cab bill'); }
+    }
+    if (P.foodMonth) { out.food = num(r.food); if (out.food) out.bills.push('Food bill'); }
+    else {
+      out.food = P.food;
+      out.why.push('Food allowance ' + inr(P.food));
+    }
+    /* the extra ₹200 / actual cab for reaching the bus stand or airport on an inter-city Ex-HQ trip */
+    if (r.st === 'ex' && (r.mode === 'ticket' || r.mode === 'cab')) {
+      if (P.station) { out.station = P.station; out.why.push('Station tak aane-jaane ka ' + inr(P.station)); }
+      else if (num(r.cab) && r.mode === 'ticket') out.why.push('Station tak ka cab bill alag se claim karo');
+    }
+    return out;
+  },
+  total: function () {
+    Tada.load();
+    var S = Tada.slab(), t = { da:0, food:0, travel:0, lodge:0, station:0, days:0, nights:0,
+      warn:0, bills:{}, byStation:{ hq:0, ex:0, out:0, meet:0, off:0 } };
+    Tada.dates().forEach(function (d) {
+      var r = Tada.days[d], c = Tada.calc(d);
+      t.byStation[r.st] = (t.byStation[r.st] || 0) + 1;
+      if (r.st === 'out') t.nights += Math.max(1, num(r.night));
+      if (c.da || c.food || c.travel || c.lodge || c.station) t.days++;
+      t.da += c.da; t.food += c.food; t.travel += c.travel; t.lodge += c.lodge; t.station += c.station;
+      t.warn += c.warn.length;
+      c.bills.forEach(function (b) { t.bills[b] = (t.bills[b] || 0) + 1; });
+    });
+    var meet = num((Tada.row() || {}).MeetAmount);
+    t.meet = meet;
+    t.meetCap = Tada.MEET[S.id] || 0;
+    t.foodMonth = (S.hq.foodMonth || 0);
+    t.grand = t.da + t.food + t.travel + t.lodge + t.station + t.meet;
+    return t;
+  },
+
+  flush: function () {
+    if (!Tada._dirty) return null;
+    Tada._dirty = false;
+    var t = Tada.total(), r = Tada.row();
+    return DB.save('TaDa', { Id:Tada.key(), EmpCode:DB.me.code, EmpName:DB.me.name, Month:Tada.mon(),
+      Designation:(DB.emp(DB.me.code) || {}).Designation || DB.me.desig || '',
+      Station:'', Status:/pending|approved/i.test(r.Status || '') ? r.Status : 'Draft',
+      DaysJson:JSON.stringify(Tada.days), DaAmount:t.da, FoodAmount:t.food, TravelAmount:t.travel,
+      LodgeAmount:t.lodge, MeetAmount:t.meet, OtherAmount:t.station, Nights:t.nights,
+      Total:t.grand, UpdatedAt:Date.now() }, { quiet:true });
+  },
+  setMeet: function (v) {
+    var t = Tada.total(), cap = t.meetCap;
+    var r = Tada.row();
+    Tada._dirty = true;
+    DB.save('TaDa', Object.assign({}, r, { Id:Tada.key(), MeetAmount:num(v), UpdatedAt:Date.now() }), { quiet:true });
+    if (cap && num(v) > cap) toast('Meeting budget cap ' + inr(cap) + ' per month', 3500);
+    clearTimeout(Tada._t); Tada._t = setTimeout(function () { Tada._dirty = true; Tada.flush(); render(); }, 900);
+  },
+
+  /* ── the screen ── */
+  html: function () {
+    var r = Tada.load(), S = Tada.slab(), t = Tada.total();
+    var st = String(r.Status || 'Draft'), sent = /pending/i.test(st), okd = /approved/i.test(st);
+    var h = UI.head('', 'TA / DA claim',
+      'Policy ke hisaab se apne mahine ka travel claim banao — din ka station plan se aa jata hai, ' +
+      'aap sirf amount aur bills confirm karo.');
+
+    /* who this is, and therefore which slab */
+    h += '<div class="card"><div class="c-h"><h3>' + esc(monthName(Tada.mon())) + '</h3>' +
+      '<span class="pill ' + (okd ? 'p-ok' : sent ? 'p-warn' : 'p-grey') + '">' + esc(st) + '</span></div>' +
+      '<div class="row two"><div><label class="f">Month</label>' +
+      '<input class="in" type="month" max="' + today().slice(0, 7) + '" value="' + Tada.mon() +
+      '" onchange="Tada.setMonth(this.value)"></div>' +
+      '<div><label class="f">Designation</label>' +
+      '<input class="in lk" readonly value="' + esc((DB.emp(DB.me.code) || {}).Designation || DB.me.desig || '—') + '"></div></div>' +
+      '<div class="hint" style="margin-top:8px">Aapka slab: <b>' + esc(S.name) + '</b></div></div>';
+
+    /* what the policy allows this slab — read once, trusted all month */
+    h += '<div class="sec-title">Aapka entitlement</div><div class="card">' +
+      Tada.slabTable(S) +
+      '<div class="hint" style="margin-top:8px">Travel class: ' + esc(S.travel) + '</div>' +
+      '<div class="hint">Metro cities: Delhi NCR, Mumbai, Kolkata, Hyderabad, Chennai, Bangalore. ' +
+      'Mumbai ka lodging rate alag hai.' + (Tada.female() ? ' Female employee — lodging ek level upar claim kar sakti hain.' : '') + '</div></div>';
+
+    if (okd) h += '<div class="banner g"><span></span><div><b>Ye claim approve ho gaya</b><br>' +
+      '<span style="font-weight:500">5 tarikh tak approve hua to 17 ko, 15 tak hua to 30 ko payment.</span></div></div>';
+    else if (sent) h += '<div class="banner b"><span></span><div><b>HOD ke paas hai</b><br>' +
+      '<span style="font-weight:500">Approve hone tak edit kar sakte ho — dobara bhej dena.</span></div></div>';
+
+    /* the money */
+    h += '<div class="sec-title">Mahine ka total</div><div class="card">' +
+      '<div class="kpis k3" style="margin-bottom:0">' +
+        UI.kpi(inr(t.grand), 'Total claim', 'b') +
+        UI.kpi(t.days, 'Claim din', 'g') +
+        UI.kpi(t.warn, 'Warning', t.warn ? 'r' : 'g') + '</div>' +
+      '<div class="tw" style="margin-top:10px"><table><tbody>' +
+      [['Daily allowance', t.da], ['Food', t.food], ['Travel (km / ticket / cab)', t.travel],
+       ['Station tak', t.station], ['Lodging', t.lodge], ['Team meeting', t.meet]]
+      .map(function (x) { return '<tr><td>' + esc(x[0]) + '</td><td class="num">' + inr(x[1]) + '</td></tr>'; }).join('') +
+      '<tr class="tot"><td><b>TOTAL</b></td><td class="num"><b>' + inr(t.grand) + '</b></td></tr>' +
+      '</tbody></table></div>' +
+      (t.foodMonth ? '<div class="hint" style="margin-top:8px">Food budget: ' + inr(t.food) + ' / ' +
+        inr(t.foodMonth) + ' per month' + (t.food > t.foodMonth ? ' — <b>cap se zyada</b>' : '') +
+        '. HQ, Ex-HQ aur outstation ka food isi me aata hai.</div>' : '') +
+      (t.meetCap ? '<div class="row two" style="margin-top:10px"><div><label class="f">Team meeting bill (' +
+        inr(t.meetCap) + (S.id === 's3' || S.id === 's4' ? ' per employee' : ' per zone') + ' / month)</label>' +
+        '<input class="in" type="number" min="0" value="' + num(t.meet) +
+        '" oninput="Tada.setMeet(this.value)"></div><div><label class="f">&nbsp;</label>' +
+        '<div class="in lk">' + (t.meetCap && t.meet > t.meetCap ? 'Cap se zyada' : 'Cap ke andar') + '</div></div></div>' : '') +
+      '<div class="hint" style="margin-top:8px">Bills lagenge: ' +
+        (Object.keys(t.bills).length ? esc(Object.keys(t.bills).join(', ')) : 'koi nahi (sirf DA)') +
+        '. DA ke liye bill ki zaroorat nahi hoti.</div>' +
+      '</div>';
+
+    /* the days */
+    var ds = Tada.dates();
+    h += '<div class="sec-title">Din-wise (' + ds.length + ')</div>';
+    if (!ds.length) return h + '<div class="card">' + UI.empty('', 'Is month ka koi din abhi nahi aaya') + '</div>';
+    h += '<div class="card">';
+    /* a full month is thirty-one rows, which would bury the send button. While nothing is open the list
+       scrolls inside its own pane; the moment a day is opened it gets the whole page to itself. */
+    var pane = !Tada.open;
+    /* .pane's negative margin is cut for the product table's own card padding; the day rows sit in a
+       card with a different inset, so it is cancelled here or the pane runs 13px past its parent */
+    if (pane) h += '<div class="pane" style="max-height:430px;margin:0;padding:0">';
+    var DAY = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    ds.forEach(function (d) {
+      var row = Tada.days[d], c = Tada.calc(d), op = Tada.open === d;
+      var amt = c.da + c.food + c.travel + c.lodge + c.station;
+      var lbl = (Tada.ST.filter(function (x) { return x[0] === row.st; })[0] || Tada.ST[0])[1];
+      h += '<div class="drow' + (c.warn.length ? ' bad inset' : (op ? ' op inset' : '')) + '">' +
+        '<div class="dr-h"><div class="m">' +
+          '<div class="t">' + dmy(d) + ' <span class="hint">' + DAY[new Date(d + 'T00:00:00').getDay()] + '</span>' +
+          (row.from === 'plan' ? ' <span class="pill p-grey">plan se</span>' : '') +
+          (c.warn.length ? ' <span class="pill p-bad">' + c.warn.length + '</span>' : '') + '</div>' +
+          '<div class="s">' + esc(lbl) + (row.town ? ' · ' + esc(row.town) : '') +
+            (amt ? ' · ' + inr(amt) : ' · —') + '</div></div>' +
+        '<button class="btn ghost xs" onclick="Tada.tap(\'' + d + '\')">' + (op ? 'Close' : 'Edit') + '</button></div>' +
+        (op ? Tada.dayEdit(d, row, c, S) : '') +
+        '</div>';
+    });
+    if (pane) h += '</div><div class="hint" style="margin-top:8px">List scroll karo — ' + ds.length +
+      ' din. Kisi bhi din par Edit dabao.</div>';
+    h += '</div>';
+
+    /* send */
+    h += '<div class="card"><div class="c-h"><h3>HOD ko bhejo</h3>' +
+      '<span class="pill ' + (t.warn ? 'p-bad' : 'p-ok') + '">' + (t.warn ? t.warn + ' warning' : 'Sab theek') + '</span></div>' +
+      '<div class="sub">Ek mahine ka ek hi claim jata hai. 5 tarikh tak approve hua to 17 ko payment, ' +
+      '15 tarikh tak hua to 30 ko.</div>' +
+      '<label class="f">Remarks</label><input class="in" id="td_rm" value="' + esc(r.Remarks || '') + '">' +
+      '<div class="btns"><button class="btn' + (okd ? ' ghost' : '') + '" onclick="Tada.send(this)"' +
+        (okd ? ' disabled' : '') + '>' + (sent ? 'Dobara bhejo' : 'HOD ko bhejo') + '</button>' +
+      '<button class="btn ghost" onclick="Tada.excel()">Excel</button></div>' +
+      (r.HodRemarks ? '<div class="banner ' + (/reject/i.test(st) ? 'r' : 'b') + '" style="margin-top:10px">' +
+        '<span></span><div><b>HOD ka message</b><br><span style="font-weight:500">' + esc(r.HodRemarks) + '</span></div></div>' : '') +
+      '</div>';
+    return h;
+  },
+  slabTable: function (S) {
+    var money = function (v) { return v ? inr(v) : '—'; };
+    var line = function (P, what) {
+      var bits = [];
+      if (P.da) bits.push('DA ' + inr(P.da));
+      if (P.metro || P.nonMetro) bits.push('DA ' + inr(P.metro) + ' metro / ' + inr(P.nonMetro) + ' non-metro');
+      if (P.perKm) bits.push(inr(P.perKm) + '/km' + (P.kmCap ? ' upto ' + P.kmCap + ' km' : ''));
+      if (P.tickets) bits.push('tickets on actuals');
+      if (P.cab) bits.push('cab on actuals');
+      if (P.billsOnly && !P.metro) bits.push('bills only — fixed DA nahi');
+      var food = P.foodMonth ? inr(P.foodMonth) + ' / month'
+        : P.food ? inr(P.food) + ' / din'
+        : (P.foodMetro ? inr(P.foodMetro) + ' metro / ' + inr(P.foodNonMetro) + ' non-metro' : '—');
+      return '<tr><td>' + what + '</td><td>' + esc(bits.join(' · ') || '—') + '</td><td>' + esc(food) + '</td></tr>';
+    };
+    return '<div class="tw"><table><thead><tr><th>Station</th><th>Travel</th><th>Food</th></tr></thead><tbody>' +
+      line(S.hq, 'HQ') + line(S.ex, 'Ex-HQ') + line(S.out, 'Outstation') +
+      '<tr class="tot"><td><b>Lodging</b></td><td colspan="2"><b>' + inr(S.lodge.nonMetro) +
+      ' non-metro · ' + inr(S.lodge.metro) + ' metro · ' + inr(S.lodge.mumbai) +
+      ' Mumbai</b></td></tr></tbody></table></div>';
+  },
+  dayEdit: function (d, r, c, S) {
+    var P = r.st === 'hq' ? S.hq : r.st === 'ex' ? S.ex : S.out;
+    var sel = function (f, list, cur) {
+      return '<select class="in" onchange="Tada.set(\'' + d + '\',\'' + f + '\',this.value)">' +
+        list.map(function (x) { return '<option value="' + x[0] + '"' + (x[0] === cur ? ' selected' : '') +
+          '>' + esc(x[1]) + '</option>'; }).join('') + '</select>';
+    };
+    var numf = function (f, lbl, v) {
+      return '<div><label class="f">' + lbl + '</label><input class="in" type="number" min="0" value="' +
+        num(v) + '" oninput="Tada.set(\'' + d + '\',\'' + f + '\',this.value)"></div>';
+    };
+    var h = '<div class="dr-b">' +
+      '<div class="row two"><div><label class="f">Ye din kya tha</label>' + sel('st', Tada.ST, r.st) + '</div>' +
+      '<div><label class="f">Town / city</label><input class="in" value="' + esc(r.town || '') +
+        '" oninput="Tada.set(\'' + d + '\',\'town\',this.value)"></div></div>';
+    if (r.st === 'off' || r.st === 'meet') {
+      h += '<div class="hint" style="margin-top:8px">' + esc(c.why[0] || '') + '</div>';
+      return h + '</div>';
+    }
+    h += '<div class="row two" style="margin-top:8px"><div><label class="f">Kaise gaye</label>' +
+      sel('mode', Tada.MODE.filter(function (m) {
+        if (m[0] === 'da') return !!(P.da || P.metro || P.nonMetro);
+        if (m[0] === 'km') return !!P.perKm;
+        if (m[0] === 'cab') return !!P.cab;
+        return !!P.tickets || r.st !== 'hq';
+      }), r.mode) + '</div>' +
+      (r.st === 'out' ? numf('night', 'Kitni raat ruke', r.night) : '<div></div>') + '</div>';
+    var f2 = [];
+    if (r.mode === 'km') f2.push(numf('km', 'Kitne km (logbook)', r.km));
+    if (r.mode === 'ticket') f2.push(numf('ticket', 'Ticket amount ₹', r.ticket));
+    if (r.mode === 'cab') f2.push(numf('cab', 'Cab amount ₹', r.cab));
+    /* on an outstation DA the food is already inside the DA, so asking for a food bill only confuses —
+       the field appears when food is actually claimable on its own */
+    var foodOwn = P.foodMonth || (r.st === 'out' && (r.mode !== 'da' || P.billsOnly));
+    if (foodOwn) f2.push(numf('food', 'Food bill ₹', r.food));
+    if (r.st === 'out') f2.push(numf('lodge', 'Hotel ₹ (GST ke saath)', r.lodge));
+    while (f2.length % 2) f2.push('<div></div>');
+    for (var i = 0; i < f2.length; i += 2) h += '<div class="row two" style="margin-top:8px">' + f2[i] + f2[i + 1] + '</div>';
+    h += '<label class="f">Note</label><input class="in" value="' + esc(r.note || '') +
+      '" oninput="Tada.set(\'' + d + '\',\'note\',this.value)">';
+    h += '<div class="tw" style="margin-top:10px"><table><tbody>' +
+      [['DA', c.da], ['Food', c.food], ['Travel', c.travel], ['Station tak', c.station], ['Lodging', c.lodge]]
+      .filter(function (x) { return x[1]; })
+      .map(function (x) { return '<tr><td>' + x[0] + '</td><td class="num">' + inr(x[1]) + '</td></tr>'; }).join('') +
+      '<tr class="tot"><td><b>Din ka total</b></td><td class="num"><b>' +
+      inr(c.da + c.food + c.travel + c.lodge + c.station) + '</b></td></tr></tbody></table></div>' +
+      (c.why.length ? '<div class="hint" style="margin-top:6px">' + esc(c.why.join(' · ')) + '</div>' : '') +
+      (c.bills.length ? '<div class="hint">Bill lagega: ' + esc(c.bills.join(', ')) + '</div>' : '') +
+      c.warn.map(function (w) { return '<div class="hint" style="color:var(--bad);font-weight:700">! ' + esc(w) + '</div>'; }).join('');
+    return h + '</div>';
+  },
+  tap: function (d) { Tada.open = Tada.open === d ? '' : d; render(); },
+  setMonth: function (m) { Tada.flush(); Tada.month = m; Tada.days = null; Tada.open = ''; render(); },
+  after: function () { Flush.reg('tada', Tada.flush); },
+
+  send: function (el) {
+    var t = Tada.total(), r = Tada.row();
+    if (/approved/i.test(r.Status || '')) return toast('Ye claim approve ho chuka hai');
+    if (!t.grand) return toast('Claim me kuch nahi hai — pehle din bharo');
+    var warn = t.warn ? 'Isme ' + t.warn + ' warning hai — cap se zyada amount cut ho jayega. ' : '';
+    return UI.confirm({ icon:'', title:'TA/DA claim bhejna hai?',
+      msg:'<b>' + esc(monthName(Tada.mon())) + '</b> — ' + inr(t.grand) + ' ka claim, ' + t.days +
+        ' din.<br>' + warn + 'Mahine me ek hi claim jata hai.',
+      ok:'Haan, bhej do', cancel:'Abhi nahi' }).then(function (go) {
+      if (!go) return;
+      Tada._dirty = true;
+      return Busy.run('tada_' + Tada.key(), el, 'Bhej raha hai…', function () {
+        return DB.save('TaDa', Object.assign({}, Tada.row(), { Id:Tada.key(), Month:Tada.mon(),
+          Designation:(DB.emp(DB.me.code) || {}).Designation || DB.me.desig || '',
+          DaysJson:JSON.stringify(Tada.days), DaAmount:t.da, FoodAmount:t.food, TravelAmount:t.travel,
+          LodgeAmount:t.lodge, MeetAmount:t.meet, OtherAmount:t.station, Nights:t.nights,
+          Total:t.grand, Remarks:val('td_rm'), Status:'Pending', HodAt:'', HodBy:'', HodRemarks:'',
+          Date:today(), SubmittedAt:new Date().toISOString(), UpdatedAt:Date.now() })).then(function () {
+          Log.add('TaDa', 'Submitted', Tada.key(), inr(t.grand));
+          render(); toast('Claim HOD ko chala gaya — ' + inr(t.grand), 4000);
+        });
+      });
+    });
+  },
+  excel: function () { return Rep.tada(Tada.mon()); }
 };
 
 /* ═══════════════ APPROVALS — "meri requests" ═══════════════
@@ -8285,6 +9076,19 @@ var Admin = {
     var a = []; try { a = JSON.parse((d && d.RejectedDaysJson) || '[]') || []; } catch (e) {}
     return a.map(function (x) { return toISO(x.date || x) || String(x); }).filter(Boolean);
   },
+  /* the days the rep just fixed and re-sent — written by Pjp.submit on a partial re-send */
+  fixDays: function (d) {
+    var a = []; try { a = JSON.parse((d && d.FixedDaysJson) || '[]') || []; } catch (e) {}
+    return a.map(function (x) { return toISO(x.date || x) || String(x); }).filter(Boolean);
+  },
+  /* 'fix' = only what changed, 'all' = the whole month. Per draft key, so opening a second employee
+     does not inherit the first one's view. */
+  pjpView:{},
+  view: function (key, fixN) {
+    if (Admin.pjpView[key]) return Admin.pjpView[key];
+    return fixN ? 'fix' : 'all';                    /* a re-send opens on the changed days */
+  },
+  setView: function (key, v) { Admin.pjpView[key] = v; render(); },
   /* the days the rep just fixed and re-sent — written by Pjp.submit on a partial re-send */
   fixDays: function (d) {
     var a = []; try { a = JSON.parse((d && d.FixedDaysJson) || '[]') || []; } catch (e) {}
