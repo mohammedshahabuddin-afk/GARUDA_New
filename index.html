@@ -1874,6 +1874,15 @@ I18n.D.en = I18n.EN = {
   'Stock se add karo':'Add from Stock',
   'Stock tab me shop aur distributor ka stock dikhta hai — wahin se product add karo.':'The Stock tab shows the shop and distributor stock — add products from there.',
   'Product ya code':'Product or code',
+  'Stock time par nahi aaya — dobara try karo (ya admin se stock index build karwao)':'The stock did not arrive in time — try again (or ask the admin to build the stock index)',
+  'Stock index nahi bana — admin ko buildStockIndex chalane ko kaho':'The stock index has not been built — ask the admin to run buildStockIndex',
+  'Ek chuno — uske baad order page khulega.':'Pick one — the order page opens next.',
+  'Photo lete hi order page khul jayega.':'The order page opens as soon as the photo is taken.',
+  'Order page kholo':'Open the order page',
+  'Ye visit:':'This visit:',
+  '· shop ka photo ho gaya':'· shop photo taken',
+  '· photo bypass':'· photo bypassed',
+  'badlo':'change',
   'Order punch karo':'Punch the order',
   /* live updates + the read-only plan / waiting screen */
   'HOD ne approve kar diya — aage badho':'The HOD approved it — carry on',
@@ -5245,6 +5254,20 @@ var Plan = {
 /* ═══════════════ FIELD — store loop ═══════════════ */
 var Field = {
   store:null, lines:[], mode:'order', ns:{ front:'', inside:'' },
+  /* ── has this visit cleared its gate? ──
+     Derived, never stored: a flag would drift out of step with the photo. A store visit needs the shop
+     photo (waived by bypass); a telephonic call needs nothing; either way the rep must first say which
+     it is, so a bypassed user is not silently skipped past the question. */
+  srcSet:false,
+  ready: function () {
+    if (!Field.store || !Field.srcSet || Field.none()) return false;
+    return Field.phone() || Cam.ok('entry') || Bypass.on();
+  },
+  /* the one door from the gate to the order page */
+  toOrder: function () {
+    if (!Field.ready()) return toast('Pehle shop ka photo lo');
+    Router.go('stk');
+  },
   html: function () {
     if (Gate.locked()) return Field.lockedHtml();
     var h = UI.head('', 'Field — store visit', 'Store select karo product add karo submit. Ek store ke baad POSM.');
@@ -5286,29 +5309,29 @@ var Field = {
     h += '</div>';
     if (!Field.store) return h;
 
-    /* STEP 2 — how the order is coming in. Asked here, before the photo, so a telephonic order can
-       skip the photo entirely instead of being blocked by it. */
-    /* Two answers here, not three. "No order" belongs AFTER the photo — that is when the rep finds
-       out — so it is offered there and nowhere else. */
+    /* ─── STEP 2 — what kind of visit is this? ───
+       Asked before anything else, because the answer decides whether a photo is owed. */
+    var done = Field.ready();
     h += '<div class="card" id="f_step2"><h3><span class="ic">' + (++sN) + '</span>Order kaise aa raha hai?</h3>' +
       '<div class="seg" style="margin-top:8px">' +
-      '<button type="button" class="' + (Field.phone() ? '' : 'on') + '" onclick="Field.setSrc(\'Store Visit\')">Store visit</button>' +
+      '<button type="button" class="' + (Field.srcSet && !Field.phone() && !Field.none() ? 'on' : '') +
+        '" onclick="Field.setSrc(\'Store Visit\')">Store visit</button>' +
       '<button type="button" class="' + (Field.phone() ? 'on' : '') + '" onclick="Field.setSrc(\'Telephonic Call\')">Telephonic</button>' +
       '</div><div class="seg-n"><span>Shop me ja rahe ho — photo lagega</span>' +
-      '<span class="w">Phone par order — photo aur POSM skip</span></div></div>';
+      '<span class="w">Phone par order — photo aur POSM skip</span></div>' +
+      (Field.srcSet ? '' : '<div class="hint" style="margin-top:8px">Ek chuno — uske baad order page khulega.</div>') +
+      '</div>';
+    if (!Field.srcSet) return h;
 
-    /* ── No order ──
-       A visit with nothing to punch: no products, no photo, no order lines. The reason IS the record,
-       so it is the only thing asked for, and then the rep carries straight on to POSM — the shelf still
-       has to be audited whether or not an order came out of the call. */
+    /* ─── No order ───
+       A visit with nothing to punch: no products, no order lines. The reason IS the record, so it is the
+       only thing asked for, and then the rep carries straight on to POSM — the shelf still has to be
+       audited whether or not an order came out of the call. */
     if (Field.none()) {
-      /* a photo taken before the rep found out there was no order is still evidence of the visit — it
-         is already uploaded, so say so instead of throwing the step away */
       if (Cam.has('entry')) h += '<div class="banner g"><span></span><div><b>Shop ka photo ho gaya</b>' +
         '<br><span style="font-weight:500">Visit ka proof save hai. Ab sirf reason bharo.</span></div></div>';
       h += '<div class="card"><h3><span class="ic">' + (++sN) + '</span>Order kyun nahi mila?</h3>' +
         '<div class="sub">Reason select karo — product aur photo ki zaroorat nahi. Save karte hi POSM khul jayega.</div>' +
-        /* no pre-selected first option: a reason that was never chosen is not a reason */
         '<label class="f">Reason <span class="req">*</span></label>' +
         '<select class="in" id="f_norsn" onchange="Field.noRsn(this.value)">' +
           '<option value="">— select —</option>' +
@@ -5322,38 +5345,30 @@ var Field = {
       return h;
     }
 
-    if (Field.phone()) {
-      /* telephonic: no shop to photograph and no shelf to audit */
-      h += '<div class="banner b"><span></span><div><b>Telephonic order</b> — shop ka photo aur POSM ' +
-        'dono skip ho jayenge. Sirf product aur status bharo.</div></div>';
-    } else {
-
-    /* STEP 3 — dukaan me ghusne se pehle shop ka photo. Live camera only, and it gates the rest of
-       the visit: no products, no submit until the photo is taken. */
-    h += '<div class="card"><h3><span class="ic">' + (++sN) + '</span>Shop ka photo</h3>' +
-      '<div class="sub">Dukaan me andar jaane se <b>pehle</b> shop ke bahar ka ek photo lo — board aur entry ' +
-      'dono dikhne chahiye. ' + (Bypass.on() ? 'Aapke liye ye <b>optional</b> hai (bypass ON) — gallery se bhi chalega.'
-                                             : 'Ye live camera se hi hoga, gallery se nahi.') + '</div>' +
-      '<div class="ph-g" style="margin-top:10px">' +
-        Cam.tile('entry', 'Shop ka photo', true, { live:true, sendJs:'Field.photoMeta()', cbJs:'Field.entryDone' }) + '</div>' +
-      (Cam.has('entry') || Bypass.on() ? '' : '<div class="hint" style="margin-top:8px"> Photo lene ke baad hi product add kar paoge.</div>') +
-      /* the explicit way forward once the photo exists — the rep should not have to guess that the
-         screen has opened up below */
-      /* the photo is taken — now the visit went one of two ways, and both have to be one tap away.
-         "No order" keeps the photo (it is already uploaded) and only asks WHY, then goes to POSM. */
-      (Cam.ok('entry') || Bypass.on()
-        ? '<div class="btns two"><button class="btn" onclick="Field.entryDone()">Punch order</button>' +
-          '<button class="btn warn" onclick="Field.setSrc(\'No Order\')">No order</button></div>'
-        : '') +
-      '</div>';
-      if (!Cam.ok('entry') && !Bypass.on()) return h;
-    }                                        /* end of the "not telephonic" branch */
+    /* ─── STEP 3 — the shop photo, before stepping inside ───
+       A store visit cannot proceed without it; a telephonic call never sees it. */
+    if (!Field.phone()) {
+      h += '<div class="card"><h3><span class="ic">' + (++sN) + '</span>Shop ka photo</h3>' +
+        '<div class="sub">Dukaan me andar jaane se <b>pehle</b> shop ke bahar ka ek photo lo — board aur entry ' +
+        'dono dikhne chahiye. ' + (Bypass.on() ? 'Aapke liye ye optional hai (bypass ON) — gallery se bhi chalega.'
+                                               : 'Ye live camera se hi hoga, gallery se nahi.') + '</div>' +
+        '<div class="ph-g" style="margin-top:10px">' +
+          Cam.tile('entry', 'Shop ka photo', true, { live:true, sendJs:'Field.photoMeta()', cbJs:'Field.entryDone' }) + '</div>' +
+        (done ? '<div class="btns two"><button class="btn" onclick="Field.toOrder()">Punch order</button>' +
+                '<button class="btn warn" onclick="Field.setSrc(\'No Order\')">No order</button></div>'
+              : '<div class="hint" style="margin-top:8px">Photo lete hi order page khul jayega.</div>') +
+        '</div>';
+      if (!done) return h;
+    }
 
     /* the products come from the Stock tab now — that screen has the shelf counts next to every SKU,
        which is the only place the choice can honestly be made. This screen is the review. */
     h += '<div class="card"><div class="c-h"><h3>Product</h3>' +
       '<button class="btn ghost xs" onclick="Router.go(\'stk\')">Stock se add karo</button></div>' +
-      '<div class="sub">Stock tab me shop aur distributor ka stock dikhta hai — wahin se product add karo.</div></div>';
+      '<div class="sub">Stock tab me shop aur distributor ka stock dikhta hai — wahin se product add karo.</div>' +
+      '<div class="hint" style="margin-top:8px">Ye visit: <b>' + esc(Field.src) + '</b>' +
+        (Field.phone() ? '' : (Cam.has('entry') ? ' · shop ka photo ho gaya' : ' · photo bypass')) +
+        ' — <a class="pl" onclick="Field.srcSet=false;render()">badlo</a></div></div>';
 
     Field.lineStep = ++sN;
     h += '<div class="card"><h3><span class="ic">' + Field.lineStep + '</span>Order lines' + (Field.lines.length ? ' (' + Field.lines.length + ')' : '') + '</h3><div id="f_lines"></div></div>';
@@ -5398,19 +5413,33 @@ var Field = {
     Cam.clear(['entry']);                       /* new store = new visit photo */
     Field.lines = [];
     Field.src = 'Store Visit';
+    Field.srcSet = false;                       /* the visit has not declared itself yet */
     Stk.open = ''; Stk.qty = {}; Stk.q = '';
-    /* walking into the shop means seeing its shelf: the stock read starts now and the rep is taken to
-       the Stock tab, which is where the order is built */
+    /* the stock read starts NOW so the shelf is already loaded by the time the photo is taken — but
+       the rep stays here until the visit has cleared its gate */
     Stock.load(String(Field.store.ClientId || Field.store.CompanyCode || ''),
                String(Field.store.DbCode || ''));
-    Router.go('stk');
+    render();
+    setTimeout(function () {
+      var el = $('f_step2');
+      var card = el && el.closest ? el.closest('.card') : el;
+      if (card && card.scrollIntoView) card.scrollIntoView({ behavior:'smooth', block:'start' });
+    }, 80);
   },
   /* Order source is asked BEFORE the photo, because a telephonic order has no shop to photograph —
      choosing it must skip the whole photo gate rather than fail it at the end. */
   src:'Store Visit', lineStep:5,
   phone: function () { return Field.src === 'Telephonic Call'; },
   none: function () { return Field.src === 'No Order'; },
-  setSrc: function (v) { Field.src = v; render(); },
+  setSrc: function (v) {
+    Field.src = v;
+    /* "No order" IS an answer to the question, so the gate has been engaged — it just does not clear
+       it. ready() stays false while none() is true, which is what keeps the order page shut. */
+    Field.srcSet = true;
+    /* nothing left to ask on a phone order — no shop to photograph, so go and build the order */
+    if (v === 'Telephonic Call' && Field.store) return Router.go('stk');
+    render();
+  },
   /* A No-Order visit: one SecOrders row with Status 'No Order', zero lines, the reason, and on to
      POSM. It goes through the same table and the same DFR push as every other visit, so the day's
      call count and the reports cannot disagree with what the rep did. */
@@ -5446,16 +5475,11 @@ var Field = {
   /* The shop photo GATES the visit, so filling it has to open the rest of the screen. Cam.paint only
      redraws the tile, which is why the order steps stayed hidden until the rep left the tab and came
      back. Called from the tile's own cb and from the "Order punch karo" button. */
+  /* the shutter is the hand-off: the photo is what the rep came here to do, and the order page is
+     what comes next. Called by the camera tile's own callback and by the button under it. */
   entryDone: function () {
-    var had = !!$('f_prods');            /* already past the gate → do NOT rebuild the form */
-    var go = function () {
-      var box = $('f_prods'); if (!box) return;
-      var card = box.closest ? box.closest('.card') : null;
-      if (card && card.scrollIntoView) card.scrollIntoView({ behavior:'smooth', block:'start' });
-      if (had) { var q = $('f_psearch'); if (q) q.focus(); }
-    };
-    /* already rendered → scroll now; a fresh render needs a tick for the DOM to exist */
-    if (had) go(); else { render(); setTimeout(go, 80); }
+    if (Field.ready()) return Router.go('stk');
+    render();
   },
   /* stable id for everything photographed at this store today, so re-taking a slot overwrites
      the same Photos row instead of adding another */
@@ -5693,24 +5717,31 @@ var Stock = {
   key: function (st, db) { return today() + '|' + String(st || '') + '|' + String(db || ''); },
   get: function (st, db) { return Stock.cache[Stock.key(st, db)] || null; },
   /* fire-and-render: called from Field when a store is picked */
+  /* A read that never comes back is worse than a read that fails: the screen used to spin forever
+     while the server chewed through a huge tab. 25 seconds, then say so. */
+  WAIT:25000,
   load: function (st, db, loud) {
     var k = Stock.key(st, db), s = Auth.session();
     if (!s || (!st && !db)) return;
     if (loud) delete Stock.cache[k];
     else if (Stock.cache[k] || Stock.busy === k) return;
     Stock.busy = k;
+    var done = false;
+    var finish = function (v) {
+      if (done) return; done = true;
+      Stock.busy = '';
+      Stock.cache[k] = v;
+      if (Router.cur === 'stk' || Router.cur === 'field') render();
+    };
+    setTimeout(function () {
+      finish({ err:'Stock time par nahi aaya — dobara try karo (ya admin se stock index build karwao)' });
+    }, Stock.WAIT);
     return Api.get({ action:'stock', email:s.email, store:st || '', db:db || '' }, true)
       .then(function (r) {
-        Stock.busy = '';
-        Stock.cache[k] = (r && r.ok) ? { store:r.store || [], db:r.db || [], storeAt:r.storeAt || '',
-                                         dbAt:r.dbAt || '', at:Date.now() }
-                                     : { err:(r && r.error) || 'Stock nahi mila' };
-        if (Router.cur === 'field') render();
-      }, function () {
-        Stock.busy = '';
-        Stock.cache[k] = { err:'Internet nahi mila' };
-        if (Router.cur === 'field') render();
-      });
+        finish((r && r.ok) ? { store:r.store || [], db:r.db || [], storeAt:r.storeAt || '',
+                               dbAt:r.dbAt || '', indexed:!!(r && r.indexed), at:Date.now() }
+                           : { err:(r && r.error) || 'Stock nahi mila' });
+      }, function () { finish({ err:'Internet nahi mila' }); });
   },
   /* Sku / SkuName / Code all appear across the two uploads; take whichever is filled */
   sku: function (r) { return String(r.Sku || r.SkuName || r.Code || r.Product || '').trim(); },
