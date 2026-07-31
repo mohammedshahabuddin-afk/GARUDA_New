@@ -401,6 +401,9 @@ td.num,th.num{text-align:right}
 /* the same tint, but kept inside the card instead of bleeding to its edge — used where the row sits in
    a card whose padding is not the 14px the full-bleed version assumes */
 .drow.op.inset,.drow.bad.inset{margin:0;padding:9px 10px;border-radius:10px}
+/* a tinted row bleeds to the card edge with a negative margin; inside a scrolling pane, which has its
+   own 14px of padding, that same margin hangs 14px past the pane and the page scrolls sideways */
+.pane .drow.op,.pane .drow.bad,.pane .drow.fix{margin:0;padding:9px 10px;border-radius:10px}
 .dr-h{display:flex;gap:8px;align-items:flex-start}
 .dr-h .m{flex:1;min-width:0}
 .dr-h .t{font-weight:700;font-size:13px}
@@ -2002,6 +2005,102 @@ I18n.D.en = I18n.EN = {
   'km/din':'km/day',
   ' / din':' / day',
   'bills only — fixed DA nahi':'bills only — no fixed DA',
+  'Policy ke hisaab se apne mahine ka travel claim banao — din ka city aur station PJP se aa jata hai, DA aur food estimate hain jo aap badal sakte ho.':'Your month’s travel claim, by the policy — each day’s city and station come from your PJP, and DA and food are estimates you can change.',
+  'HOD ne wapas bheja':'The HOD sent it back',
+  'Net claim':'Net claim',
+  'Travel (km / fare / station)':'Travel (km / fare / station)',
+  'Lodging cost':'Lodging cost',
+  'Ex-HQ visits':'Ex-HQ visits',
+  'Outstation visits':'Outstation visits',
+  'HOD deduction':'HOD deduction',
+  'Net payable':'Net payable',
+  'Meeting kis city me':'Which city was the meeting in',
+  '— city chuno —':'— pick a city —',
+  'city nahi':'no city',
+  'deduct karke wapas bheja':'deducted and sent it back',
+  'din par deduction hai — neeche laal line me HOD ka reason likha hai. Theek karke ya samjha kar dobara bhej do.':'days carry a deduction — the HOD’s reason is on the red line under each one. Fix it or explain it, then send it again.',
+  'deduct kiya — net':'deducted — net',
+  'City':'City',
+  'Aapne khud badla hai.':'You changed this yourself.',
+  'City se dobara set karo':'Set it from the city again',
+  'City bharo — station isi se decide hota hai.':'Fill in the city — the station follows from it.',
+  'Koi travel nahi':'No travel',
+  '2 wheeler (apni gaadi)':'2 wheeler (own)',
+  '4 wheeler (apni gaadi)':'4 wheeler (own)',
+  'Bus':'Bus',
+  'Train':'Train',
+  'Auto / rickshaw':'Auto / rickshaw',
+  'Cab / taxi (Ola, Uber)':'Cab / taxi (Ola, Uber)',
+  'Flight':'Flight',
+  'ka actual ₹':' actual ₹',
+  'DA ₹ (estimate)':'DA ₹ (estimate)',
+  'Food ₹ (estimate)':'Food ₹ (estimate)',
+  'Food ₹ (DA me shamil)':'Food ₹ (already inside the DA)',
+  'DA me food already hai':'Food is already inside the DA',
+  'policy rate wapas':'back to the policy rate',
+  'Save karne ke baad ye din band ho jayega.':'Saving closes this day.',
+  'save ho gaya':'saved',
+  'City nahi bhari — HQ / Ex-HQ / Outstation isi se decide hota hai':'No city — HQ / Ex-HQ / Outstation is decided from it',
+  'DA policy rate':'The DA policy rate is',
+  'se zyada likha hai — HOD check karega':'and more has been claimed — the HOD will check it',
+  'Food policy rate':'The food policy rate is',
+  'Is role ke liye outstation DA nahi hai — bills lagao':'This role has no fixed outstation DA — attach the bills',
+  'Is role ke liye fixed DA nahi hai — per-km ya actual fare claim karo':'This role has no fixed DA — claim per-km or the actual fare',
+  'Is role ke liye per-km allowed nahi hai':'Per-km is not allowed for this role',
+  '— uske aage public transport hi allowed hai':'— beyond that only public transport is allowed',
+  'Flight sirf outstation ke liye hai':'A flight is for outstation travel only',
+  'Flight — manager ki prior approval zaroori hai':'Flight — the manager’s prior approval is required',
+  '— actual':'— actual',
+  'Outstation DA me food already hai — alag food claim HOD deduct kar sakta hai':'The outstation DA already includes food — a separate food claim may be deducted by the HOD',
+  'ki city bharo — station usi se decide hota hai':'— fill in the city, the station follows from it',
+  'Flight ticket':'Flight ticket',
+  'Auto receipt':'Auto receipt',
+  'Poora TA/DA —':'The whole TA/DA —',
+  'Claim total':'Claim total',
+  'Deduction':'Deduction',
+  'Rep ka remark:':'The rep’s remark:',
+  'Reason likhna baaki hai':'Still needs a reason',
+  'Har din ke saamne deduction daal sakte ho — jitna kaam nahi hua utna kaato aur reason likho. Reason ke bina deduction save nahi hoga.':'You can put a deduction against any day — cut what was not worked and write the reason. A deduction without a reason will not save.',
+  'Deduction ₹':'Deduction ₹',
+  'Reason (zaroori)':'Reason (required)',
+  'Kyun kaata':'Why it was cut',
+  'Ye claim abhi decide karne layak nahi hai — rep ke paas hai ya decision ho chuka hai.':'This claim is not open for a decision — it is with the rep, or it has already been decided.',
+  'Message (rep ko dikhega)':'Message (the rep sees this)',
+  'Poora approve karo':'Approve in full',
+  'Deduction ke saath wapas bhejo':'Send back with the deductions',
+  'Approve karne par deduction ke baad ka net amount final ho jayega. Wapas bhejne par rep isse theek karke dobara bhej sakta hai.':'Approving makes the net amount after deductions final. Sending it back lets the rep correct it and send it again.',
+  'Har deduction ke saath reason likhna zaroori hai —':'Every deduction needs a reason —',
+  'baaki hai':'still missing',
+  'Wapas bhejne ke liye kam se kam ek deduction ya message do':'To send it back, add at least one deduction or a message',
+  'Poora claim approve karein?':'Approve the whole claim?',
+  'Deduction ke saath wapas bhejein?':'Send it back with the deductions?',
+  'deduction, net':'deduction, net',
+  'poora amount':'the full amount',
+  'Haan, approve':'Yes, approve',
+  'Haan, wapas bhejo':'Yes, send it back',
+  'TA/DA approved — net':'TA/DA approved — net',
+  'Rep ko wapas bhej diya —':'Sent back to the rep —',
+  'Poora claim dekho — har din par deduction daal sakte ho':'Read the whole claim — you can put a deduction on any day',
+  'Poora claim dekho':'Read the whole claim',
+  'Deduction lagao':'Add deductions',
+  'Deduct':'Deduct',
+  'HOD ne kuch din par deduction lagaya':'The HOD put a deduction on some days',
+  'Deduction dekho, theek karo ya samjha do, phir dobara bhejo.':'Look at the deductions, fix or explain them, then send it again.',
+  'TA/DA tab me deduction wale din laal me dikh rahe hain.':'The days with a deduction are shown in red in the TA/DA tab.',
+  'Claim row nahi mila':'Claim row not found',
+  'bus / train actual':'bus / train on actuals',
+  'cab actual':'cab on actuals',
+  'raat outstation':'outstation nights',
+  'raat':'nights',
+  'Ye aapka HQ hai, isliye HQ. City:':'This is your HQ, so the day is HQ. City:',
+  'HQ se alag city, wapas usi din — isliye Ex-HQ. HQ:':'A different city from HQ and back the same day — so Ex-HQ. HQ:',
+  'HQ se doosre state me — isliye Outstation. City:':'Another state altogether — so Outstation. City:',
+  ', city:':', city:',
+  'Poora claim dekho — jis din ka kaam nahi hua uspar deduction daalo':'Read the whole claim — put a deduction on any day that was not worked',
+  'Poora claim dekho — niche se poora approve karo':'Read the whole claim — approve it in full from the bar below',
+  'Is din ka koi claim nahi bhara':'Nothing has been claimed for this day',
+  '(bill ke saath)':'(with the bill)',
+  '— bill lagega':'— a bill is needed',
   'Order punch karo':'Punch the order',
   /* live updates + the read-only plan / waiting screen */
   'HOD ne approve kar diya — aage badho':'The HOD approved it — carry on',
@@ -6559,35 +6658,43 @@ var Rep = {
     s1.push(['Status', Xl.t(r.Status || 'Draft'), 'Month', Xl.t(monthName(m))]);
     s1.push([], [Xl.b('CLAIM')]);
     s1.push(['Head', 'Amount (\u20b9)', '', '', '', '', ''].map(Xl.h));
-    [['Daily allowance', t.da], ['Food', t.food], ['Travel (km / ticket / cab)', t.travel],
-     ['Station transfer', t.station], ['Lodging', t.lodge], ['Team meeting', t.meet]]
+    [['Daily allowance', t.da], ['Food', t.food], ['Travel (km / fare)', t.travel],
+     ['Station transfer', t.station], ['Lodging cost', t.lodge], ['Team meeting', t.meet]]
       .forEach(function (x) { s1.push([Xl.t(x[0]), Xl.m(x[1])]); });
     s1.push([Xl.t('TOTAL', Xl.S.tot), Xl.m(t.grand, Xl.S.totM)]);
+    if (t.deduct) {
+      s1.push([Xl.t('HOD deduction'), Xl.m(-t.deduct)]);
+      s1.push([Xl.t('NET PAYABLE', Xl.S.tot), Xl.m(t.net, Xl.S.totM)]);
+    }
     s1.push([], [Xl.b('DAYS')]);
     s1.push(['Claim days', Xl.n(t.days), 'Outstation nights', Xl.n(t.nights)]);
-    s1.push(['HQ days', Xl.n(t.byStation.hq), 'Ex-HQ days', Xl.n(t.byStation.ex)]);
+    s1.push(['HQ days', Xl.n(t.byStation.hq), 'Ex-HQ visits', Xl.n(t.byStation.ex)]);
+    s1.push(['Outstation visits', Xl.n(t.byStation.out), 'Meeting city',
+             Xl.t(r.MeetCity || '\u2014')]);
     s1.push(['Outstation days', Xl.n(t.byStation.out), 'Meeting days', Xl.n(t.byStation.meet)]);
     s1.push(['Off / leave', Xl.n(t.byStation.off), 'Warnings', Xl.n(t.warn)]);
 
-    var d2 = [['Date', 'Day', 'Station', 'Town', 'Mode', 'Km', 'Nights', 'DA (\u20b9)', 'Food (\u20b9)',
-               'Travel (\u20b9)', 'Station (\u20b9)', 'Lodging (\u20b9)', 'Day total (\u20b9)',
-               'Bills needed', 'How it was worked out', 'Warning', 'Note'].map(Xl.h)];
+    var ded = Tada.ded(r);
+    var d2 = [['Date', 'Day', 'Station', 'City', 'How he travelled', 'Km', 'Nights', 'DA (\u20b9)',
+               'Food (\u20b9)', 'Travel (\u20b9)', 'Station (\u20b9)', 'Lodging (\u20b9)',
+               'Day total (\u20b9)', 'HOD deduction (\u20b9)', 'HOD reason', 'Bills needed',
+               'How it was worked out', 'Warning', 'Note'].map(Xl.h)];
     var DAY = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     Tada.dates().forEach(function (d) {
-      var row = Tada.days[d], c = Tada.calc(d);
-      var lbl = (Tada.ST.filter(function (x) { return x[0] === row.st; })[0] || Tada.ST[0])[1];
-      var mode = (Tada.MODE.filter(function (x) { return x[0] === row.mode; })[0] || Tada.MODE[0])[1];
-      d2.push([Xl.dt(d), Xl.t(DAY[new Date(d + 'T00:00:00').getDay()]), Xl.t(lbl), Xl.t(row.town),
-        Xl.t(row.st === 'off' || row.st === 'meet' ? '\u2014' : mode), Xl.n(row.km), Xl.n(row.night),
+      var row = Tada.days[d], c = Tada.calc(d), dd = ded[d] || {};
+      d2.push([Xl.dt(d), Xl.t(DAY[new Date(d + 'T00:00:00').getDay()]), Xl.t(Tada.stLbl(row.st)),
+        Xl.t(row.city || ''),
+        Xl.t(row.st === 'off' || row.st === 'meet' ? '\u2014' : Tada.mLbl(row.mode)),
+        Xl.n(row.km), Xl.n(row.night),
         Xl.m(c.da), Xl.m(c.food), Xl.m(c.travel), Xl.m(c.station), Xl.m(c.lodge),
-        Xl.m(c.da + c.food + c.travel + c.station + c.lodge),
+        Xl.m(Tada.dayTot(c)), Xl.m(num(dd.amt)), Xl.t(dd.note || '', Xl.S.wrap),
         Xl.t(c.bills.join(', '), Xl.S.wrap), Xl.t(c.why.join(' \u00b7 '), Xl.S.wrap),
         Xl.t(c.warn.join(' \u00b7 '), Xl.S.wrap), Xl.t(row.note, Xl.S.wrap)]);
     });
     d2.push([Xl.t('TOTAL', Xl.S.tot), '', '', '', '', Xl.n(0), Xl.n(t.nights, Xl.S.totI),
       Xl.m(t.da, Xl.S.totM), Xl.m(t.food, Xl.S.totM), Xl.m(t.travel, Xl.S.totM),
       Xl.m(t.station, Xl.S.totM), Xl.m(t.lodge, Xl.S.totM),
-      Xl.m(t.grand - t.meet, Xl.S.totM), '', '', '', '']);
+      Xl.m(t.grand - t.meet, Xl.S.totM), Xl.m(t.deduct, Xl.S.totM), '', '', '', '', '']);
 
     var p2r = [['Station', 'Travel', 'Food'].map(Xl.h)];
     [['HQ', S.hq], ['Ex-HQ', S.ex], ['Outstation', S.out]].forEach(function (x) {
@@ -6607,8 +6714,9 @@ var Rep = {
 
     return Xl.save('TADA_' + DB.me.code + '_' + m, [
       { name:I18n.s('Claim'), cols:[26, 16, 16, 14, 10, 10, 10], rows:s1, merges:ttl.merges },
-      { name:I18n.s('Day-wise'), cols:[11, 6, 20, 16, 18, 7, 7, 11, 11, 11, 11, 11, 12, 22, 34, 26, 22],
-        rows:d2, freeze:1, filter:'A1:Q' + d2.length },
+      { name:I18n.s('Day-wise'),
+        cols:[11, 6, 20, 16, 20, 7, 7, 11, 11, 11, 11, 11, 12, 13, 26, 22, 34, 26, 22],
+        rows:d2, freeze:1, filter:'A1:S' + d2.length },
       { name:I18n.s('Policy'), cols:[16, 52, 30], rows:p2r, freeze:1 }
     ]);
   },
@@ -7835,9 +7943,10 @@ var Tada = {
     return Tada.METRO.some(function (m) { return t.indexOf(m) >= 0; });
   },
   isMumbai: function (town) { return /MUMBAI/i.test(String(town || '')); },
-  /* the policy's own words for a woman's lodging entitlement: one level up */
-  female: function () {
-    var e = DB.emp(DB.me.code) || {};
+  /* the policy's own words for a woman's lodging entitlement: one level up. Takes a code because an HOD
+     reviewing a claim is pricing SOMEBODY ELSE's month. */
+  female: function (code) {
+    var e = DB.emp(code || DB.me.code) || {};
     return /^f|female|woman|ms\b|mrs\b/i.test(String(e.Gender || e.Sex || ''));
   },
 
@@ -7863,25 +7972,132 @@ var Tada = {
     }
     return out;
   },
-  /* STATIONS: what kind of day it was. 'off' pays nothing by policy. */
+
+  /* STATIONS: what kind of day it was. Derived from the CITY (see stFor) and overridable per day. */
   ST:[['hq', 'HQ (base city)'], ['ex', 'Ex-HQ (same-day return)'],
       ['out', 'Outstation (night stay)'], ['meet', 'Team meeting'], ['off', 'Off / leave / holiday']],
-  MODE:[['da', 'Daily allowance'], ['km', 'Own vehicle (per km)'],
-        ['ticket', 'Bus / train / metro / auto'], ['cab', 'Cab (Ola / Uber / Rapido)']],
+  /* HOW he travelled, in the policy's own words. Own vehicle is paid per km against a logbook;
+     everything else is the actual fare against a ticket or a bill. */
+  MODE:[['none', 'Koi travel nahi'], ['2w', '2 wheeler (apni gaadi)'], ['4w', '4 wheeler (apni gaadi)'],
+        ['bus', 'Bus'], ['train', 'Train'], ['auto', 'Auto / rickshaw'],
+        ['cab', 'Cab / taxi (Ola, Uber)'], ['air', 'Flight']],
+  OWN:['2w', '4w'],
+  FARE:['bus', 'train', 'auto', 'cab', 'air'],
+  mLbl: function (m) {
+    var x = Tada.MODE.filter(function (y) { return y[0] === m; })[0];
+    return x ? x[1] : m || '—';
+  },
+  stLbl: function (s) {
+    var x = Tada.ST.filter(function (y) { return y[0] === s; })[0];
+    return x ? x[1] : s || '—';
+  },
+  /* which modes this station and slab actually allow — a dropdown that offers what the policy forbids
+     is a claim that comes back deducted */
+  modes: function (st, P) {
+    return Tada.MODE.filter(function (m) {
+      if (m[0] === 'none') return true;
+      if (Tada.OWN.indexOf(m[0]) >= 0) return !!P.perKm;
+      if (m[0] === 'cab') return !!P.cab;
+      if (m[0] === 'air') return st === 'out';
+      return true;                                        /* bus, train, auto — always on actuals */
+    });
+  },
 
-  /* pre-fill a day from what the rep already told the app */
+  /* ── city → station ──
+     The sheet carries the rep's HQ (Master_Employees.HQ) and every town's state (Master_Stores), so the
+     station follows from the city the PJP already has: same city as HQ is HQ, another city in the same
+     state is a same-day Ex-HQ trip, another state is outstation. Three Master_Config keys override it
+     town by town when the business wants to say otherwise. */
+  hqCity: function (code) {
+    var e = DB.emp(code || DB.me.code) || {};
+    var v = String(e.HQ || '').trim();
+    if (v) return v;
+    var s = (DB.myStores() || [])[0] || {};
+    return String(s.EmAsmHq || s.AsmHq || s.City || '').trim();
+  },
+  cfgTowns: function (k) {
+    return String(DB.cfg(k, '') || '').split(/[,;|]/).map(function (x) { return Plan.norm(x); })
+      .filter(Boolean);
+  },
+  /* the master writes "DELHI", the PJP writes "New Delhi", a rep writes "Delhi NCR" — one posting.
+     Whole-word containment either way, so "Noida" still does not swallow "Greater Noida West". */
+  sameCity: function (a, b) {
+    var x = Plan.norm(a), y = Plan.norm(b);
+    if (!x || !y) return false;
+    if (x === y) return true;
+    return new RegExp('(^| )' + y + '( |$)').test(x) || new RegExp('(^| )' + x + '( |$)').test(y);
+  },
+  stFor: function (city, code) {
+    var c = Plan.norm(city);
+    if (!c) return '';
+    if (Tada.cfgTowns('TADA_HQ_TOWNS').indexOf(c) >= 0) return 'hq';
+    if (Tada.cfgTowns('TADA_EX_TOWNS').indexOf(c) >= 0) return 'ex';
+    if (Tada.cfgTowns('TADA_OUT_TOWNS').indexOf(c) >= 0) return 'out';
+    if (Tada.sameCity(city, Tada.hqCity(code))) return 'hq';
+    var sh = Plan.norm(Plan.stateOf(Tada.hqCity(code))), sc = Plan.norm(Plan.stateOf(city));
+    if (sh && sc) return sh === sc ? 'ex' : 'out';
+    return 'ex';                                          /* known city, unknown state — same-day trip */
+  },
+  /* said on screen, because an auto-filled station that nobody can explain is an argument later */
+  stWhy: function (city) {
+    var c = String(city || '').trim();
+    if (!c) return 'City bharo — station isi se decide hota hai.';
+    var hq = Tada.hqCity(), st = Tada.stFor(c);
+    /* whole sentences, one string each: a sentence stitched from fragments translates in half */
+    if (st === 'hq') return 'Ye aapka HQ hai, isliye HQ. City: ' + c;
+    if (st === 'ex') return 'HQ se alag city, wapas usi din — isliye Ex-HQ. HQ: ' + (hq || '—') +
+      ', city: ' + c;
+    return 'HQ se doosre state me — isliye Outstation. City: ' + c +
+      ' (' + (Plan.stateOf(c) || '—') + ')';
+  },
+  /* every city this rep can pick: his own towns from the master, plus whatever the PJP already says */
+  cities: function (extra) {
+    var a = Plan.towns('');
+    var hq = Tada.hqCity();
+    [hq, extra].forEach(function (x) {
+      if (x && a.map(Plan.norm).indexOf(Plan.norm(x)) < 0) a = [x].concat(a);
+    });
+    return a;
+  },
+  OFFISH:/^(leave|sunday|off day|weekly off|holiday|meeting.*|activity.*)$/i,
+  /* what the PJP says about this date — the plan the rep already filled, then the published master */
+  plan: function (k) {
+    var p = DB.find('DayPlan', DB.me.code + '_' + k);
+    if (p) return { ww:String(p.WorkingWith || ''), city:String(p.Town || ''), station:String(p.Station || '') };
+    var m = DB.pjpFor(DB.me.code, k);
+    return m ? { ww:String(m.Ww || m.Week || ''), city:String(m.Town || ''), station:'' }
+             : { ww:'', city:'', station:'' };
+  },
+
+  /* a day with nothing claimed — the shape every day has, so a month saved by an older build still
+     prices correctly */
+  blank: function () {
+    return { st:'hq', city:'', mode:'none', km:0, fare:0, da:0, food:0, lodge:0, night:0,
+             daT:0, foodT:0, stT:0, note:'', from:'' };
+  },
+  /* pre-fill a day from the PJP */
   seed: function (k) {
-    var p = DB.find('DayPlan', DB.me.code + '_' + k) || {};
-    var ww = String(p.WorkingWith || '');
-    var st = /meeting|activity/i.test(ww) ? 'meet'
-      : /weekly off|leave|holiday/i.test(ww) ? 'off'
-      : /outstation/i.test(String(p.Station || '')) ? 'out'
-      : /ex.?hq/i.test(String(p.Station || '')) ? 'ex' : 'hq';
-    /* an RSM / ZSM has no fixed DA at all — opening their month on "Daily allowance" would show a
-       warning against every single day, so start them on per-km, which is what the policy pays them */
-    var mode = Tada.slab().hq.da ? 'da' : 'km';
-    return { st:st, mode:mode, km:0, ticket:0, cab:0, food:0, lodge:0, night:st === 'out' ? 1 : 0,
-             town:p.Town || '', note:'', from:'plan' };
+    var p = Tada.plan(k), b = Tada.blank();
+    var city = Tada.OFFISH.test(String(p.city).trim()) ? '' : String(p.city).trim();
+    b.st = /meeting|activity/i.test(p.ww) ? 'meet'
+      : /weekly off|leave|holiday|off day|sunday/i.test(p.ww) ? 'off'
+      : /outstation/i.test(p.station) ? 'out'
+      : /ex.?hq/i.test(p.station) ? 'ex'
+      : (Tada.stFor(city) || 'hq');
+    b.city = city;
+    b.night = b.st === 'out' ? 1 : 0;
+    b.from = 'plan';
+    return b;
+  },
+  /* an older draft called the city "town" and the mode "da / km / ticket / cab" */
+  migrate: function (r) {
+    if (!r) return r;
+    if (r.town && !r.city) r.city = r.town;
+    if (r.mode === 'da') r.mode = 'none';
+    else if (r.mode === 'km') r.mode = '2w';
+    else if (r.mode === 'ticket') r.mode = 'bus';
+    if (!r.fare && (r.ticket || r.cab)) r.fare = num(r.ticket) + num(r.cab);
+    return r;
   },
   load: function () {
     var r = Tada.row(), k = Tada.key();
@@ -7890,130 +8106,207 @@ var Tada = {
     try { saved = JSON.parse(r.DaysJson || '{}') || {}; } catch (e) {}
     Tada.days = {};
     Tada.dates().forEach(function (d) {
-      Tada.days[d] = saved[d] ? Object.assign(Tada.seed(d), saved[d]) : Tada.seed(d);
+      Tada.days[d] = saved[d] ? Tada.migrate(Object.assign(Tada.seed(d), saved[d])) : Tada.seed(d);
     });
     Tada._for = k;
     return r;
   },
+  /* the context calc needs: whose days, whose slab, whose gender. Mine by default; an HOD passes a row. */
+  ctx: function (r) {
+    if (!r) return { days:Tada.days, S:Tada.slab(), code:DB.me.code };
+    var days = {};
+    try { days = JSON.parse(r.DaysJson || '{}') || {}; } catch (e) {}
+    Object.keys(days).forEach(function (d) {
+      days[d] = Tada.migrate(Object.assign(Tada.blank(), days[d])); });
+    return { days:days, S:Tada.slab(r.Designation), code:r.EmpCode };
+  },
+
   set: function (d, f, v) {
     Tada.load();
     if (!Tada.days[d]) Tada.days[d] = Tada.seed(d);
-    Tada.days[d][f] = (f === 'st' || f === 'mode' || f === 'note' || f === 'town') ? v : num(v);
-    Tada.days[d].from = 'rep';
+    var r = Tada.days[d];
+    r[f] = (f === 'st' || f === 'mode' || f === 'note' || f === 'city') ? v : num(v);
+    r.from = 'rep';
+    /* the rep's own numbers, once typed, are never silently rewritten by a policy default */
+    if (f === 'da') r.daT = 1;
+    if (f === 'food') r.foodT = 1;
     if (f === 'st') {
-      /* a station change resets what cannot apply: an off day claims nothing, and only an outstation
-         day has nights and lodging */
-      var r = Tada.days[d];
-      if (v === 'off' || v === 'meet') { r.km = 0; r.ticket = 0; r.cab = 0; r.food = 0; r.lodge = 0; r.night = 0; }
+      r.stT = 1;
+      if (v === 'off' || v === 'meet') { r.km = 0; r.fare = 0; r.food = 0; r.lodge = 0; r.night = 0;
+        r.da = 0; r.daT = 0; r.foodT = 0; r.mode = 'none'; }
       if (v !== 'out') { r.lodge = 0; r.night = 0; }
       if (v === 'out' && !r.night) r.night = 1;
     }
+    /* a city change re-derives the station, unless the rep has said otherwise for this day */
+    if (f === 'city' && !r.stT && r.st !== 'off' && r.st !== 'meet') {
+      var st = Tada.stFor(v);
+      if (st) { r.st = st; if (st === 'out' && !r.night) r.night = 1; if (st !== 'out') { r.night = 0; r.lodge = 0; } }
+    }
     Tada._dirty = true;
     clearTimeout(Tada._t);
-    if (f === 'st' || f === 'mode') { Tada.flush(); render(); }
+    if (f === 'st' || f === 'mode' || f === 'city') { Tada.flush(); render(); }
     else Tada._t = setTimeout(Tada.flush, 900);
+  },
+  /* "policy rate wapas lo" — drop an edit and go back to what the slab says */
+  reset: function (d, f) {
+    Tada.load();
+    var r = Tada.days[d]; if (!r) return;
+    if (f === 'da') { r.daT = 0; r.da = 0; }
+    if (f === 'food') { r.foodT = 0; r.food = 0; }
+    if (f === 'st') { r.stT = 0; var st = Tada.stFor(r.city); if (st) r.st = st; }
+    Tada._dirty = true; Tada.flush(); render();
+  },
+
+  /* ── what the POLICY says a day is worth (the estimate that lands in the boxes) ── */
+  pol: function (d, cx) {
+    cx = cx || Tada.ctx();
+    var r = (cx.days || {})[d] || Tada.blank(), S = cx.S;
+    if (r.st === 'off' || r.st === 'meet') return { da:0, food:0, foodIn:false };
+    var P = r.st === 'hq' ? S.hq : r.st === 'ex' ? S.ex : S.out;
+    var metro = Tada.isMetro(r.city), nights = Math.max(1, num(r.night));
+    if (r.st === 'out') {
+      var per = P.billsOnly ? 0 : (metro ? P.metro : P.nonMetro);
+      /* the policy's outstation row carries a food figure of its own, per night and metro-dependent */
+      var cap = P.foodMonth ? 0 : (metro ? P.foodMetro : P.foodNonMetro) * nights;
+      return { da:per * nights, food:cap, foodCap:cap };
+    }
+    var own = Tada.OWN.indexOf(r.mode) >= 0;
+    /* per-km is paid INSTEAD of the fixed daily allowance */
+    return { da:own ? 0 : num(P.da), food:P.foodMonth ? 0 : num(P.food), foodCap:0 };
   },
 
   /* ── what one day is worth ──
-     Returns the amounts AND the reasons, so the screen can explain itself and an auditor can see why. */
-  calc: function (d) {
-    var S = Tada.slab(), r = (Tada.days || {})[d] || Tada.seed(d);
+     Returns the amounts AND the reasons, so the screen can explain itself and an HOD can see how every
+     rupee was reached without asking. */
+  calc: function (d, cx) {
+    cx = cx || Tada.ctx();
+    var S = cx.S, r = (cx.days || {})[d] || Tada.blank();
     var out = { da:0, food:0, travel:0, lodge:0, station:0, why:[], warn:[], bills:[] };
     if (r.st === 'off') { out.why.push('Off / leave / holiday — policy me DA nahi milta'); return out; }
     if (r.st === 'meet') { out.why.push('Meeting day — DA aur food dono lagu nahi hote'); return out; }
     var P = r.st === 'hq' ? S.hq : r.st === 'ex' ? S.ex : S.out;
-    var metro = Tada.isMetro(r.town);
+    var metro = Tada.isMetro(r.city), nights = Math.max(1, num(r.night));
+    var pol = Tada.pol(d, cx);
+    if (!String(r.city || '').trim())
+      out.warn.push('City nahi bhari — HQ / Ex-HQ / Outstation isi se decide hota hai');
 
-    if (r.st === 'out') {
-      var nights = Math.max(1, num(r.night));
-      if (r.mode === 'da') {
-        /* an RSM / ZSM / R-KAM has no fixed outstation DA — the policy pays their actuals. Say so instead
-           of falling through to the bills branch, which would quietly total up stale ticket amounts. */
-        var per = P.billsOnly ? 0 : (metro ? P.metro : P.nonMetro);
-        if (per > 0) { out.da = per * nights; out.why.push(nights + ' night × ' + inr(per) + ' (' + (metro ? 'metro' : 'non-metro') + ')'); }
-        else out.warn.push('Is role ke liye outstation DA nahi hai — tickets ya per-km chuno');
-      } else if (r.mode === 'km') {
-        var km = num(r.km), cap = P.kmCap || 0;
-        var okKm = cap ? Math.min(km, cap * nights) : km;
-        out.travel = okKm * P.perKm;
-        out.why.push(okKm + ' km × ' + inr(P.perKm) + (cap ? ' (cap ' + cap + ' km/din)' : ''));
-        if (cap && km > cap * nights) out.warn.push(cap + ' km/din se zyada — uske aage public transport hi allowed hai');
-        out.bills.push('Logbook');
-      } else {
-        out.travel = num(r.ticket) + num(r.cab);
-        if (out.travel) out.bills.push('Ticket / cab bill');
-      }
-      /* food: a per-day figure for the junior slabs, a monthly budget for the senior ones */
-      if (P.foodMonth) { out.food = num(r.food); if (out.food) out.bills.push('Food bill'); }
+    /* DA — the policy rate is an estimate the rep may correct; over the rate is flagged, not silently
+       paid, so the HOD sees it here and not in a payroll query next month */
+    out.da = r.daT ? num(r.da) : pol.da;
+    if (out.da) {
+      out.why.push(r.st === 'out' ? nights + ' night × ' + inr(pol.da / nights) + ' (' +
+        (metro ? 'metro' : 'non-metro') + ')' : 'Daily allowance ' + inr(out.da));
+    }
+    if (r.daT && num(r.da) > pol.da)
+      out.warn.push('DA policy rate ' + inr(pol.da) + ' se zyada likha hai — HOD check karega');
+    if (!out.da && !pol.da && r.st === 'out' && P.billsOnly)
+      out.warn.push('Is role ke liye outstation DA nahi hai — bills lagao');
+    else if (!out.da && !pol.da && r.st !== 'out' && !P.da && Tada.OWN.indexOf(r.mode) < 0)
+      out.warn.push('Is role ke liye fixed DA nahi hai — per-km ya actual fare claim karo');
+
+    /* TRAVEL — own vehicle is per km against a logbook, everything else is the actual fare */
+    if (Tada.OWN.indexOf(r.mode) >= 0) {
+      if (!P.perKm) out.warn.push('Is role ke liye per-km allowed nahi hai');
       else {
-        var fc = (metro ? P.foodMetro : P.foodNonMetro) * nights;
-        if (r.mode !== 'da' || P.billsOnly) {
-          out.food = Math.min(num(r.food), fc);
-          if (num(r.food) > fc) out.warn.push('Food cap ' + inr(fc) + ' (' + nights + ' din)');
-          if (out.food) out.bills.push('Food bill');
-        } else out.why.push('DA me food shamil hai');
+        var cap = (P.kmCap || 0) * (r.st === 'out' ? nights : 1);
+        var km = num(r.km), ok = cap ? Math.min(km, cap) : km;
+        out.travel = ok * P.perKm;
+        out.why.push(ok + ' km × ' + inr(P.perKm) + (cap ? ' (cap ' + cap + ' km)' : ''));
+        if (cap && km > cap) out.warn.push('Cap ' + cap + ' km — uske aage public transport hi allowed hai');
+        if (out.travel) out.bills.push('Logbook');
       }
-      /* lodging, with the woman-one-level-up rule */
-      var L = S.lodge, capL = Tada.isMumbai(r.town) ? L.mumbai : (metro ? L.metro : L.nonMetro);
-      if (Tada.female() && !metro && !Tada.isMumbai(r.town)) capL = L.metro;
+    } else if (Tada.FARE.indexOf(r.mode) >= 0) {
+      var okMode = true;
+      if (r.mode === 'cab' && !P.cab) { okMode = false; out.warn.push('Is role ke liye cab allowed nahi hai'); }
+      if (r.mode === 'air' && r.st !== 'out') { okMode = false; out.warn.push('Flight sirf outstation ke liye hai'); }
+      if (okMode) {
+        out.travel = num(r.fare);
+        if (out.travel) out.bills.push(r.mode === 'air' ? 'Flight ticket' :
+          r.mode === 'cab' ? 'Cab bill' : r.mode === 'auto' ? 'Auto receipt' : 'Ticket');
+        if (r.mode === 'air') out.why.push('Flight — manager ki prior approval zaroori hai');
+        out.why.push(Tada.mLbl(r.mode) + ' — actual ' + inr(out.travel));
+      }
+      /* the policy's extra for reaching the bus stand / station on an inter-city Ex-HQ trip */
+      if (r.st === 'ex' && P.station && r.mode !== 'cab') {
+        out.station = P.station; out.why.push('Station tak aane-jaane ka ' + inr(P.station));
+      }
+    }
+
+    /* FOOD — a per-day figure for the junior slabs, a monthly budget for the senior ones, and a
+       per-night capped bill on outstation */
+    if (P.foodMonth) {
+      out.food = num(r.food);
+      if (out.food) out.bills.push('Food bill');
+    } else if (r.st === 'out') {
+      out.food = r.foodT ? num(r.food) : pol.food;
+      if (pol.foodCap && out.food > pol.foodCap) {
+        out.warn.push('Food cap ' + inr(pol.foodCap) + ' (' + nights + ' din)');
+        out.food = pol.foodCap;
+      }
+      if (out.food) { out.bills.push('Food bill'); out.why.push('Food ' + inr(out.food) + ' (bill ke saath)'); }
+    } else {
+      out.food = r.foodT ? num(r.food) : pol.food;
+      if (out.food) out.why.push('Food allowance ' + inr(out.food));
+      if (r.foodT && num(r.food) > pol.food)
+        out.warn.push('Food policy rate ' + inr(pol.food) + ' se zyada likha hai — HOD check karega');
+    }
+
+    /* LODGING — capped per night, one level up for a woman in a non-metro */
+    if (r.st === 'out') {
+      var L = S.lodge, capL = Tada.isMumbai(r.city) ? L.mumbai : (metro ? L.metro : L.nonMetro);
+      if (Tada.female(cx.code) && !metro && !Tada.isMumbai(r.city)) capL = L.metro;
       out.lodge = Math.min(num(r.lodge), capL * nights);
       if (num(r.lodge) > capL * nights) out.warn.push('Lodging cap ' + inr(capL) + '/din');
       if (out.lodge) out.bills.push('Hotel bill (GST of the state)');
-      return out;
     }
-
-    /* HQ and Ex-HQ: travel allowance AND food allowance, both */
-    if (r.mode === 'da') {
-      if (P.da) { out.da = P.da; out.why.push('Daily allowance ' + inr(P.da)); }
-      else out.warn.push('Is role ke liye fixed DA nahi hai — per-km, ticket ya cab chuno');
-    } else if (r.mode === 'km') {
-      if (!P.perKm) out.warn.push('Per-km is station par allowed nahi hai');
-      else {
-        var km2 = num(r.km), cap2 = P.kmCap || 0;
-        var ok2 = cap2 ? Math.min(km2, cap2) : km2;
-        out.travel = ok2 * P.perKm;
-        out.why.push(ok2 + ' km × ' + inr(P.perKm) + (cap2 ? ' (cap ' + cap2 + ' km)' : ''));
-        if (cap2 && km2 > cap2) out.warn.push('Cap ' + cap2 + ' km/din');
-        out.bills.push('Logbook');
-      }
-    } else if (r.mode === 'ticket') {
-      if (r.st === 'hq') out.warn.push('HQ me ticket claim policy me nahi hai — DA ya per-km chuno');
-      else { out.travel = num(r.ticket); if (out.travel) out.bills.push('Ticket'); }
-    } else if (r.mode === 'cab') {
-      if (!P.cab) out.warn.push('Is role ke liye cab allowed nahi hai');
-      else { out.travel = num(r.cab); if (out.travel) out.bills.push('Cab bill'); }
-    }
-    if (P.foodMonth) { out.food = num(r.food); if (out.food) out.bills.push('Food bill'); }
-    else {
-      out.food = P.food;
-      out.why.push('Food allowance ' + inr(P.food));
-    }
-    /* the extra ₹200 / actual cab for reaching the bus stand or airport on an inter-city Ex-HQ trip */
-    if (r.st === 'ex' && (r.mode === 'ticket' || r.mode === 'cab')) {
-      if (P.station) { out.station = P.station; out.why.push('Station tak aane-jaane ka ' + inr(P.station)); }
-      else if (num(r.cab) && r.mode === 'ticket') out.why.push('Station tak ka cab bill alag se claim karo');
+    /* A day the rep has not filled in yet claims nothing, and nothing is not an error: a slab with no
+       fixed DA (RSM, ZSM) would otherwise open the month with a red flag on all 31 days. The advice
+       stays — as advice, not as a warning that says money is at risk. */
+    if (!Tada.dayTot(out) && r.mode === 'none' && !r.daT && !r.foodT && !num(r.lodge)) {
+      out.why = out.warn.length ? [out.warn[0]] : [];
+      out.warn = [];
+      out.why.unshift('Is din ka koi claim nahi bhara');
     }
     return out;
   },
-  total: function () {
-    Tada.load();
-    var S = Tada.slab(), t = { da:0, food:0, travel:0, lodge:0, station:0, days:0, nights:0,
+  dayTot: function (c) { return c.da + c.food + c.travel + c.lodge + c.station; },
+
+  total: function (cx, dates) {
+    if (!cx) { Tada.load(); cx = Tada.ctx(); }
+    var S = cx.S, t = { da:0, food:0, travel:0, lodge:0, station:0, days:0, nights:0,
       warn:0, bills:{}, byStation:{ hq:0, ex:0, out:0, meet:0, off:0 } };
-    Tada.dates().forEach(function (d) {
-      var r = Tada.days[d], c = Tada.calc(d);
+    (dates || Tada.dates()).forEach(function (d) {
+      var r = (cx.days || {})[d] || Tada.blank(), c = Tada.calc(d, cx);
       t.byStation[r.st] = (t.byStation[r.st] || 0) + 1;
       if (r.st === 'out') t.nights += Math.max(1, num(r.night));
-      if (c.da || c.food || c.travel || c.lodge || c.station) t.days++;
+      if (Tada.dayTot(c)) t.days++;
       t.da += c.da; t.food += c.food; t.travel += c.travel; t.lodge += c.lodge; t.station += c.station;
       t.warn += c.warn.length;
       c.bills.forEach(function (b) { t.bills[b] = (t.bills[b] || 0) + 1; });
     });
-    var meet = num((Tada.row() || {}).MeetAmount);
-    t.meet = meet;
+    var row = cx.row || Tada.row();
+    t.meet = num(row.MeetAmount);
     t.meetCap = Tada.MEET[S.id] || 0;
     t.foodMonth = (S.hq.foodMonth || 0);
     t.grand = t.da + t.food + t.travel + t.lodge + t.station + t.meet;
+    t.deduct = Tada.dedTot(row);
+    t.net = Math.max(0, t.grand - t.deduct);
     return t;
+  },
+
+  /* ── the HOD's deductions live on the same row, one entry per date ── */
+  ded: function (r) {
+    try { return JSON.parse((r || Tada.row()).DeductJson || '{}') || {}; } catch (e) { return {}; }
+  },
+  dedTot: function (r) {
+    var d = Tada.ded(r), s = 0;
+    Object.keys(d).forEach(function (k) { s += num(d[k] && d[k].amt); });
+    return s;
+  },
+  dedN: function (r) {
+    var d = Tada.ded(r), n = 0;
+    Object.keys(d).forEach(function (k) { if (num(d[k] && d[k].amt) > 0) n++; });
+    return n;
   },
 
   flush: function () {
@@ -8022,10 +8315,18 @@ var Tada = {
     var t = Tada.total(), r = Tada.row();
     return DB.save('TaDa', { Id:Tada.key(), EmpCode:DB.me.code, EmpName:DB.me.name, Month:Tada.mon(),
       Designation:(DB.emp(DB.me.code) || {}).Designation || DB.me.desig || '',
-      Station:'', Status:/pending|approved/i.test(r.Status || '') ? r.Status : 'Draft',
+      Station:'', Status:/pending|approved|return/i.test(r.Status || '') ? r.Status : 'Draft',
       DaysJson:JSON.stringify(Tada.days), DaAmount:t.da, FoodAmount:t.food, TravelAmount:t.travel,
-      LodgeAmount:t.lodge, MeetAmount:t.meet, OtherAmount:t.station, Nights:t.nights,
+      LodgeAmount:t.lodge, MeetAmount:t.meet, MeetCity:r.MeetCity || '', OtherAmount:t.station,
+      Nights:t.nights, DeductJson:r.DeductJson || '', DeductTotal:t.deduct, NetTotal:t.net,
       Total:t.grand, UpdatedAt:Date.now() }, { quiet:true });
+  },
+  saveDay: function (d, el) {
+    Tada._dirty = true;
+    return Busy.run('tdday_' + d, el, 'Save…', function () {
+      var p = Tada.flush() || Promise.resolve();
+      return p.then(function () { Tada.open = ''; render(); toast(dmy(d) + ' save ho gaya'); });
+    });
   },
   setMeet: function (v) {
     var t = Tada.total(), cap = t.meetCap;
@@ -8035,24 +8336,31 @@ var Tada = {
     if (cap && num(v) > cap) toast('Meeting budget cap ' + inr(cap) + ' per month', 3500);
     clearTimeout(Tada._t); Tada._t = setTimeout(function () { Tada._dirty = true; Tada.flush(); render(); }, 900);
   },
+  setMeetCity: function (v) {
+    var r = Tada.row();
+    DB.save('TaDa', Object.assign({}, r, { Id:Tada.key(), MeetCity:v, UpdatedAt:Date.now() }), { quiet:true });
+  },
 
   /* ── the screen ── */
   html: function () {
     var r = Tada.load(), S = Tada.slab(), t = Tada.total();
-    var st = String(r.Status || 'Draft'), sent = /pending/i.test(st), okd = /approved/i.test(st);
+    var st = String(r.Status || 'Draft');
+    var sent = /pending/i.test(st), okd = /approved/i.test(st), back = /return/i.test(st);
     var h = UI.head('', 'TA / DA claim',
-      'Policy ke hisaab se apne mahine ka travel claim banao — din ka station plan se aa jata hai, ' +
-      'aap sirf amount aur bills confirm karo.');
+      'Policy ke hisaab se apne mahine ka travel claim banao — din ka city aur station PJP se aa jata hai, ' +
+      'DA aur food estimate hain jo aap badal sakte ho.');
 
     /* who this is, and therefore which slab */
     h += '<div class="card"><div class="c-h"><h3>' + esc(monthName(Tada.mon())) + '</h3>' +
-      '<span class="pill ' + (okd ? 'p-ok' : sent ? 'p-warn' : 'p-grey') + '">' + esc(st) + '</span></div>' +
+      '<span class="pill ' + (okd ? 'p-ok' : back ? 'p-bad' : sent ? 'p-warn' : 'p-grey') + '">' +
+        esc(back ? 'HOD ne wapas bheja' : st) + '</span></div>' +
       '<div class="row two"><div><label class="f">Month</label>' +
       '<input class="in" type="month" max="' + today().slice(0, 7) + '" value="' + Tada.mon() +
       '" onchange="Tada.setMonth(this.value)"></div>' +
       '<div><label class="f">Designation</label>' +
       '<input class="in lk" readonly value="' + esc((DB.emp(DB.me.code) || {}).Designation || DB.me.desig || '—') + '"></div></div>' +
-      '<div class="hint" style="margin-top:8px">Aapka slab: <b>' + esc(S.name) + '</b></div></div>';
+      '<div class="hint" style="margin-top:8px">Aapka slab: <b>' + esc(S.name) + '</b> · HQ: <b>' +
+        esc(Tada.hqCity() || '—') + '</b></div></div>';
 
     /* what the policy allows this slab — read once, trusted all month */
     h += '<div class="sec-title">Aapka entitlement</div><div class="card">' +
@@ -8062,21 +8370,32 @@ var Tada = {
       'Mumbai ka lodging rate alag hai.' + (Tada.female() ? ' Female employee — lodging ek level upar claim kar sakti hain.' : '') + '</div></div>';
 
     if (okd) h += '<div class="banner g"><span></span><div><b>Ye claim approve ho gaya</b><br>' +
-      '<span style="font-weight:500">5 tarikh tak approve hua to 17 ko, 15 tak hua to 30 ko payment.</span></div></div>';
+      '<span style="font-weight:500">' + (t.deduct ? 'HOD ne ' + inr(t.deduct) + ' deduct kiya — net ' +
+        inr(t.net) + '. ' : '') + '5 tarikh tak approve hua to 17 ko, 15 tak hua to 30 ko payment.</span></div></div>';
+    else if (back) h += '<div class="banner r"><span></span><div><b>HOD ne ' + inr(t.deduct) +
+      ' deduct karke wapas bheja</b><br><span style="font-weight:500">' + Tada.dedN(r) +
+      ' din par deduction hai — neeche laal line me HOD ka reason likha hai. Theek karke ya samjha kar ' +
+      'dobara bhej do.</span></div></div>';
     else if (sent) h += '<div class="banner b"><span></span><div><b>HOD ke paas hai</b><br>' +
       '<span style="font-weight:500">Approve hone tak edit kar sakte ho — dobara bhej dena.</span></div></div>';
 
     /* the money */
     h += '<div class="sec-title">Mahine ka total</div><div class="card">' +
       '<div class="kpis k3" style="margin-bottom:0">' +
-        UI.kpi(inr(t.grand), 'Total claim', 'b') +
+        UI.kpi(inr(t.deduct ? t.net : t.grand), t.deduct ? 'Net claim' : 'Total claim', 'b') +
         UI.kpi(t.days, 'Claim din', 'g') +
         UI.kpi(t.warn, 'Warning', t.warn ? 'r' : 'g') + '</div>' +
       '<div class="tw" style="margin-top:10px"><table><tbody>' +
-      [['Daily allowance', t.da], ['Food', t.food], ['Travel (km / ticket / cab)', t.travel],
-       ['Station tak', t.station], ['Lodging', t.lodge], ['Team meeting', t.meet]]
+      [['Daily allowance', t.da], ['Food', t.food], ['Travel (km / fare / station)', t.travel + t.station],
+       ['Lodging cost', t.lodge], ['Team meeting', t.meet]]
       .map(function (x) { return '<tr><td>' + esc(x[0]) + '</td><td class="num">' + inr(x[1]) + '</td></tr>'; }).join('') +
+      /* counts, not money: how much of the month was spent away from base */
+      '<tr><td>Ex-HQ visits</td><td class="num">' + t.byStation.ex + ' din</td></tr>' +
+      '<tr><td>Outstation visits</td><td class="num">' + t.byStation.out + ' din · ' + t.nights + ' raat</td></tr>' +
       '<tr class="tot"><td><b>TOTAL</b></td><td class="num"><b>' + inr(t.grand) + '</b></td></tr>' +
+      (t.deduct ? '<tr><td style="color:var(--bad)">HOD deduction</td>' +
+        '<td class="num" style="color:var(--bad)">− ' + inr(t.deduct) + '</td></tr>' +
+        '<tr class="tot"><td><b>Net payable</b></td><td class="num"><b>' + inr(t.net) + '</b></td></tr>' : '') +
       '</tbody></table></div>' +
       (t.foodMonth ? '<div class="hint" style="margin-top:8px">Food budget: ' + inr(t.food) + ' / ' +
         inr(t.foodMonth) + ' per month' + (t.food > t.foodMonth ? ' — <b>cap se zyada</b>' : '') +
@@ -8084,37 +8403,43 @@ var Tada = {
       (t.meetCap ? '<div class="row two" style="margin-top:10px"><div><label class="f">Team meeting bill (' +
         inr(t.meetCap) + (S.id === 's3' || S.id === 's4' ? ' per employee' : ' per zone') + ' / month)</label>' +
         '<input class="in" type="number" min="0" value="' + num(t.meet) +
-        '" oninput="Tada.setMeet(this.value)"></div><div><label class="f">&nbsp;</label>' +
-        '<div class="in lk">' + (t.meetCap && t.meet > t.meetCap ? 'Cap se zyada' : 'Cap ke andar') + '</div></div></div>' : '') +
+        '" oninput="Tada.setMeet(this.value)"></div>' +
+        '<div><label class="f">Meeting kis city me</label>' + Tada.citySel('', r.MeetCity || '', 'Tada.setMeetCity(this.value)') +
+        '</div></div>' +
+        '<div class="hint" style="margin-top:6px">' + (t.meetCap && t.meet > t.meetCap ? 'Cap se zyada' : 'Cap ke andar') + '</div>' : '') +
       '<div class="hint" style="margin-top:8px">Bills lagenge: ' +
         (Object.keys(t.bills).length ? esc(Object.keys(t.bills).join(', ')) : 'koi nahi (sirf DA)') +
         '. DA ke liye bill ki zaroorat nahi hoti.</div>' +
       '</div>';
 
     /* the days */
-    var ds = Tada.dates();
+    var ds = Tada.dates(), ded = Tada.ded(r);
     h += '<div class="sec-title">Din-wise (' + ds.length + ')</div>';
     if (!ds.length) return h + '<div class="card">' + UI.empty('', 'Is month ka koi din abhi nahi aaya') + '</div>';
     h += '<div class="card">';
-    /* a full month is thirty-one rows, which would bury the send button. While nothing is open the list
-       scrolls inside its own pane; the moment a day is opened it gets the whole page to itself. */
     var pane = !Tada.open;
-    /* .pane's negative margin is cut for the product table's own card padding; the day rows sit in a
-       card with a different inset, so it is cancelled here or the pane runs 13px past its parent */
-    if (pane) h += '<div class="pane" style="max-height:430px;margin:0;padding:0">';
+    if (pane) h += '<div class="pane" style="max-height:430px">';
     var DAY = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     ds.forEach(function (d) {
       var row = Tada.days[d], c = Tada.calc(d), op = Tada.open === d;
-      var amt = c.da + c.food + c.travel + c.lodge + c.station;
-      var lbl = (Tada.ST.filter(function (x) { return x[0] === row.st; })[0] || Tada.ST[0])[1];
-      h += '<div class="drow' + (c.warn.length ? ' bad inset' : (op ? ' op inset' : '')) + '">' +
+      var amt = Tada.dayTot(c), dd = ded[d] || {};
+      var bad = c.warn.length || num(dd.amt) > 0;
+      /* inset, not full-bleed: this list lives inside a padded card (and sometimes inside a scrolling
+         pane), where a -14px bleed hangs past the content box */
+      h += '<div class="drow' + (bad ? ' bad inset' : (op ? ' op inset' : '')) + '">' +
         '<div class="dr-h"><div class="m">' +
           '<div class="t">' + dmy(d) + ' <span class="hint">' + DAY[new Date(d + 'T00:00:00').getDay()] + '</span>' +
           (row.from === 'plan' ? ' <span class="pill p-grey">plan se</span>' : '') +
           (c.warn.length ? ' <span class="pill p-bad">' + c.warn.length + '</span>' : '') + '</div>' +
-          '<div class="s">' + esc(lbl) + (row.town ? ' · ' + esc(row.town) : '') +
+          '<div class="s">' + esc(Tada.stLbl(row.st)) +
+            /* an off day owes no city; a claimable day without one cannot be priced, so it is flagged */
+            (row.st === 'off' || row.st === 'meet' ? (row.city ? ' · ' + esc(row.city) : '')
+              : ' · ' + (row.city ? esc(row.city) : '<b style="color:var(--bad)">city nahi</b>')) +
+            (row.mode !== 'none' ? ' · ' + esc(Tada.mLbl(row.mode)) : '') +
             (amt ? ' · ' + inr(amt) : ' · —') + '</div></div>' +
         '<button class="btn ghost xs" onclick="Tada.tap(\'' + d + '\')">' + (op ? 'Close' : 'Edit') + '</button></div>' +
+        (num(dd.amt) > 0 ? '<div class="hint" style="color:var(--bad);font-weight:700;margin:2px 0 0">' +
+          'HOD deduction − ' + inr(dd.amt) + (dd.note ? ' · ' + esc(dd.note) : '') + '</div>' : '') +
         (op ? Tada.dayEdit(d, row, c, S) : '') +
         '</div>';
     });
@@ -8129,22 +8454,28 @@ var Tada = {
       '15 tarikh tak hua to 30 ko.</div>' +
       '<label class="f">Remarks</label><input class="in" id="td_rm" value="' + esc(r.Remarks || '') + '">' +
       '<div class="btns"><button class="btn' + (okd ? ' ghost' : '') + '" onclick="Tada.send(this)"' +
-        (okd ? ' disabled' : '') + '>' + (sent ? 'Dobara bhejo' : 'HOD ko bhejo') + '</button>' +
+        (okd ? ' disabled' : '') + '>' + (sent || back ? 'Dobara bhejo' : 'HOD ko bhejo') + '</button>' +
       '<button class="btn ghost" onclick="Tada.excel()">Excel</button></div>' +
-      (r.HodRemarks ? '<div class="banner ' + (/reject/i.test(st) ? 'r' : 'b') + '" style="margin-top:10px">' +
+      (r.HodRemarks ? '<div class="banner ' + (back ? 'r' : 'b') + '" style="margin-top:10px">' +
         '<span></span><div><b>HOD ka message</b><br><span style="font-weight:500">' + esc(r.HodRemarks) + '</span></div></div>' : '') +
       '</div>';
     return h;
   },
+  citySel: function (d, cur, handler) {
+    var list = Tada.cities(cur);
+    return '<select class="in" onchange="' + (handler || ('Tada.set(\'' + d + '\',\'city\',this.value)')) + '">' +
+      '<option value=""' + (cur ? '' : ' selected') + '>— city chuno —</option>' +
+      list.map(function (x) { return '<option' + (Plan.norm(x) === Plan.norm(cur) ? ' selected' : '') +
+        '>' + esc(x) + '</option>'; }).join('') + '</select>';
+  },
   slabTable: function (S) {
-    var money = function (v) { return v ? inr(v) : '—'; };
     var line = function (P, what) {
       var bits = [];
       if (P.da) bits.push('DA ' + inr(P.da));
       if (P.metro || P.nonMetro) bits.push('DA ' + inr(P.metro) + ' metro / ' + inr(P.nonMetro) + ' non-metro');
       if (P.perKm) bits.push(inr(P.perKm) + '/km' + (P.kmCap ? ' upto ' + P.kmCap + ' km' : ''));
-      if (P.tickets) bits.push('tickets on actuals');
-      if (P.cab) bits.push('cab on actuals');
+      if (P.tickets) bits.push('bus / train actual');
+      if (P.cab) bits.push('cab actual');
       if (P.billsOnly && !P.metro) bits.push('bills only — fixed DA nahi');
       var food = P.foodMonth ? inr(P.foodMonth) + ' / month'
         : P.food ? inr(P.food) + ' / din'
@@ -8153,60 +8484,73 @@ var Tada = {
     };
     return '<div class="tw"><table><thead><tr><th>Station</th><th>Travel</th><th>Food</th></tr></thead><tbody>' +
       line(S.hq, 'HQ') + line(S.ex, 'Ex-HQ') + line(S.out, 'Outstation') +
-      '<tr class="tot"><td><b>Lodging</b></td><td colspan="2"><b>' + inr(S.lodge.nonMetro) +
+      '<tr class="tot"><td><b>Lodging cost</b></td><td colspan="2"><b>' + inr(S.lodge.nonMetro) +
       ' non-metro · ' + inr(S.lodge.metro) + ' metro · ' + inr(S.lodge.mumbai) +
       ' Mumbai</b></td></tr></tbody></table></div>';
   },
   dayEdit: function (d, r, c, S) {
     var P = r.st === 'hq' ? S.hq : r.st === 'ex' ? S.ex : S.out;
+    var pol = Tada.pol(d);
     var sel = function (f, list, cur) {
       return '<select class="in" onchange="Tada.set(\'' + d + '\',\'' + f + '\',this.value)">' +
         list.map(function (x) { return '<option value="' + x[0] + '"' + (x[0] === cur ? ' selected' : '') +
           '>' + esc(x[1]) + '</option>'; }).join('') + '</select>';
     };
-    var numf = function (f, lbl, v) {
+    var numf = function (f, lbl, v, extra) {
       return '<div><label class="f">' + lbl + '</label><input class="in" type="number" min="0" value="' +
-        num(v) + '" oninput="Tada.set(\'' + d + '\',\'' + f + '\',this.value)"></div>';
+        num(v) + '" oninput="Tada.set(\'' + d + '\',\'' + f + '\',this.value)">' +
+        (extra || '') + '</div>';
     };
+    /* city first: the station follows from it */
     var h = '<div class="dr-b">' +
-      '<div class="row two"><div><label class="f">Ye din kya tha</label>' + sel('st', Tada.ST, r.st) + '</div>' +
-      '<div><label class="f">Town / city</label><input class="in" value="' + esc(r.town || '') +
-        '" oninput="Tada.set(\'' + d + '\',\'town\',this.value)"></div></div>';
+      '<div class="row two"><div><label class="f">City</label>' + Tada.citySel(d, r.city || '') + '</div>' +
+      '<div><label class="f">Ye din kya tha</label>' + sel('st', Tada.ST, r.st) + '</div></div>' +
+      '<div class="hint" style="margin-top:6px">' + esc(Tada.stWhy(r.city)) +
+        (r.stT ? ' <b>Aapne khud badla hai.</b>' : '') +
+        (r.stT ? ' <a class="pl" onclick="Tada.reset(\'' + d + '\',\'st\')">City se dobara set karo</a>' : '') +
+        '</div>';
     if (r.st === 'off' || r.st === 'meet') {
-      h += '<div class="hint" style="margin-top:8px">' + esc(c.why[0] || '') + '</div>';
+      h += '<div class="hint" style="margin-top:8px">' + esc(c.why[0] || '') + '</div>' +
+        Tada.dayBar(d);
       return h + '</div>';
     }
     h += '<div class="row two" style="margin-top:8px"><div><label class="f">Kaise gaye</label>' +
-      sel('mode', Tada.MODE.filter(function (m) {
-        if (m[0] === 'da') return !!(P.da || P.metro || P.nonMetro);
-        if (m[0] === 'km') return !!P.perKm;
-        if (m[0] === 'cab') return !!P.cab;
-        return !!P.tickets || r.st !== 'hq';
-      }), r.mode) + '</div>' +
+      sel('mode', Tada.modes(r.st, P), r.mode) + '</div>' +
       (r.st === 'out' ? numf('night', 'Kitni raat ruke', r.night) : '<div></div>') + '</div>';
     var f2 = [];
-    if (r.mode === 'km') f2.push(numf('km', 'Kitne km (logbook)', r.km));
-    if (r.mode === 'ticket') f2.push(numf('ticket', 'Ticket amount ₹', r.ticket));
-    if (r.mode === 'cab') f2.push(numf('cab', 'Cab amount ₹', r.cab));
-    /* on an outstation DA the food is already inside the DA, so asking for a food bill only confuses —
-       the field appears when food is actually claimable on its own */
-    var foodOwn = P.foodMonth || (r.st === 'out' && (r.mode !== 'da' || P.billsOnly));
-    if (foodOwn) f2.push(numf('food', 'Food bill ₹', r.food));
+    if (Tada.OWN.indexOf(r.mode) >= 0) f2.push(numf('km', 'Kitne km (logbook)', r.km));
+    if (Tada.FARE.indexOf(r.mode) >= 0) f2.push(numf('fare', Tada.mLbl(r.mode) + ' ka actual ₹', r.fare));
+    /* DA and food are estimates the rep owns */
+    f2.push(numf('da', 'DA ₹ (estimate)', r.daT ? r.da : pol.da,
+      '<div class="hint">Policy ' + inr(pol.da) + (r.daT ? ' · <a class="pl" onclick="Tada.reset(\'' + d +
+        '\',\'da\')">policy rate wapas</a>' : '') + '</div>'));
+    f2.push(numf('food', 'Food ₹ (estimate)', r.foodT ? r.food : pol.food,
+      '<div class="hint">' + 'Policy ' + inr(pol.food || pol.foodCap || 0) +
+      (r.st === 'out' ? ' — bill lagega' : '') +
+      (r.foodT ? ' · <a class="pl" onclick="Tada.reset(\'' + d + '\',\'food\')">policy rate wapas</a>' : '') +
+      '</div>'));
     if (r.st === 'out') f2.push(numf('lodge', 'Hotel ₹ (GST ke saath)', r.lodge));
     while (f2.length % 2) f2.push('<div></div>');
     for (var i = 0; i < f2.length; i += 2) h += '<div class="row two" style="margin-top:8px">' + f2[i] + f2[i + 1] + '</div>';
     h += '<label class="f">Note</label><input class="in" value="' + esc(r.note || '') +
       '" oninput="Tada.set(\'' + d + '\',\'note\',this.value)">';
     h += '<div class="tw" style="margin-top:10px"><table><tbody>' +
-      [['DA', c.da], ['Food', c.food], ['Travel', c.travel], ['Station tak', c.station], ['Lodging', c.lodge]]
+      [['DA', c.da], ['Food', c.food], ['Travel', c.travel], ['Station tak', c.station], ['Lodging cost', c.lodge]]
       .filter(function (x) { return x[1]; })
       .map(function (x) { return '<tr><td>' + x[0] + '</td><td class="num">' + inr(x[1]) + '</td></tr>'; }).join('') +
       '<tr class="tot"><td><b>Din ka total</b></td><td class="num"><b>' +
-      inr(c.da + c.food + c.travel + c.lodge + c.station) + '</b></td></tr></tbody></table></div>' +
+      inr(Tada.dayTot(c)) + '</b></td></tr></tbody></table></div>' +
       (c.why.length ? '<div class="hint" style="margin-top:6px">' + esc(c.why.join(' · ')) + '</div>' : '') +
       (c.bills.length ? '<div class="hint">Bill lagega: ' + esc(c.bills.join(', ')) + '</div>' : '') +
       c.warn.map(function (w) { return '<div class="hint" style="color:var(--bad);font-weight:700">! ' + esc(w) + '</div>'; }).join('');
-    return h + '</div>';
+    return h + Tada.dayBar(d) + '</div>';
+  },
+  /* one explicit Save per day — an autosave the rep cannot see is an autosave he does not trust */
+  dayBar: function (d) {
+    return '<div class="dsave" style="margin-top:10px"><div class="hint" style="flex:1 1 auto">' +
+      'Save karne ke baad ye din band ho jayega.</div>' +
+      '<button class="btn ok" onclick="Tada.saveDay(\'' + d + '\',this)">Save</button>' +
+      '<button class="btn ghost" onclick="Tada.tap(\'' + d + '\')">Close</button></div>';
   },
   tap: function (d) { Tada.open = Tada.open === d ? '' : d; render(); },
   setMonth: function (m) { Tada.flush(); Tada.month = m; Tada.days = null; Tada.open = ''; render(); },
@@ -8216,6 +8560,11 @@ var Tada = {
     var t = Tada.total(), r = Tada.row();
     if (/approved/i.test(r.Status || '')) return toast('Ye claim approve ho chuka hai');
     if (!t.grand) return toast('Claim me kuch nahi hai — pehle din bharo');
+    var noCity = Tada.dates().filter(function (d) {
+      var x = Tada.days[d]; return x && x.st !== 'off' && x.st !== 'meet' && !String(x.city || '').trim() &&
+        Tada.dayTot(Tada.calc(d)) > 0; });
+    if (noCity.length) { Tada.open = noCity[0]; render();
+      return toast(dmy(noCity[0]) + ' ki city bharo — station usi se decide hota hai', 4000); }
     var warn = t.warn ? 'Isme ' + t.warn + ' warning hai — cap se zyada amount cut ho jayega. ' : '';
     return UI.confirm({ icon:'', title:'TA/DA claim bhejna hai?',
       msg:'<b>' + esc(monthName(Tada.mon())) + '</b> — ' + inr(t.grand) + ' ka claim, ' + t.days +
@@ -8224,11 +8573,14 @@ var Tada = {
       if (!go) return;
       Tada._dirty = true;
       return Busy.run('tada_' + Tada.key(), el, 'Bhej raha hai…', function () {
-        return DB.save('TaDa', Object.assign({}, Tada.row(), { Id:Tada.key(), Month:Tada.mon(),
+        var r2 = Tada.row();
+        return DB.save('TaDa', Object.assign({}, r2, { Id:Tada.key(), Month:Tada.mon(),
           Designation:(DB.emp(DB.me.code) || {}).Designation || DB.me.desig || '',
           DaysJson:JSON.stringify(Tada.days), DaAmount:t.da, FoodAmount:t.food, TravelAmount:t.travel,
           LodgeAmount:t.lodge, MeetAmount:t.meet, OtherAmount:t.station, Nights:t.nights,
-          Total:t.grand, Remarks:val('td_rm'), Status:'Pending', HodAt:'', HodBy:'', HodRemarks:'',
+          DeductTotal:t.deduct, NetTotal:t.net,
+          Revision:num(r2.Revision) + 1,
+          Total:t.grand, Remarks:val('td_rm'), Status:'Pending', HodAt:'', HodBy:'',
           Date:today(), SubmittedAt:new Date().toISOString(), UpdatedAt:Date.now() })).then(function () {
           Log.add('TaDa', 'Submitted', Tada.key(), inr(t.grand));
           render(); toast('Claim HOD ko chala gaya — ' + inr(t.grand), 4000);
@@ -8236,8 +8588,161 @@ var Tada = {
       });
     });
   },
-  excel: function () { return Rep.tada(Tada.mon()); }
+  excel: function () { return Rep.tada(Tada.mon()); },
+
+  /* ══════════ THE HOD's SIDE ══════════
+     A claim is a month of days, not a number: the HOD reads every day the way the rep filled it, and
+     where a day is not worth what was claimed he cuts an amount and says why. The note is compulsory —
+     a deduction nobody explained is the thing the rep argues about next month. */
+  hod:{ id:'', d:{} },
+  /* the generic Approvals contract still routes "approve / reject" through Appr.act(); for a claim both
+     of those mean "open it and read it", so this takes the HOD to the month instead of deciding it */
+  jump: function (id) {
+    Router.go('appr');
+    Appr.open['tada_' + Appr.jid(id)] = true;
+    render();
+    toast('Poora claim dekho — har din par deduction daal sakte ho', 3800);
+  },
+  hodLoad: function (r) {
+    if (Tada.hod.id === r.Id) return Tada.hod.d;
+    Tada.hod = { id:r.Id, d:{} };
+    var saved = Tada.ded(r);
+    Object.keys(saved).forEach(function (k) {
+      Tada.hod.d[k] = { amt:num(saved[k] && saved[k].amt), note:String((saved[k] && saved[k].note) || '') };
+    });
+    return Tada.hod.d;
+  },
+  hodSet: function (id, d, f, v) {
+    var r = DB.find('TaDa', id); if (!r) return;
+    var m = Tada.hodLoad(r);
+    if (!m[d]) m[d] = { amt:0, note:'' };
+    m[d][f] = f === 'amt' ? num(v) : String(v || '');
+    Tada.hodPaint(r);
+  },
+  hodSum: function (r) {
+    var m = Tada.hodLoad(r), cx = Tada.ctx(r), dates = Object.keys(cx.days).sort();
+    cx.row = r;
+    var t = Tada.total(cx, dates), ded = 0, miss = 0;
+    Object.keys(m).forEach(function (k) {
+      var a = num(m[k].amt);
+      if (a > 0) { ded += a; if (!String(m[k].note || '').trim()) miss++; }
+    });
+    return { t:t, cx:cx, dates:dates, ded:ded, miss:miss, net:Math.max(0, t.grand - ded), m:m };
+  },
+  /* the running net, without a re-render that would take the caret out of the box being typed in */
+  hodPaint: function (r) {
+    var s = Tada.hodSum(r);
+    var a = $('tdh_ded'), b = $('tdh_net'), c = $('tdh_miss');
+    if (a) a.innerHTML = I18n.tr('− ' + inr(s.ded));
+    if (b) b.innerHTML = I18n.tr(inr(s.net));
+    if (c) c.innerHTML = s.miss ? I18n.s('Reason likhna baaki hai') + ': ' + s.miss : '';
+  },
+  hodView: function (id, can) {
+    var r = DB.find('TaDa', id);
+    if (!r) return '<div class="hint">Claim row nahi mila</div>';
+    var s = Tada.hodSum(r), S = s.cx.S;
+    var h = '<div class="sec-title" style="margin-top:12px">Poora TA/DA — ' +
+      esc(monthName(r.Month) || r.Month) + '</div>';
+    h += '<div class="card"><div class="hint">' + esc(r.EmpName || '') + ' · ' +
+      esc(r.Designation || '—') + ' · slab: <b>' + esc(S.name) + '</b></div>' +
+      '<div class="tw" style="margin-top:8px"><table><tbody>' +
+      '<tr><td>Claim total</td><td class="num"><b>' + inr(s.t.grand) + '</b></td></tr>' +
+      '<tr><td>Deduction</td><td class="num" id="tdh_ded" style="color:var(--bad)">− ' + inr(s.ded) + '</td></tr>' +
+      '<tr class="tot"><td><b>Net payable</b></td><td class="num"><b id="tdh_net">' + inr(s.net) + '</b></td></tr>' +
+      '</tbody></table></div>' +
+      '<div class="hint" style="margin-top:6px">DA ' + inr(s.t.da) + ' · Food ' + inr(s.t.food) +
+        ' · Travel ' + inr(s.t.travel + s.t.station) + ' · Lodging ' + inr(s.t.lodge) +
+        ' · Meeting ' + inr(s.t.meet) + '</div>' +
+      '<div class="hint">Ex-HQ ' + s.t.byStation.ex + ' din · Outstation ' + s.t.byStation.out +
+        ' din (' + s.t.nights + ' raat) · HQ ' + s.t.byStation.hq + ' din</div>' +
+      (r.Remarks ? '<div class="hint" style="margin-top:6px">Rep ka remark: ' + esc(r.Remarks) + '</div>' : '') +
+      '<div class="hint" id="tdh_miss" style="color:var(--bad);font-weight:700">' +
+        (s.miss ? I18n.s('Reason likhna baaki hai') + ': ' + s.miss : '') + '</div></div>';
+
+    var DAY = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    h += '<div class="card">';
+    h += '<div class="hint" style="margin-bottom:8px">Har din ke saamne deduction daal sakte ho — jitna ' +
+      'kaam nahi hua utna kaato aur reason likho. Reason ke bina deduction save nahi hoga.</div>';
+    h += '<div class="pane" style="max-height:460px">';
+    s.dates.forEach(function (d) {
+      var row = s.cx.days[d], c = Tada.calc(d, s.cx), dd = s.m[d] || { amt:0, note:'' };
+      var amt = Tada.dayTot(c);
+      h += '<div class="drow' + (num(dd.amt) > 0 ? ' bad' : '') + '">' +
+        '<div class="dr-h"><div class="m">' +
+          '<div class="t">' + dmy(d) + ' <span class="hint">' +
+            DAY[new Date(d + 'T00:00:00').getDay()] + '</span></div>' +
+          '<div class="s">' + esc(Tada.stLbl(row.st)) + ' · ' + esc(row.city || '—') +
+            (row.mode !== 'none' ? ' · ' + esc(Tada.mLbl(row.mode)) : '') +
+            (num(row.km) ? ' · ' + num(row.km) + ' km' : '') +
+            (row.st === 'out' ? ' · ' + Math.max(1, num(row.night)) + ' raat' : '') + '</div></div>' +
+        '<span class="pill p-grey">' + inr(amt) + '</span></div>';
+      h += '<div class="dr-b">' +
+        '<div class="hint">DA ' + inr(c.da) + ' · Food ' + inr(c.food) + ' · Travel ' +
+          inr(c.travel + c.station) + (c.lodge ? ' · Hotel ' + inr(c.lodge) : '') + '</div>' +
+        (c.why.length ? '<div class="hint">' + esc(c.why.join(' · ')) + '</div>' : '') +
+        (row.note ? '<div class="hint">Rep: ' + esc(row.note) + '</div>' : '') +
+        c.warn.map(function (w) { return '<div class="hint" style="color:var(--bad);font-weight:700">! ' +
+          esc(w) + '</div>'; }).join('') +
+        '<div style="display:flex;gap:8px;align-items:flex-end;margin-top:6px">' +
+          '<div style="flex:0 0 96px"><label class="f">Deduction ₹</label>' +
+            '<input class="in" type="number" min="0" max="' + amt + '" value="' + num(dd.amt) +
+            '" onclick="event.stopPropagation()" oninput="Tada.hodSet(\'' + Appr.q(id) + '\',\'' + d +
+            '\',\'amt\',this.value)"></div>' +
+          '<div style="flex:1 1 auto;min-width:0"><label class="f">Reason (zaroori)</label>' +
+            '<input class="in" value="' + esc(dd.note) + '" placeholder="Kyun kaata" ' +
+            'onclick="event.stopPropagation()" oninput="Tada.hodSet(\'' + Appr.q(id) + '\',\'' + d +
+            '\',\'note\',this.value)"></div></div>' +
+        '</div>';
+      h += '</div>';
+    });
+    h += '</div><div class="hint" style="margin-top:8px">List scroll karo — ' + s.dates.length + ' din</div>';
+    h += '</div>';
+
+    if (!can) {
+      h += '<div class="hint">Ye claim abhi decide karne layak nahi hai — rep ke paas hai ya decision ho chuka hai.</div>';
+      return h;
+    }
+    h += '<div class="card tada-bar"><label class="f">Message (rep ko dikhega)</label>' +
+      '<input class="in" id="tdh_msg" onclick="event.stopPropagation()" value="' + esc(r.HodRemarks || '') + '">' +
+      '<div class="btns"><button class="btn ok" onclick="Tada.hodDo(\'' + Appr.q(id) + '\',\'ok\',this)">Poora approve karo</button>' +
+      '<button class="btn bad" onclick="Tada.hodDo(\'' + Appr.q(id) + '\',\'back\',this)">Deduction ke saath wapas bhejo</button></div>' +
+      '<div class="hint" style="margin-top:6px">Approve karne par deduction ke baad ka net amount final ' +
+      'ho jayega. Wapas bhejne par rep isse theek karke dobara bhej sakta hai.</div></div>';
+    return h;
+  },
+  hodDo: function (id, what, el) {
+    var r = DB.find('TaDa', id); if (!r) return;
+    var s = Tada.hodSum(r);
+    if (s.miss) return toast('Har deduction ke saath reason likhna zaroori hai — ' + s.miss + ' baaki hai', 4000);
+    if (what === 'back' && !s.ded)
+      return toast('Wapas bhejne ke liye kam se kam ek deduction ya message do');
+    var m = {}, now = new Date().toISOString();
+    Object.keys(s.m).forEach(function (k) {
+      if (num(s.m[k].amt) > 0) m[k] = { amt:num(s.m[k].amt), note:s.m[k].note, by:DB.me.name, at:now };
+    });
+    var msg = val('tdh_msg') || '';
+    var ok = what === 'ok';
+    return UI.confirm({ icon:'', title:ok ? 'Poora claim approve karein?' : 'Deduction ke saath wapas bhejein?',
+      msg:'<b>' + esc(r.EmpName || '') + '</b> — claim ' + inr(s.t.grand) +
+        (s.ded ? ', deduction ' + inr(s.ded) + ', net <b>' + inr(s.net) + '</b>' : ', poora amount') + '.',
+      ok:ok ? 'Haan, approve' : 'Haan, wapas bhejo', cancel:'Abhi nahi' }).then(function (go) {
+      if (!go) return;
+      return Busy.run('tadahod_' + id, el, ok ? 'Approve…' : 'Bhej raha hai…', function () {
+        return DB.save('TaDa', Object.assign({}, r, Admin.stamp(), {
+          Status:ok ? 'Approved' : 'Returned',
+          DeductJson:JSON.stringify(m), DeductTotal:s.ded, NetTotal:s.net,
+          ReturnedAt:ok ? (r.ReturnedAt || '') : now,
+          HodRemarks:msg })).then(function () {
+          Log.add('TaDa', ok ? 'Approved' : 'Returned', id, inr(s.net));
+          Tada.hod = { id:'', d:{} };
+          Nav._c = null; Nav.build(); render();
+          toast(ok ? 'TA/DA approved — net ' + inr(s.net) : 'Rep ko wapas bhej diya — ' + inr(s.ded) + ' deduction');
+        });
+      });
+    });
+  }
 };
+
 
 /* ═══════════════ APPROVALS — "meri requests" ═══════════════
    One place where a rep sees every approval they have ever asked for, and exactly when each step
@@ -8285,6 +8790,9 @@ var Appr = {
     /* "Partially Rejected" must not be read as either a clean approval or a full rejection: the rep
        has to fix only the ticked days, and the queue has to keep it visible as still-open work. */
     if (/partial/.test(s)) return 'partial';
+    /* a TA/DA the HOD sent back with deductions is the same shape of work: it is the rep's move now,
+       it must stay visible in his to-do, and no HOD may decide it again until he re-sends */
+    if (/return/.test(s)) return 'partial';
     if (/approv/.test(s)) return 'approved';
     if (/reject|declin/.test(s)) return 'rejected';
     if (/draft/.test(s)) return 'draft';
@@ -8319,8 +8827,14 @@ var Appr = {
        Approve and Reject at the top open the plan instead of deciding it: the HOD reads the days, ticks
        the ones that are wrong, and commits at the bottom — where "reject only these days" lives. A
        month approved from a collapsed card is a month nobody read. */
-    if (o.act === 'pjp') {
+    if (o.act === 'pjp' || o.act === 'tada') {
       var r = 'onclick="event.stopPropagation();Appr.review(\'' + o.id + '\',';
+      if (o.act === 'tada') return big
+        ? '<div class="btns"><button class="btn ok" ' + r + '\'ok\')">Poora claim dekho</button>' +
+          '<button class="btn bad" ' + r + '\'no\')">Deduction lagao</button></div>'
+        : '<div style="display:flex;gap:6px;flex:0 0 auto">' +
+          '<button class="btn ok xs" ' + r + '\'ok\')">Dekho</button>' +
+          '<button class="btn bad xs" ' + r + '\'no\')">Deduct</button></div>';
       return big
         ? '<div class="btns"><button class="btn ok" ' + r + '\'ok\')">Approve — plan dekho</button>' +
           '<button class="btn bad" ' + r + '\'no\')">Reject — plan dekho</button></div>'
@@ -8342,11 +8856,15 @@ var Appr = {
     Appr.open[id] = true;
     render();
     setTimeout(function () {
-      var b = document.querySelector('#view .pjp-bar');
+      var b = document.querySelector('#view .pjp-bar') || document.querySelector('#view .tada-bar');
       if (b && b.scrollIntoView) b.scrollIntoView({ block:'center' });
     }, 60);
-    toast(want === 'no' ? 'Poora plan dekho — niche se poora month ya sirf kuch din reject karo'
-                        : 'Poora plan dekho — niche se approve karo', 3800);
+    var kind = (Appr.list().filter(function (x) { return x.id === id; })[0] || {}).act;
+    if (kind === 'tada')
+      toast(want === 'no' ? 'Poora claim dekho — jis din ka kaam nahi hua uspar deduction daalo'
+                          : 'Poora claim dekho — niche se poora approve karo', 3800);
+    else toast(want === 'no' ? 'Poora plan dekho — niche se poora month ya sirf kuch din reject karo'
+                             : 'Poora plan dekho — niche se approve karo', 3800);
   },
 
   list: function () {
@@ -8415,7 +8933,12 @@ var Appr = {
         sent:r.Date || '', sentAlt:r.UpdatedAt || r.LastSync || '',
         act:'tada', key:r.Id,
         done:r.HodAt || '', by:r.HodBy || '', role:r.HodRole || '', note:r.HodRemarks || '',
-        rows:[['Total', inr(r.Total)], ['Station', r.Station || '—']], tip:'' });
+        rows:num(r.DeductTotal)
+          ? [['Claim', inr(r.Total)], ['Deduction', '− ' + inr(r.DeductTotal)],
+             ['Net payable', inr(r.NetTotal || (num(r.Total) - num(r.DeductTotal)))]]
+          : [['Claim total', inr(r.Total)]].concat(num(r.Nights)
+              ? [['Outstation nights', String(num(r.Nights))]] : []),
+        tip:'' });
     });
 
     out.forEach(function (o) {
@@ -8502,10 +9025,13 @@ var Appr = {
         h += '<div class="tl-i wait"><b>' + (Auth.isAdmin() ? 'Rep ke paas hai — wapas aane ka wait'
           : 'Theek karke dobara bhejna hai') + '</b><span>' +
           (Auth.isAdmin() ? 'Jab tak rep dobara nahi bhejta, isme kuch decide nahi karna hai.'
-                          : 'PJP tab me sirf reject wale din khule hain.') + '</span></div>';
-        h += '<div class="tl-i bad"><b>HOD ne kuch din reject kiye</b><span>' +
+            : o.act === 'tada' ? 'TA/DA tab me deduction wale din laal me dikh rahe hain.'
+            : 'PJP tab me sirf reject wale din khule hain.') + '</span></div>';
+        h += '<div class="tl-i bad"><b>' + (o.act === 'tada' ? 'HOD ne kuch din par deduction lagaya'
+          : 'HOD ne kuch din reject kiye') + '</b><span>' +
           (o.doneT ? esc(Appr.when(o.doneT)) + (o.by ? ' · ' + esc(o.by) : '') : 'Time record nahi hua') +
-          '<br>Sirf wo din theek karke dobara bhejo — baaki month waise hi hai.</span></div>';
+          (o.act === 'tada' ? '<br>Deduction dekho, theek karo ya samjha do, phir dobara bhejo.'
+            : '<br>Sirf wo din theek karke dobara bhejo — baaki month waise hi hai.') + '</span></div>';
       } else if (o.status === 'draft') {
         h += '<div class="tl-i wait"><b>HOD ko bheja nahi</b><span>PJP tab se submit karo</span></div>';
       } else if (o.doneT) {
@@ -8539,10 +9065,13 @@ var Appr = {
       }
       /* the big pair is the way IN to a PJP; with the month already open the decision bar under the
          day list is the only place a decision is made */
-      if (o.act !== 'pjp') h += Appr.btns(o, true);
+      if (o.act !== 'pjp' && o.act !== 'tada') h += Appr.btns(o, true);
       /* A PJP request IS its day list — telling an HOD to "go to that tab" was asking them to
          re-find the thing they had just tapped. Every other kind still gets a jump link. */
       if (o.act === 'pjp') h += '<div onclick="event.stopPropagation()">' + Admin.pjpDays(o.key, Appr.can(o)) + '</div>';
+      /* a claim is a month of days too: the HOD reads each one and cuts what was not worked */
+      else if (o.act === 'tada' && Auth.isAdmin()) h += '<div onclick="event.stopPropagation()">' +
+        Tada.hodView(o.key, Appr.can(o)) + '</div>';
       else h += '<div class="btns"><button class="btn ghost sm" onclick="event.stopPropagation();Router.go(\'' +
         o.go + '\')">Open that tab</button></div>';
     }
@@ -8860,22 +9389,9 @@ var Admin = {
      asks his ASM himself and marks the stage in the Tracker tab. There is deliberately no admin/HOD
      handler for either: two authorities writing one Status column is how a sheet starts lying. */
 
-  /* TA/DA claim */
-  tadaOk: function (id, ok) {
-    var r = DB.find('TaDa', id); if (!r) return;
-    var ask = ok ? Promise.resolve('') : UI.prompt({ icon:'', title:'TA/DA reject karein?',
-      danger:true, msg:'<b>' + esc(r.EmpName || '') + '</b> \u2014 ' + inr(r.Total),
-      label:'Reject reason', multiline:true, required:true,
-      requiredMsg:'Reason likhna zaroori hai', ok:'Reject karo' });
-    ask.then(function (rem) {
-      if (!ok && !rem) return;
-      return DB.save('TaDa', Object.assign({}, r, Admin.stamp(),
-        { Status:ok ? 'Approved' : 'Rejected', HodRemarks:rem || '' })).then(function () {
-        Log.add('TaDa', ok ? 'Approved' : 'Rejected', id, Admin.role());
-        Nav._c = null; Nav.build(); render(); toast(ok ? ' TA/DA approved' : ' TA/DA rejected');
-      });
-    });
-  },
+  /* TA/DA — decided in Tada.hodDo, day by day, because a month is not a yes/no. This shim keeps the
+     generic Appr.act() contract: both buttons open the claim instead of deciding it unread. */
+  tadaOk: function (id) { return Tada.jump(id); },
 
   /* ORDER STATUS — an HOD chasing billing should not have to open the sheet.
      Goes through Sec.commit so the line rows and totals stay in step. */
