@@ -373,6 +373,18 @@ td.num,th.num{text-align:right}
   margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
 .dsave span{font-size:11.5px;font-weight:600;color:var(--ink-3)}
 .dsave .btn{width:auto;flex:0 0 auto;min-width:104px}
+/* ── a count that means "these need you" ──
+   The same red dot a phone puts on an app icon, so a rep reads it without being taught. It only ever
+   carries OPEN work: a closed order is not a notification. */
+.tnav{display:flex;gap:8px;border-bottom:1px solid var(--line);margin:0 -14px;padding:0 14px}
+.tnav button{flex:1 1 0;background:none;border:0;padding:11px 4px 9px;font:inherit;font-size:13px;
+  font-weight:600;color:var(--muted);border-bottom:2.5px solid transparent;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:6px}
+.tnav button.on{color:var(--blue);border-bottom-color:var(--blue)}
+.bdg{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;
+  padding:0 5px;border-radius:9px;background:var(--bad);color:#fff;font-size:11px;font-weight:800;
+  line-height:1}
+.tnav button.on .bdg{background:var(--bad)}
 .drow.fix{background:#f2fbf5;margin:0 -14px;padding:9px 14px;box-shadow:inset 3px 0 0 var(--ok)}
 /* a returned day's save row: state on the left, button on the right, a rule to separate it */
 .dsave{display:flex;align-items:center;justify-content:space-between;gap:10px;
@@ -2101,6 +2113,75 @@ I18n.D.en = I18n.EN = {
   'Is din ka koi claim nahi bhara':'Nothing has been claimed for this day',
   '(bill ke saath)':'(with the bill)',
   '— bill lagega':'— a bill is needed',
+  'Station (HQ / Ex-HQ / Outstation)':'Station (HQ / Ex-HQ / Outstation)',
+  'Station':'Station',
+  'Station aur city PJP se aate hain — badalna ho to PJP (ya Change PJP) me badlo.':'The station and the city come from the PJP — change them in the PJP (or Change PJP).',
+  'TA — travel ₹':'TA — travel ₹',
+  'DA — daily allowance ₹':'DA — daily allowance ₹',
+  'Bus / train / auto / cab / apni gaadi — jo kharch hua':'Bus / train / auto / cab / own vehicle — what it cost',
+  'Lodge cost ₹ (GST ke saath)':'Lodge cost ₹ (with GST)',
+  'Meeting day par sirf TA milta hai.':'A meeting day pays travel only.',
+  'Note (optional)':'Note (optional)',
+  'DA (daily allowance)':'DA (daily allowance)',
+  'TA (travel allowance)':'TA (travel allowance)',
+  'Lodge cost':'Lodge cost',
+  'Lodge':'Lodge',
+  'Meeting day — sirf TA milta hai, DA nahi':'Meeting day — travel only, no DA',
+  'Meeting day par DA nahi milta — HOD ise deduct kar sakta hai':'A meeting day pays no DA — the HOD may deduct it',
+  'Is din ka city PJP me nahi hai — PJP theek karao, tabhi rate lagega':'This day has no city in the PJP — get the PJP fixed so the rate can apply',
+  'policy ke hisaab se':'as per the policy',
+  '(DA + food)':'(DA + food)',
+  'Is role ke liye fixed DA nahi hai — TA aur bills par claim hota hai':'This role has no fixed DA — the claim is TA and bills',
+  'Kitni raat ruke, wo bharo':'Fill in how many nights',
+  'Travel bill / ticket / logbook':'Travel bill / ticket / logbook',
+  'Is role ka food monthly budget':'This role has a monthly food budget of',
+  'hai — DA me alag se food nahi jodte, bill lagao.':'— food is not added into the DA, claim it against bills.',
+  'raat)':'nights)',
+  'TA/DA PDF download':'Download TA/DA PDF',
+  'Travel policy PDF':'Travel policy PDF',
+  'Travel policy PDF khul rahi hai':'Opening the travel policy PDF',
+  'PDF ban gaya —':'PDF ready —',
+  'Total working days':'Total working days',
+  'On planned PJP':'On planned PJP',
+  'Off PJP (approved change)':'Off PJP (approved change)',
+  'Off PJP (approved)':'Off PJP (approved)',
+  'Missed':'Missed',
+  'Working days me weekly off, leave aur holiday nahi gine jaate. Adherence':'Working days exclude weekly off, leave and holidays. Adherence',
+  '% — on-PJP aur approved off-PJP dono ginte hain. HOD kisi bhi din ko khud bhi mark kar sakta hai.':'% — both on-PJP and approved off-PJP count. The HOD can also mark any day himself.',
+  'Telephonic calls':'Telephonic calls',
+  'TC me se store par gaye':'of TC, visited in person',
+  'TC me se phone par liye':'of TC, taken on the phone',
+  'Day-wise NSV (₹ Lakh)':'Day-wise NSV (₹ Lakh)',
+  'Last 7 days':'Last 7 days',
+  'This month':'This month',
+  'From':'From',
+  'To':'To',
+  'PJP adherence —':'PJP adherence —',
+  'Working din':'Working days',
+  'Jo mark nahi kiya wo app khud nikalta hai (order hua = on-PJP, approved change = off-PJP, kuch nahi = missed).':'Anything left unmarked the app works out itself (an order that day = on-PJP, an approved change = off-PJP, nothing = missed).',
+  'mark ho gaya':'marked',
+  '— auto —':'— auto —',
+  'Open — action chahiye':'Open — needs action',
+  'Open':'Open',
+  'Closed':'Closed',
+  'All':'All',
+  'Sec order — shop ka final order':'Sec order — each shop’s final order',
+  'Din ke beech me koi adjust karne ko kahe to yahin se karo — units badlo, line hatao, ya us shop me naya product add karo.':'If someone asks for an adjustment mid-day, do it here — change units, drop a line, or add a product to that shop.',
+  'Shop':'Shop',
+  'Units':'Units',
+  'Value':'Value',
+  '(aaj)':'(today)',
+  'Naya order':'New order',
+  'Aaj ka din lock hai — pehle Field tab se din dobara kholo.':'Today is locked — reopen the day from the Field tab first.',
+  'ka koi order nahi hai':'has no orders',
+  'Adjust':'Adjust',
+  'Line hatao?':'Remove the line?',
+  'is order se hat jayega.':'will come off this order.',
+  'Ye shop master me nahi mila — Field tab se add karo':'This shop is not in the master — add it from the Field tab',
+  'Aaj ka din lock hai — pehle din dobara kholo':'Today is locked — reopen the day first',
+  'shelf khul gaya, product add karo aur order complete karo':'— the shelf is open, add the product and complete the order',
+  'ka order update ho gaya — PO':'order updated — PO',
+  'units':'units',
   'Order punch karo':'Punch the order',
   /* live updates + the read-only plan / waiting screen */
   'HOD ne approve kar diya — aage badho':'The HOD approved it — carry on',
@@ -2726,11 +2807,18 @@ var Gate = {
     if (Bypass.on()) return true;                  /* the sequence is one of the waived rules */
     var l = Gate.level();
     if (v === 'plan')  return l >= 1;
-    if (v === 'field') return l >= 2;
-    if (v === 'stk') return l >= 2;                /* the shelf is part of the visit */
+    /* same exception as the shelf below: an order that exists can always be adjusted */
+    if (v === 'field') return l >= 2 || !!Field.editPo;
+    /* the shelf is part of the visit — except when Sec order sent the rep back to add a product to an
+       order that ALREADY exists: that day's sequence is history, and refusing him there would leave the
+       adjustment impossible */
+    if (v === 'stk') return l >= 2 || !!Field.editPo;
     /* a travel claim is about days ALREADY worked, so it is never gated on today's plan */
     if (v === 'tada') return true;
     if (v === 'sec' || v === 'posm' || v === 'eod') return l >= 3;
+    /* adjusting an order that already exists is not part of today's sequence — a rep gets that call
+       whether or not he has punched anything since */
+    if (v === 'fin') return true;
     /* PJP is a once-a-month job: open until HOD approves the month the window is for, then shut
        until the 27th comes round again */
     if (v === 'pjp') return !Pjp.approvedFor(Pjp.winMonth());
@@ -2778,9 +2866,10 @@ var TABS = [
   { v:'field', g:'', t:'Field' },
   { v:'stk',   g:'', t:'Stock' },
   { v:'sec',   g:'', t:'Orders' },
+  { v:'fin',   g:'', t:'Sec order' },
   { v:'posm',  g:'', t:'POSM' },
-  { v:'trk',   g:'', t:'Tracker' },
   { v:'eod',   g:'', t:'EOD' },
+  { v:'trk',   g:'', t:'Tracker' },
   { v:'tada',  g:'', t:'TA/DA' },
   { v:'appr',  g:'', t:'Approvals' }
 ];
@@ -2888,8 +2977,8 @@ function render() {
      restored right after the paint, while layout is still synchronous.
      A real tab change still starts at the top: Router.go scrolls AFTER calling render(). */
   var y = window.pageYOffset || document.documentElement.scrollTop || 0;
-  var f = ({ home:Home, pjp:Pjp, plan:Plan, field:Field, stk:Stk, sec:Sec, posm:Posm, trk:Trk, eod:Eod,
-             tada:Tada, appr:Appr, admin:Admin })[Router.cur];
+  var f = ({ home:Home, pjp:Pjp, plan:Plan, field:Field, stk:Stk, sec:Sec, fin:Fin, posm:Posm, trk:Trk,
+             eod:Eod, tada:Tada, appr:Appr, admin:Admin })[Router.cur];
   /* first ever paint and the data is still on its way — show a skeleton, never blank cards */
   /* every screen leaves through here, so ONE call translates the whole app */
   if (f && !DB.pulledAt && Api.n > 0) { $('view').innerHTML = I18n.tr(UI.skel()); return; }
@@ -3950,6 +4039,8 @@ var Card = {
 var Home = {
   /* dash · calls · ord · team */
   view:'dash', per:'M', month:'', metric:'nsv',
+  /* a from–to the rep picked himself; both set = it wins over the rolling seven days */
+  from:'', to:'',
   /* GARUDA went live in July — there is no data before it, so no period may reach back past it */
   start: function () { return String(DB.cfg('Go_Live_Month', '2026-07')).slice(0, 7); },
   mon: function () {
@@ -3972,9 +4063,14 @@ var Home = {
     var t = today();
     if (Home.per === 'D') return [t, t];
     if (Home.per === 'W') {
+      var s0 = Home.start() + '-01';
+      if (Home.from && Home.to) {
+        var a = Home.from < Home.to ? Home.from : Home.to, b = Home.from < Home.to ? Home.to : Home.from;
+        return [a < s0 ? s0 : a, b > t ? t : b];
+      }
       var d = new Date(t + 'T00:00:00'); d.setDate(d.getDate() - 6);
-      var f = iso(d), s = Home.start() + '-01';
-      return [f < s ? s : f, t];
+      var f = iso(d);
+      return [f < s0 ? s0 : f, t];
     }
     var m = Home.mon();
     var last = new Date(+m.slice(0, 4), +m.slice(5, 7), 0);
@@ -3983,8 +4079,12 @@ var Home = {
   rangeLbl: function () {
     var r = Home.range();
     return Home.per === 'D' ? dmy(r[0])
-      : Home.per === 'W' ? dmy(r[0]) + ' – ' + dmy(r[1])
+      : Home.per === 'W' ? dmy(r[0]) + ' – ' + dmy(r[1]) + ' (' + Home.days() + ' din)'
       : monthName(Home.mon()) + ' (1–' + (+r[1].slice(8, 10)) + ')';
+  },
+  /* "Jul 26" — the month AND the year, because a plain "Jul" stops meaning anything next year */
+  monLbl: function (m) {
+    return monthName(m).split(' ')[0].slice(0, 3) + ' ' + String(m).slice(2, 4);
   },
   days: function () { var r = Home.range();
     return Math.round((new Date(r[1] + 'T00:00:00') - new Date(r[0] + 'T00:00:00')) / 864e5) + 1; },
@@ -4013,7 +4113,9 @@ var Home = {
       nso:0, posm:0, posmReq:0, eod:0,
       byBrand:{}, byCat:{}, bySub:{}, bySku:{}, byStore:{}, byDay:{}, byBucket:{},
       msl:{ u:0, v:0 }, non:{ u:0, v:0 }, mega:{}, ba:{},
-      pjpPlanned:0, pjpCovered:0, offPjp:0, monthly:{}, pend:[] };
+      pjpPlanned:0, pjpCovered:0, offPjp:0, monthly:{}, pend:[],
+      /* the split inside TC, and the four adherence numbers */
+      visit:0, tel:0, workDays:0, onPjp:0, missed:0 };
     Home.BK.forEach(function (b) { A.byBucket[b[0]] = { days:0, tc:0, pc:0, nsv:0, nso:0 }; });
     A.byBucket.other = { days:0, tc:0, pc:0, nsv:0, nso:0 };
 
@@ -4047,6 +4149,8 @@ var Home = {
       if (!Home.billed(o.Status) && !can) A.pend.push(o);
       if (!Home.inR(d)) return;
       A.tc++;
+      /* TC = store visits + telephonic; the order says which it was */
+      if (/telephonic|phone/i.test(String(o.Source || ''))) A.tel++; else A.visit++;
       if (!A.byDay[d]) A.byDay[d] = { tc:0, pc:0, nsv:0, val:0 };
       A.byDay[d].tc++;
       var bk = dayBk[d] || 'other', B = A.byBucket[bk] || A.byBucket.other;
@@ -4089,17 +4193,43 @@ var Home = {
     DB.mine('PosmRequirement').forEach(function (r) { if (Home.inR(r.Date)) A.posmReq++; });
     DB.mine('Eod').forEach(function (r) { if (Home.inR(r.Date)) A.eod++; });
 
-    /* PJP adherence — a planned beat day counts as covered when that day has at least one visit */
-    var seen = {};
-    Object.keys(A.byDay).forEach(function (d) { seen[d] = 1; });
-    DB.pjpMonth(DB.me.code, Home.mon()).forEach(function (p) {
-      var d = toISO(p.Date);
-      if (!Home.inR(d)) return;
-      if (!Home.FIELD.test(String(p.Ww || 'Self Working'))) return;
-      A.pjpPlanned++;
-      if (seen[d]) { A.pjpCovered++; delete seen[d]; }
+    /* ── PJP adherence, the four numbers ──
+       A working day is a planned FIELD day (weekly off, leave and holiday are not). Of those, a day is
+       ON the plan when he worked the beat he had planned, OFF the plan when the change was approved,
+       and MISSED when neither. An HOD's own marking (DayPlan.PjpStatus) beats all of it — he knows what
+       actually happened. */
+    var plans = {};
+    DB.mine('DayPlan').forEach(function (p) { plans[toISO(p.Date)] = p; });
+    var pjpDays = {};
+    Home.months().forEach(function (m) {
+      DB.pjpMonth(DB.me.code, m).forEach(function (p) {
+        var d = toISO(p.Date);
+        if (!Home.inR(d)) return;
+        if (!Home.FIELD.test(String(p.Ww || p.Week || 'Self Working'))) return;
+        pjpDays[d] = p;
+      });
     });
-    A.offPjp = Object.keys(seen).length;
+    /* a day the rep planned himself (no master row yet) still counts as a working day */
+    Object.keys(plans).forEach(function (d) {
+      if (!Home.inR(d) || pjpDays[d]) return;
+      if (Home.FIELD.test(String(plans[d].WorkingWith || ''))) pjpDays[d] = plans[d];
+    });
+    Object.keys(pjpDays).forEach(function (d) {
+      A.workDays++;
+      var p = plans[d] || {}, mark = String(p.PjpStatus || '').toLowerCase();
+      var worked = !!A.byDay[d];
+      if (mark) {
+        if (/^on/.test(mark)) A.onPjp++;
+        else if (/^off/.test(mark)) A.offPjp++;
+        else A.missed++;
+        return;
+      }
+      if (!worked) { A.missed++; return; }
+      if (String(p.OffPjp || '') === 'Yes' && /approv/i.test(String(p.Approval || ''))) A.offPjp++;
+      else A.onPjp++;
+    });
+    /* work on a day that was never a planned field day is off-plan too */
+    Object.keys(A.byDay).forEach(function (d) { if (!pjpDays[d]) A.offPjp++; });
     Home.BK.concat([['other', 'Other']]).forEach(function (b) {
       var n = 0;
       Object.keys(A.byDay).forEach(function (d) { if ((dayBk[d] || 'other') === b[0]) n++; });
@@ -4196,12 +4326,25 @@ var Home = {
           (Home.view === x[0] ? ' data-on="1"' : '') + ' onclick="Home.go(\'' + x[0] + '\')">' + esc(x[1]) + '</button>';
       }).join('') + '</div>' +
       '<div class="seg" style="margin-top:8px">' +
-        [['D', 'Today'], ['W', '7 din'], ['M', 'Month']].map(function (p) {
+        [['D', 'Today'], ['W', 'Days'], ['M', 'Month']].map(function (p) {
           return '<button class="' + (Home.per === p[0] ? 'on' : '') + '" onclick="Home.setPer(\'' + p[0] + '\')">' +
             esc(p[1]) + '</button>'; }).join('') + '</div>' +
-      (Home.per === 'M' ? '<div class="chips" style="margin-top:8px">' + Home.months().map(function (m) {
-        return '<button class="btn ' + (Home.mon() === m ? '' : 'ghost') + ' xs" onclick="Home.setMon(\'' + m + '\')">' +
-          esc(monthName(m).split(' ')[0]) + '</button>'; }).join('') + '</div>' : '') +
+      /* Days = the rolling seven, or any stretch the rep picks */
+      (Home.per === 'W' ? '<div class="row two" style="margin-top:8px">' +
+        '<div><label class="f">From</label><input class="in" type="date" min="' + Home.start() + '-01' +
+          '" max="' + today() + '" value="' + esc(Home.from || Home.range()[0]) +
+          '" onchange="Home.setDay(\'from\',this.value)"></div>' +
+        '<div><label class="f">To</label><input class="in" type="date" min="' + Home.start() + '-01' +
+          '" max="' + today() + '" value="' + esc(Home.to || Home.range()[1]) +
+          '" onchange="Home.setDay(\'to\',this.value)"></div></div>' +
+        '<div class="btns" style="margin-top:8px">' +
+          '<button class="btn ghost sm" onclick="Home.last7()">Last 7 days</button>' +
+          '<button class="btn ghost sm" onclick="Home.thisMonth()">This month</button></div>' : '') +
+      (Home.per === 'M' ? '<div style="margin-top:8px"><label class="f">Month</label>' +
+        '<select class="in" onchange="Home.setMon(this.value)">' + Home.months().slice().reverse()
+          .map(function (m) {
+            return '<option value="' + m + '"' + (Home.mon() === m ? ' selected' : '') + '>' +
+              esc(Home.monLbl(m)) + '</option>'; }).join('') + '</select></div>' : '') +
       '<div class="hint" style="margin-top:8px">' + esc(Home.rangeLbl()) + ' · GARUDA ' +
       esc(monthName(Home.start()).split(' ')[0]) + ' se chalu</div></div>';
 
@@ -4232,15 +4375,37 @@ var Home = {
   },
   go: function (v) { Home.view = v; render(); Home.after(); },
   setPer: function (p) { Home.per = p; render(); },
+  setDay: function (k, v) { Home[k] = v; Home.per = 'W'; render(); },
+  last7: function () { Home.from = ''; Home.to = ''; Home.per = 'W'; render(); },
+  thisMonth: function () {
+    var t = today();
+    Home.from = t.slice(0, 7) + '-01'; Home.to = t; Home.per = 'W'; render();
+  },
   setMon: function (m) { Home.month = m; Home.per = 'M'; render(); },
   setMetric: function (m) { Home.metric = m; render(); },
 
   /* ── 1. DASHBOARD ── */
   dashHtml: function (A, plan) {
     var t = today();
-    var h = '<div class="sec-title">Month-wise NSV (₹ Lakh)</div><div class="card">';
-    var ms = Home.months(), trend = ms.slice(-6).map(function (m) {
-      return { l:monthName(m).split(' ')[0].slice(0, 3), v:(A.monthly[m] || {}).nsv || 0 }; });
+    /* Month shows the months; Days shows the days in the chosen stretch — the trend a rep asked for.
+       ms is used further down by the month-wise order/billed table, whichever period is showing. */
+    var ms = Home.months(), h, trend;
+    if (Home.per === 'M') {
+      trend = ms.slice(-6).map(function (m) {
+        return { l:Home.monLbl(m), v:(A.monthly[m] || {}).nsv || 0 }; });
+      h = '<div class="sec-title">Month-wise NSV (₹ Lakh)</div><div class="card">';
+    } else {
+      var r0 = Home.range(), keys = [], d0 = new Date(r0[0] + 'T00:00:00');
+      for (var g = 0; g < 45; g++) {
+        var k = iso(d0); if (k > r0[1]) break;
+        keys.push(k); d0.setDate(d0.getDate() + 1);
+      }
+      if (keys.length > 14) keys = keys.slice(-14);          /* a phone can read fourteen bars */
+      trend = keys.map(function (k2) {
+        return { l:k2.slice(8, 10), v:(A.byDay[k2] || {}).nsv || 0 }; });
+      h = '<div class="sec-title">Day-wise NSV (₹ Lakh)' +
+        (keys.length < Home.days() ? ' — last ' + keys.length + ' din' : '') + '</div><div class="card">';
+    }
     h += Home.bar(trend, 'var(--blue)') + '</div>';
 
     h += '<div class="sec-title">Order vs billed — month wise</div><div class="card">' +
@@ -4294,24 +4459,30 @@ var Home = {
   /* ── 2. CALLS & STORES ── */
   callsHtml: function (A) {
     var sc = num(DB.cfg('SC_Call_Target', 7)) || 7;
+    var scT = A.scT || sc * Math.max(1, A.fieldDays);
     var h = '<div class="sec-title">Plan vs achieved</div><div class="card">' +
-      Home.pva('TC (Total calls)', A.scT || sc * Math.max(1, A.fieldDays), A.tc,
-        'SC ' + (A.scT || sc * Math.max(1, A.fieldDays)) + ' · ' + A.fieldDays + ' field din × ' + sc + '/din') +
+      Home.pva('TC (Total calls)', scT, A.tc,
+        'SC ' + scT + ' · ' + A.fieldDays + ' field din × ' + sc + '/din') +
+      /* TC is store visits PLUS telephonic — a rep is judged on the split, so both are shown */
+      Home.pva('Store visits', scT, A.visit, 'TC me se store par gaye') +
+      Home.pva('Telephonic calls', scT, A.tel, 'TC me se phone par liye') +
       Home.pva('PC (Productive calls)', Math.round((A.scT || sc) * .6), A.pc, 'Jitne store ne order diya') +
       Home.pva('Naye outlet (NSO)', A.nsoT || num(DB.cfg('NSO_Monthly_Target', 15)), A.nso, 'Plan ka NSO target') +
       Home.pva('POSM', A.posmT || A.fieldDays, A.posm, 'Audit kiye') +
       Home.pva('NSV (₹L)', num(DB.cfg('MTD @24 Days - Working', 36)), A.nsv, 'Month ka NSV target') +
       '</div>';
 
-    var adh = A.pjpPlanned ? Math.round(A.pjpCovered / A.pjpPlanned * 100) : 0;
+    var adh = A.workDays ? Math.round((A.onPjp + A.offPjp) / A.workDays * 100) : 0;
     h += '<div class="sec-title">PJP adherence</div><div class="card">' +
-      '<div class="kpis k3" style="margin-bottom:0">' +
-        UI.kpi(A.pjpPlanned, 'Planned beat din', 'b') +
-        UI.kpi(A.pjpCovered, 'Covered · ' + adh + '%', adh >= 90 ? 'g' : adh >= 70 ? 'w' : 'r') +
-        UI.kpi(Math.max(0, A.pjpPlanned - A.pjpCovered), 'Chhoot gaya', A.pjpCovered === A.pjpPlanned ? 'g' : 'r') +
+      '<div class="kpis" style="margin-bottom:0">' +
+        UI.kpi(A.workDays, 'Total working days', 'b') +
+        UI.kpi(A.onPjp, 'On planned PJP', A.onPjp ? 'g' : '') +
+        UI.kpi(A.offPjp, 'Off PJP (approved change)', A.offPjp ? 'w' : '') +
+        UI.kpi(A.missed, 'Missed', A.missed ? 'r' : 'g') +
       '</div>' +
-      (A.offPjp ? '<div class="hint" style="margin-top:8px">' + A.offPjp +
-        ' din PJP se bahar kaam hua (off-PJP)</div>' : '') + '</div>';
+      '<div class="hint" style="margin-top:8px">Working days me weekly off, leave aur holiday nahi gine ' +
+      'jaate. Adherence ' + adh + '% — on-PJP aur approved off-PJP dono ginte hain. HOD kisi bhi din ko ' +
+      'khud bhi mark kar sakta hai.</div></div>';
 
     var totMega = 0, totBa = 0;
     DB.myStores().forEach(function (s) {
@@ -4389,7 +4560,10 @@ var Home = {
      aggregate (no other rep's raw data is ever sent). Admin/HOD already hold everything, so for them
      the same table is computed locally and needs no round trip. */
   teamHtml: function () {
-    var r = Home.range(), M = [['nsv', 'NSV ₹L'], ['tc', 'Calls'], ['pc', 'Order mila'], ['nso', 'NSO'], ['days', 'Din']];
+    var r = Home.range(), M = [['nsv', 'NSV ₹L'], ['tc', 'Calls'], ['pc', 'Order mila']];
+    /* NSO and the day count came off this table; a metric chosen before that has to fall back, and it
+       has to happen BEFORE the waiting / error returns below, or the stale choice survives */
+    if (M.map(function (x) { return x[0]; }).indexOf(Home.metric) < 0) Home.metric = 'nsv';
     var h = '<div class="card" style="padding:10px"><div class="hint" style="margin-bottom:6px">Number</div>' +
       '<div class="chips">' + M.map(function (m) {
         return '<button class="btn ' + (Home.metric === m[0] ? '' : 'ghost') + ' xs" onclick="Home.setMetric(\'' + m[0] + '\')">' +
@@ -4407,7 +4581,7 @@ var Home = {
 
     var me = String(DB.me.code || '').toUpperCase();
     var mk = Home.metric, fmt = function (v) { return mk === 'nsv' ? lakh(v) : String(Math.round(v)); };
-    var cell = function (b) { return b ? (mk === 'days' ? b.days : b[mk] || 0) : 0; };
+    var cell = function (b) { return b ? (b[mk] || 0) : 0; };
     var tot = function (e) { return Home.BK.reduce(function (a, b) { return a + cell(e.b[b[0]]); }, 0) +
       cell(e.b.other); };
     var sorted = rows.slice().sort(function (a, b) { return tot(b) - tot(a); });
@@ -4586,6 +4760,16 @@ var Pjp = {
     if (/team/i.test(s)) return 'ME Sales Team';
     return 'Self Working'; },
   isField: function (w) { return ['Self Working','ME Sales Team','BA Supervisor'].indexOf(w) >= 0; },
+  /* ── where the day is worked, in the policy's words ──
+     Filled by the rep for every field day (HQ unless he says otherwise) and carried all the way into
+     Master_PJP, so the TA/DA claim never has to guess whether a day was a local day or a trip. */
+  STN:['HQ', 'Ex-HQ', 'Outstation'],
+  stn: function (v) {
+    var t = String(v || '').trim();
+    if (/^out/i.test(t)) return 'Outstation';
+    if (/^ex/i.test(t) || /ex.?hq/i.test(t)) return 'Ex-HQ';
+    return 'HQ';
+  },
   /* ── partial rejection ──
      An HOD can send back three days instead of a whole month. Those days — and ONLY those days —
      open up again for the rep; the rest of the month is read-only, because it has already been
@@ -4782,9 +4966,9 @@ var Pjp = {
             : '<select class="in" style="width:auto;flex:1;min-width:150px;padding:7px 30px 7px 10px;font-size:12.5px" onchange="Pjp.set(\'' + d + '\',\'ww\',this.value)">' +
               ['Self Working','ME Sales Team','BA Supervisor','Meeting / Activity','Weekly Off','Leave','Sick Leave','HO Holiday']
               .map(function (o) { return '<option value="' + o + '"' + (o === r.ww ? ' selected' : '') + '>' + o + '</option>'; }).join('') + '</select>') +
-          (f ? (locked ? '<span class="pill p-grey">' + esc(r.st || 'HQ') + '</span>'
+          (f ? (locked ? '<span class="pill p-grey">' + esc(Pjp.stn(r.st)) + '</span>'
             : '<select class="in" style="width:auto;padding:7px 30px 7px 10px;font-size:12.5px" onchange="Pjp.set(\'' + d + '\',\'st\',this.value)">' +
-              ['HQ','Ex-HQ','Outstation'].map(function (o) { return '<option value="' + o + '"' + (o === (r.st || 'HQ') ? ' selected' : '') + '>' + o + '</option>'; }).join('') + '</select>') : '') +
+              Pjp.STN.map(function (o) { return '<option value="' + o + '"' + (o === Pjp.stn(r.st) ? ' selected' : '') + '>' + o + '</option>'; }).join('') + '</select>') : '') +
         '</div>' +
         (f ? (locked ? '<div class="sub">' + esc(r.state ? r.state + ' · ' : '') + esc(r.city || '—') + ' · ' + esc(r.beat || '—') + '</div>'
           : Pjp.geo(d, r) +
@@ -5155,6 +5339,7 @@ var Plan = {
           '<table class="ap-t"><tr><td>Kya maanga</td><td><b>' + esc(dev.NewTown || '') + ' / ' +
             esc(dev.NewBeat || '') + '</b></td></tr>' +
           '<tr><td>Working With</td><td>' + esc(Pjp.ww(dev.NewWw || ww)) + '</td></tr>' +
+          '<tr><td>Station</td><td>' + esc(Pjp.stn(dev.NewStation)) + '</td></tr>' +
           '<tr><td>PJP me tha</td><td>' + esc((dev.PlannedTown || '—') + ' / ' + (dev.PlannedBeat || '—')) + '</td></tr>' +
           '<tr><td>Aapka reason</td><td>' + esc(dev.Reason || '—') + '</td></tr>' +
           '<tr><td>Request bheja</td><td>' + esc(Appr.when ? Appr.when(dev.UpdatedAt || dev.Ts) : '') +
@@ -5274,6 +5459,7 @@ var Plan = {
          race the close animation */
       grab: function () { Plan.picked = { state:Plan.pickVal('state'), town:Plan.pickVal('town'),
                                           beat:Plan.pickVal('beat'), ww:val('pl_ww2') || curWw,
+                                          stn:val('pl_stn2') || Plan.station(),
                                           det:Plan.grabBracket(val('pl_ww2') || curWw) }; },
       msg:'<div class="hint" style="margin:0 0 10px">Yahi ek jagah hai jahan plan badal sakte ho. Mapping sheet se ' +
           'aati hai — na mile to <b>add new…</b> chuno, HOD approval ke baad master me add hoga.</div>' +
@@ -5293,11 +5479,35 @@ var Plan = {
       Plan.sendDev(null, reason);
     });
   },
+  /* ── today's station ──
+     An approved Change PJP wins (that is the whole point of it), then whatever the plan itself says:
+     the day row already saved on DayPlan, the published Master_PJP row, or the rep's own draft for the
+     month. HQ only when nothing says otherwise. */
+  station: function () {
+    var t = today(), r = Plan.row(), dev = Plan.dev();
+    if (dev && /approved/i.test(String(dev.Status || '')) && dev.NewStation) return Pjp.stn(dev.NewStation);
+    if (r && r.Station) return Pjp.stn(r.Station);
+    var m = DB.pjpFor(DB.me.code, t);
+    if (m && m.Station) return Pjp.stn(m.Station);
+    var dr = DB.find('PjpDraft', DB.me.code + '__' + t.slice(0, 7));
+    if (dr) {
+      try {
+        var days = JSON.parse(dr.DaysJson || '{}') || {};
+        if (days[t] && days[t].st) return Pjp.stn(days[t].st);
+      } catch (e) {}
+    }
+    return 'HQ';
+  },
   /* the State/Town/Beat trio only makes sense for a field day — a Leave has no beat */
   geoFields: function (ww, st, tw) {
     if (!Pjp.isField(ww)) return '<div class="hint" style="margin-top:8px">Ye field day nahi hai — ' +
       'town/beat ki zaroorat nahi.</div>';
-    return '<label class="f">State</label>' + Plan.pickSel('state', Plan.states(), st) +
+    /* a changed day can also become a trip — the claim later depends on this, so it is asked here */
+    return '<label class="f">Station (HQ / Ex-HQ / Outstation)</label>' +
+      '<select class="in" id="pl_stn2">' + Pjp.STN.map(function (o) {
+        return '<option value="' + o + '"' + (o === Plan.station() ? ' selected' : '') + '>' + o +
+          '</option>'; }).join('') + '</select>' +
+      '<label class="f">State</label>' + Plan.pickSel('state', Plan.states(), st) +
       '<label class="f">Town / City</label>' + Plan.pickSel('town', Plan.towns(st), tw) +
       '<label class="f">Beat / Market</label>' + Plan.pickSel('beat', Plan.beats(tw), '');
   },
@@ -5374,7 +5584,7 @@ var Plan = {
     return DB.save('DayPlan', { Id:Plan.id(), Date:t, Zone:e.Zone || '', Hq:e.HQ || '',
       WorkingWith:ww, WwDetail:JSON.stringify(d), Town:town, Beat:beat, State:state,
       Focus:pjp ? (pjp.Focus || '') : '', Week:pjp ? (pjp.Week || '') : '',
-      Station:'HQ', OffPjp:off ? 'Yes' : '', Approval:off ? (Plan.dev() ? Plan.dev().Status : 'Pending') : 'PJP',
+      Station:Plan.station(), OffPjp:off ? 'Yes' : '', Approval:off ? (Plan.dev() ? Plan.dev().Status : 'Pending') : 'PJP',
       ScTarget:field ? (num(val('pl_sc')) || 7) : 0, NsoTarget:field ? num(val('pl_nso')) : 0,
       PosmTarget:field ? num(val('pl_posm')) : 0,
       PlanJson:JSON.stringify({ tgt:Plan.tgt() }), PlanAt:r.PlanAt || new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }),
@@ -5453,7 +5663,8 @@ var Plan = {
            original is no longer where the rep is, and the HOD needs to see the real move */
         PlannedTown:(r0.OffPjp && r0.Town) || (pjp ? pjp.Town : ''),
         PlannedBeat:(r0.OffPjp && r0.Beat) || (pjp ? pjp.Beat : ''),
-        NewTown:town, NewBeat:beat, NewWw:nw, Reason:reason, Status:'Pending',
+        NewTown:town, NewBeat:beat, NewWw:nw, NewStation:fld ? Pjp.stn(p.stn) : '',
+        Reason:reason, Status:'Pending',
         TryCount:num(ex && ex.TryCount) + 1, RejectedJson:JSON.stringify(Plan.rejectedList(ex)),
         UpdatedAt:Date.now(), Ts:new Date().toISOString() }).then(function () {
         /* Record the proposed beat on the day plan, and CLEAR NotifiedAt: whatever was sent on WhatsApp
@@ -5462,6 +5673,7 @@ var Plan = {
            new plan is actually sent. */
         return DB.save('DayPlan', Object.assign({}, Plan.row(), { Id:Plan.id(), Date:t,
           State:p.state || '', Town:town, Beat:beat, WorkingWith:nw,
+          Station:fld ? Pjp.stn(p.stn) : '',
           WwDetail:JSON.stringify(p.det || {}), OffPjp:'Yes', Approval:'Pending',
           NotifiedAt:'' }), { quiet:true });
       }).then(function () {
@@ -5476,6 +5688,8 @@ var Plan = {
 /* ═══════════════ FIELD — store loop ═══════════════ */
 var Field = {
   store:null, lines:[], mode:'order', ns:{ front:'', inside:'' },
+  /* set only when Sec order sent us here to extend an existing order */
+  editPo:'',
   /* ── has this visit cleared its gate? ──
      Derived, never stored: a flag would drift out of step with the photo. A store visit needs the shop
      photo (waived by bypass); a telephonic call needs nothing; either way the rep must first say which
@@ -5861,7 +6075,12 @@ var Field = {
         .then(function () { return Dfr.push(); })
         .then(function () {
           Log.add('Order', st, po, s.StoreName + ' · ' + inr(tv));
+          var wasEdit = !!Field.editPo;
+          Field.editPo = '';
           Posm.store = s; Field.lines = []; Field.store = null;
+          /* it came from Sec order — take him back there, not on to POSM */
+          if (wasEdit) { Nav.build(); render(); Router.go('fin');
+            return toast(s.StoreName + ' ka order update ho gaya — PO ' + po, 3800); }
           toast('' + s.StoreName + ' save — PO ' + po);
           Nav.build();
           if (src === 'Telephonic Call') { render(); toast('Telephonic — POSM ki zaroorat nahi'); }
@@ -5870,6 +6089,13 @@ var Field = {
     });
   },
   po: function (s) {
+    /* Sec order sends the rep back here to add a product to an order that already exists; without this
+       the next free number would be taken and the shop would end up with two orders for one day */
+    if (Field.editPo) {
+      var ex = DB.find('SecOrders', Field.editPo);
+      if (ex && String(ex.CompanyCode || ex.ClientId) === String(s.CompanyCode || s.ClientId))
+        return String(Field.editPo);
+    }
     var base = 'EMPO' + String(s.ClientId || s.CompanyCode || 'NA').replace(/\W/g, '');
     var used = {}; DB.rows('SecOrders').forEach(function (o) { used[String(o.PoNumber)] = 1; });
     for (var i = 1; i < 999; i++) { var c = base + p2(i); if (!used[c]) return c; }
@@ -6417,6 +6643,196 @@ var Pics = {
   }
 };
 
+/* ═══════════════ PDF — written by hand, like the .xlsx ═══════════════
+   A PDF is a list of numbered objects, a cross-reference table of their byte offsets, and a trailer.
+   Text is drawn inside BT/ET with one of the two fonts every reader has built in (Helvetica and
+   Helvetica-Bold), so nothing has to be embedded and a claim is a few kilobytes.
+
+   Two rules make the offsets trivial and the file safe:
+     • everything written is ASCII, so one character is one byte — the offset of an object is just the
+       length of the string before it;
+     • rupees, en-dashes and the middle dot are transliterated (Rs, -, ·→-) because the built-in fonts
+       are WinAnsi and a stray multi-byte character would shift every offset after it.                */
+var Pdf = {
+  W:595, H:842,                                    /* A4 in points */
+  ML:38, MR:38, TOP:52, BOT:46,                    /* margins */
+
+  /* what the fonts can actually print */
+  txt: function (v) {
+    return String(v == null ? '' : v)
+      .replace(/₹/g, 'Rs ').replace(/[–—]/g, '-').replace(/·/g, '-')
+      .replace(/[‘’]/g, "'").replace(/[“”]/g, '"')
+      .replace(/→/g, '->').replace(/×/g, 'x')
+      .replace(/[^\x20-\x7E]/g, ' ');
+  },
+  esc: function (v) { return Pdf.txt(v).replace(/([\\()])/g, '\\$1'); },
+  /* Helvetica is not monospaced, but for laying out a table an average width is enough to know when a
+     string will not fit — and every column here is measured against its own width */
+  wide: function (v, size) { return Pdf.txt(v).length * size * 0.5; },
+  clip: function (v, size, w) {
+    var t = Pdf.txt(v);
+    if (Pdf.wide(t, size) <= w) return t;
+    var max = Math.max(1, Math.floor(w / (size * 0.5)) - 1);
+    return t.slice(0, max) + '.';
+  },
+
+  /* ── a document is a list of pages; each page is a list of drawing ops ── */
+  doc: function () {
+    var d = { pages:[], cur:null, y:0 };
+    d.page = function () {
+      d.cur = [];
+      d.pages.push(d.cur);
+      d.y = Pdf.H - Pdf.TOP;
+      return d;
+    };
+    d.room = function (n) { if (d.y - (n || 0) < Pdf.BOT) d.page(); return d; };
+    d.text = function (x, y, s, size, bold, grey) {
+      d.cur.push('BT /' + (bold ? 'F2' : 'F1') + ' ' + size + ' Tf ' +
+        (grey ? grey + ' g ' : '0 g ') + x.toFixed(1) + ' ' + y.toFixed(1) + ' Td (' + Pdf.esc(s) + ') Tj ET');
+      return d;
+    };
+    d.right = function (x, y, s, size, bold, grey) {
+      return d.text(x - Pdf.wide(s, size), y, s, size, bold, grey);
+    };
+    d.line = function (x1, y1, x2, y2, w, grey) {
+      d.cur.push((grey === undefined ? 0.8 : grey) + ' G ' + (w || 0.6) + ' w ' +
+        x1.toFixed(1) + ' ' + y1.toFixed(1) + ' m ' + x2.toFixed(1) + ' ' + y2.toFixed(1) + ' l S');
+      return d;
+    };
+    d.rect = function (x, y, w, h, grey) {
+      d.cur.push((grey === undefined ? 0.93 : grey) + ' g ' + x.toFixed(1) + ' ' + y.toFixed(1) + ' ' +
+        w.toFixed(1) + ' ' + h.toFixed(1) + ' re f 0 g');
+      return d;
+    };
+    d.page();
+    return d;
+  },
+
+  /* ── the finished bytes ── */
+  build: function (d, title) {
+    var objs = [], W = Pdf.W, H = Pdf.H;
+    var nPage = d.pages.length;
+    /* object numbering: 1 catalog, 2 pages, then per page (page, content), then 2 fonts */
+    var fontA = 3 + nPage * 2, fontB = fontA + 1;
+    var kids = [];
+    for (var i = 0; i < nPage; i++) kids.push((3 + i * 2) + ' 0 R');
+    objs[1] = '<</Type /Catalog /Pages 2 0 R>>';
+    objs[2] = '<</Type /Pages /Kids [' + kids.join(' ') + '] /Count ' + nPage + '>>';
+    for (i = 0; i < nPage; i++) {
+      var pno = 3 + i * 2, cno = pno + 1;
+      objs[pno] = '<</Type /Page /Parent 2 0 R /MediaBox [0 0 ' + W + ' ' + H + '] ' +
+        '/Resources <</Font <</F1 ' + fontA + ' 0 R /F2 ' + fontB + ' 0 R>>>> /Contents ' + cno + ' 0 R>>';
+      var body = d.pages[i].join('\n');
+      objs[cno] = '<</Length ' + body.length + '>>\nstream\n' + body + '\nendstream';
+    }
+    objs[fontA] = '<</Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding>>';
+    objs[fontB] = '<</Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding>>';
+
+    var out = '%PDF-1.4\n', off = [];
+    for (i = 1; i < objs.length; i++) {
+      off[i] = out.length;
+      out += i + ' 0 obj\n' + objs[i] + '\nendobj\n';
+    }
+    var xref = out.length;
+    out += 'xref\n0 ' + objs.length + '\n0000000000 65535 f \n';
+    for (i = 1; i < objs.length; i++) out += ('0000000000' + off[i]).slice(-10) + ' 00000 n \n';
+    out += 'trailer\n<</Size ' + objs.length + ' /Root 1 0 R' +
+      (title ? ' /Info <</Title (' + Pdf.esc(title) + ')>>' : '') + '>>\nstartxref\n' + xref + '\n%%EOF';
+
+    var bytes = new Uint8Array(out.length);
+    for (i = 0; i < out.length; i++) bytes[i] = out.charCodeAt(i) & 0xff;
+    return bytes;
+  },
+  save: function (d, name, title) {
+    var bytes = Pdf.build(d, title || name);
+    var blob = new Blob([bytes], { type:'application/pdf' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = name.replace(/\.pdf$/i, '') + '.pdf';
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(url); }, 4000);
+    return { name:a.download, bytes:bytes.length };
+  },
+
+  /* ── the pieces every GARUDA report shares ── */
+  head: function (d, title, sub) {
+    d.rect(0, Pdf.H - 44, Pdf.W, 44, 0.12);
+    d.text(Pdf.ML, Pdf.H - 28, 'GARUDA', 15, true, 1);
+    d.right(Pdf.W - Pdf.MR, Pdf.H - 28, Pdf.txt(title), 11, true, 1);
+    d.y = Pdf.H - 66;
+    if (sub) { d.text(Pdf.ML, d.y, sub, 9, false, 0.35); d.y -= 16; }
+    return d;
+  },
+  h2: function (d, s) {
+    d.room(26);
+    d.y -= 6;
+    d.text(Pdf.ML, d.y, String(s).toUpperCase(), 9, true, 0.4);
+    d.y -= 4;
+    d.line(Pdf.ML, d.y, Pdf.W - Pdf.MR, d.y, 0.6, 0.75);
+    d.y -= 13;
+    return d;
+  },
+  /* label : value, two per line */
+  kv: function (d, pairs) {
+    var colW = (Pdf.W - Pdf.ML - Pdf.MR) / 2;
+    for (var i = 0; i < pairs.length; i += 2) {
+      d.room(16);
+      [0, 1].forEach(function (k) {
+        var p = pairs[i + k]; if (!p) return;
+        var x = Pdf.ML + k * colW;
+        d.text(x, d.y, p[0], 8.5, false, 0.42);
+        d.text(x + 88, d.y, Pdf.clip(p[1], 9, colW - 92), 9, true);
+      });
+      d.y -= 14;
+    }
+    return d;
+  },
+  /* a table: cols = [{t:'Head', w:60, a:'r'|'l'}] */
+  table: function (d, cols, rows, opt) {
+    opt = opt || {};
+    var size = opt.size || 8.2, rh = opt.rh || 13;
+    var head = function () {
+      d.rect(Pdf.ML, d.y - 3.5, Pdf.W - Pdf.ML - Pdf.MR, rh, 0.9);
+      var x = Pdf.ML;
+      cols.forEach(function (c) {
+        if (c.a === 'r') d.right(x + c.w - 3, d.y, c.t, size, true, 0.25);
+        else d.text(x + 3, d.y, c.t, size, true, 0.25);
+        x += c.w;
+      });
+      d.y -= rh;
+    };
+    head();
+    rows.forEach(function (r) {
+      if (d.y - rh < Pdf.BOT) { d.page(); d.y -= 4; head(); }
+      /* a row may be a plain array — and an array HAS a .fill (Array.prototype.fill), which used to be
+         written into the content stream as "function fill() { [native code] }" and made the file
+         unreadable. Only a number is a shade. */
+      var x = Pdf.ML, bold = r.bold === true;
+      var fill = typeof r.fill === 'number' ? r.fill : -1;
+      if (fill >= 0) d.rect(Pdf.ML, d.y - 3.5, Pdf.W - Pdf.ML - Pdf.MR, rh, fill);
+      (r.c || r).forEach(function (v, i) {
+        var c = cols[i] || { w:60 };
+        var s = Pdf.clip(v, size, c.w - 6);
+        if (c.a === 'r') d.right(x + c.w - 3, d.y, s, size, bold);
+        else d.text(x + 3, d.y, s, size, bold);
+        x += c.w;
+      });
+      d.line(Pdf.ML, d.y - 4, Pdf.W - Pdf.MR, d.y - 4, 0.4, 0.88);
+      d.y -= rh;
+    });
+    return d;
+  },
+  foot: function (d, note) {
+    d.pages.forEach(function (p, i) {
+      var save = d.cur; d.cur = p;
+      d.text(Pdf.ML, 30, Pdf.txt(note), 7.5, false, 0.55);
+      d.right(Pdf.W - Pdf.MR, 30, 'Page ' + (i + 1) + ' of ' + d.pages.length, 7.5, false, 0.55);
+      d.cur = save;
+    });
+    return d;
+  }
+};
+
 /* ═══════════════ REPORTS (xlsx) ═══════════════
    Every download is a workbook with named tabs, not a flat dump. The first tab always answers the
    question the person opening it actually has — for EOD that is "aaj ka target kya tha aur kitna
@@ -6658,8 +7074,8 @@ var Rep = {
     s1.push(['Status', Xl.t(r.Status || 'Draft'), 'Month', Xl.t(monthName(m))]);
     s1.push([], [Xl.b('CLAIM')]);
     s1.push(['Head', 'Amount (\u20b9)', '', '', '', '', ''].map(Xl.h));
-    [['Daily allowance', t.da], ['Food', t.food], ['Travel (km / fare)', t.travel],
-     ['Station transfer', t.station], ['Lodging cost', t.lodge], ['Team meeting', t.meet]]
+    [['DA (daily allowance)', t.da], ['TA (travel allowance)', t.ta],
+     ['Lodging cost', t.lodge], ['Team meeting', t.meet]]
       .forEach(function (x) { s1.push([Xl.t(x[0]), Xl.m(x[1])]); });
     s1.push([Xl.t('TOTAL', Xl.S.tot), Xl.m(t.grand, Xl.S.totM)]);
     if (t.deduct) {
@@ -6675,25 +7091,21 @@ var Rep = {
     s1.push(['Off / leave', Xl.n(t.byStation.off), 'Warnings', Xl.n(t.warn)]);
 
     var ded = Tada.ded(r);
-    var d2 = [['Date', 'Day', 'Station', 'City', 'How he travelled', 'Km', 'Nights', 'DA (\u20b9)',
-               'Food (\u20b9)', 'Travel (\u20b9)', 'Station (\u20b9)', 'Lodging (\u20b9)',
-               'Day total (\u20b9)', 'HOD deduction (\u20b9)', 'HOD reason', 'Bills needed',
-               'How it was worked out', 'Warning', 'Note'].map(Xl.h)];
+    var d2 = [['Date', 'Day', 'Station', 'City', 'Nights', 'DA (\u20b9)', 'TA (\u20b9)',
+               'Lodge cost (\u20b9)', 'Day total (\u20b9)', 'HOD deduction (\u20b9)', 'HOD reason',
+               'Bills needed', 'How it was worked out', 'Warning', 'Note'].map(Xl.h)];
     var DAY = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     Tada.dates().forEach(function (d) {
       var row = Tada.days[d], c = Tada.calc(d), dd = ded[d] || {};
       d2.push([Xl.dt(d), Xl.t(DAY[new Date(d + 'T00:00:00').getDay()]), Xl.t(Tada.stLbl(row.st)),
-        Xl.t(row.city || ''),
-        Xl.t(row.st === 'off' || row.st === 'meet' ? '\u2014' : Tada.mLbl(row.mode)),
-        Xl.n(row.km), Xl.n(row.night),
-        Xl.m(c.da), Xl.m(c.food), Xl.m(c.travel), Xl.m(c.station), Xl.m(c.lodge),
+        Xl.t(row.city || ''), Xl.n(row.night),
+        Xl.m(c.da), Xl.m(c.ta), Xl.m(c.lodge),
         Xl.m(Tada.dayTot(c)), Xl.m(num(dd.amt)), Xl.t(dd.note || '', Xl.S.wrap),
         Xl.t(c.bills.join(', '), Xl.S.wrap), Xl.t(c.why.join(' \u00b7 '), Xl.S.wrap),
         Xl.t(c.warn.join(' \u00b7 '), Xl.S.wrap), Xl.t(row.note, Xl.S.wrap)]);
     });
-    d2.push([Xl.t('TOTAL', Xl.S.tot), '', '', '', '', Xl.n(0), Xl.n(t.nights, Xl.S.totI),
-      Xl.m(t.da, Xl.S.totM), Xl.m(t.food, Xl.S.totM), Xl.m(t.travel, Xl.S.totM),
-      Xl.m(t.station, Xl.S.totM), Xl.m(t.lodge, Xl.S.totM),
+    d2.push([Xl.t('TOTAL', Xl.S.tot), '', '', '', Xl.n(t.nights, Xl.S.totI),
+      Xl.m(t.da, Xl.S.totM), Xl.m(t.ta, Xl.S.totM), Xl.m(t.lodge, Xl.S.totM),
       Xl.m(t.grand - t.meet, Xl.S.totM), Xl.m(t.deduct, Xl.S.totM), '', '', '', '', '']);
 
     var p2r = [['Station', 'Travel', 'Food'].map(Xl.h)];
@@ -6715,8 +7127,8 @@ var Rep = {
     return Xl.save('TADA_' + DB.me.code + '_' + m, [
       { name:I18n.s('Claim'), cols:[26, 16, 16, 14, 10, 10, 10], rows:s1, merges:ttl.merges },
       { name:I18n.s('Day-wise'),
-        cols:[11, 6, 20, 16, 20, 7, 7, 11, 11, 11, 11, 11, 12, 13, 26, 22, 34, 26, 22],
-        rows:d2, freeze:1, filter:'A1:S' + d2.length },
+        cols:[11, 6, 20, 16, 7, 11, 11, 12, 12, 13, 26, 22, 34, 26, 22],
+        rows:d2, freeze:1, filter:'A1:O' + d2.length },
       { name:I18n.s('Policy'), cols:[16, 52, 30], rows:p2r, freeze:1 }
     ]);
   },
@@ -7205,6 +7617,209 @@ var Sec = {
     if (o.Remarks) L.push('Remarks: ' + o.Remarks);
     UI.sheet('Order share karo', '<div class="btns"><button class="btn" onclick="UI.close();Share.wa(' + JSON.stringify(JSON.stringify(L.join('\n'))) + ')"> WhatsApp</button>' +
       '<button class="btn ghost" onclick="UI.close();Share.mail(\'Secondary Order ' + esc(o.PoNumber) + '\',' + JSON.stringify(JSON.stringify(L.join('\n'))) + ')"> Email</button></div>');
+  }
+};
+
+/* ═══════════════ SEC ORDER — every shop's final order, adjustable mid-day ═══════════════
+   The Orders tab is a list of purchase orders; this is the other question a rep gets asked at two in the
+   afternoon: "what did you finally book for that shop?" So it is shop-first — one card per store with the
+   order as it stands — and everything on it can be moved: a line's units up or down, a line out, or the
+   whole shop back into the order flow to add something.
+
+   It writes through Sec.commit, the same path the order screens use, so the header totals, the
+   SecOrderLines rows and the LinesJson copy can never disagree with each other.                       */
+var Fin = {
+  day:'', open:'', q:{},
+
+  /* which day is being adjusted — today unless the rep looks back */
+  date: function () {
+    var t = today();
+    if (!Fin.day || Fin.day > t) Fin.day = t;
+    return Fin.day;
+  },
+  /* the days this rep actually has orders for, newest first — nothing to scroll through that is empty */
+  days: function () {
+    var seen = {}, out = [];
+    DB.mine('SecOrders').forEach(function (o) { var d = toISO(o.Date); if (d) seen[d] = 1; });
+    seen[today()] = 1;
+    Object.keys(seen).sort().reverse().forEach(function (d) { out.push(d); });
+    return out.slice(0, 60);
+  },
+  /* one entry per SHOP for the chosen day: its order, its lines and its totals */
+  shops: function () {
+    var d = Fin.date(), out = [];
+    DB.mine('SecOrders').forEach(function (o) {
+      if (toISO(o.Date) !== d) return;
+      var lines = Sec.lines(o), u = 0, v = 0;
+      lines.forEach(function (l) { u += num(l.Units); v += num(l.Value); });
+      out.push({ po:String(o.PoNumber), o:o, lines:lines, units:u, value:v,
+                 name:o.StoreName || '', code:String(o.CompanyCode || o.ClientId || ''),
+                 src:o.Source || '', st:String(o.Status || '') });
+    });
+    return out.sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+  },
+
+  html: function () {
+    var d = Fin.date(), shops = Fin.shops();
+    var h = UI.head('', 'Sec order — shop ka final order',
+      'Din ke beech me koi adjust karne ko kahe to yahin se karo — units badlo, line hatao, ' +
+      'ya us shop me naya product add karo.');
+
+    var units = 0, value = 0, skus = 0;
+    shops.forEach(function (s) { units += s.units; value += s.value; skus += s.lines.length; });
+    h += '<div class="kpis">' +
+      UI.kpi(shops.length, 'Shop', 'b') + UI.kpi(skus, 'SKU', '') +
+      UI.kpi(units, 'Units', '') + UI.kpi(inr(value), 'Value', 'g') + '</div>';
+
+    /* which day */
+    h += '<div class="card" style="padding:10px"><div class="row two">' +
+      '<div><label class="f">Din</label>' +
+      '<select class="in" onchange="Fin.setDay(this.value)">' + Fin.days().map(function (k) {
+        return '<option value="' + k + '"' + (k === d ? ' selected' : '') + '>' + dmy(k) +
+          (k === today() ? ' (aaj)' : '') + '</option>'; }).join('') + '</select></div>' +
+      '<div><label class="f">&nbsp;</label>' +
+        '<button class="btn ghost" onclick="Router.go(\'field\')">Naya order</button></div>' +
+      '</div>' +
+      (Gate.locked() ? '<div class="hint" style="margin-top:8px;color:var(--bad);font-weight:700">' +
+        'Aaj ka din lock hai — pehle Field tab se din dobara kholo.</div>' : '') + '</div>';
+
+    if (!shops.length) return h + '<div class="card">' +
+      UI.empty('', dmy(d) + ' ka koi order nahi hai') +
+      '<div class="btns"><button class="btn" onclick="Router.go(\'field\')">Field tab kholo</button></div></div>';
+
+    h += '<div class="sec-title">' + shops.length + ' shop · ' + dmy(d) + '</div>';
+    h += shops.map(Fin.card).join('');
+    return h;
+  },
+
+  card: function (s) {
+    var op = Fin.open === s.po;
+    var cls = /billing|delivered/i.test(s.st) ? 'p-ok' : /cancel|no.?order/i.test(s.st) ? 'p-bad' : 'p-warn';
+    var h = '<div class="card' + (op ? ' op' : '') + '">' +
+      '<div class="lrow" style="padding-top:0"><div class="m">' +
+      '<div class="t">' + esc(s.name) + '</div>' +
+      '<div class="s">' + esc(s.code || '—') + ' · PO ' + esc(s.po) + (s.src ? ' · ' + esc(s.src) : '') + '</div>' +
+      '<div class="s"><b>' + s.lines.length + ' SKU · ' + s.units + ' units · ' + inr(s.value) + '</b>' +
+        ' · NSV ' + lakh(s.value * .6 / 1e5) + 'L</div></div>' +
+      '<div style="text-align:right"><span class="pill ' + cls + '">' + esc(s.st) + '</span>' +
+      '<div style="margin-top:6px"><button class="btn ' + (op ? 'ghost ' : '') + 'sm" onclick="Fin.tap(\'' +
+        esc(s.po) + '\')">' + (op ? 'Close' : 'Adjust') + '</button></div></div></div>';
+    if (!op) return h + '</div>';
+
+    /* the lines, each with minus / plus / remove and a units box */
+    h += '<div style="border-top:1px dashed var(--line);padding-top:10px">';
+    if (!s.lines.length) h += UI.empty('', 'Is order me koi product nahi — neeche se add karo');
+    s.lines.forEach(function (l, i) {
+      var q = Fin.q[s.po + '|' + i];
+      var u = q === undefined ? num(l.Units) : num(q);
+      h += '<div class="oline"><div class="oline-h"><div class="m">' +
+        '<div class="t">' + esc(l.SkuName) + '</div>' +
+        '<div class="hint">' + esc(l.Brand || '') + ' · MRP ' + inr(l.Mrp) + ' · ' +
+          inr(u * num(l.Mrp)) + '</div></div>' +
+        '<button class="oline-x" onclick="Fin.drop(\'' + esc(s.po) + '\',' + i + ')">Remove</button></div>' +
+        '<div class="dsave" style="border-top:0;margin-top:6px">' +
+          '<button class="btn ghost" style="flex:0 0 44px;min-width:44px" onclick="Fin.step(\'' +
+            esc(s.po) + '\',' + i + ',-1)">−</button>' +
+          '<input class="in" style="flex:1 1 60px;text-align:center" type="number" min="0" ' +
+            'id="fn_' + esc(s.po) + '_' + i + '" value="' + u +
+            '" oninput="Fin.setQ(\'' + esc(s.po) + '\',' + i + ',this.value)">' +
+          '<button class="btn ghost" style="flex:0 0 44px;min-width:44px" onclick="Fin.step(\'' +
+            esc(s.po) + '\',' + i + ',1)">+</button>' +
+          '<button class="btn ok" onclick="Fin.saveLine(\'' + esc(s.po) + '\',' + i + ',this)">Save</button>' +
+        '</div></div>';
+    });
+
+    /* add a product: back to the shelf, with this shop already selected */
+    h += '<div class="lrow"><div class="m"><div class="t">' + s.lines.length + ' SKU · ' + s.units +
+      ' units</div><div class="s">Total ' + inr(s.value) + ' · NSV ' + lakh(s.value * .6 / 1e5) + 'L</div></div>' +
+      '<button class="btn ok sm" style="flex:0 0 auto" onclick="Fin.add(\'' + esc(s.po) + '\')">Product add</button></div>';
+
+    h += '<label class="f">Status</label>' +
+      '<select class="in" onchange="Fin.setStatus(\'' + esc(s.po) + '\',this.value)">' +
+      ['Order in Process','Billing Done','No Order','Cancel Order'].map(function (x) {
+        return '<option value="' + x + '"' + (x === s.st ? ' selected' : '') + '>' + x + '</option>'; }).join('') +
+      '</select>' +
+      '<div class="btns"><button class="btn ghost" onclick="Fin.tap(\'' + esc(s.po) + '\')">Close</button>' +
+      '<button class="btn ghost sm" onclick="Sec.share(\'' + esc(s.po) + '\')">Share</button></div>';
+    return h + '</div></div>';
+  },
+
+  setDay: function (v) { Fin.day = v; Fin.open = ''; Fin.q = {}; render(); },
+  tap: function (po) { Fin.open = Fin.open === po ? '' : po; Fin.q = {}; render(); },
+  setQ: function (po, i, v) { Fin.q[po + '|' + i] = v; },
+  /* − / + move the box AND write it, because that is what a tap means here */
+  step: function (po, i, by) {
+    var s = Fin.one(po); if (!s) return;
+    var l = s.lines[i]; if (!l) return;
+    var k = po + '|' + i;
+    var cur = Fin.q[k] === undefined ? num(l.Units) : num(Fin.q[k]);
+    var nu = Math.max(0, cur + by);
+    Fin.q[k] = nu;
+    var box = $('fn_' + po + '_' + i);
+    if (box) box.value = nu;
+    Fin.write(po, function (lines) { lines[i].Units = nu; lines[i].Value = nu * num(lines[i].Mrp); },
+      l.SkuName + ' — ' + nu + ' units');
+  },
+  saveLine: function (po, i, el) {
+    var s = Fin.one(po); if (!s) return;
+    var l = s.lines[i]; if (!l) return;
+    var v = Fin.q[po + '|' + i];
+    var nu = Math.max(0, num(v === undefined ? val('fn_' + po + '_' + i) : v));
+    return Busy.run('fin_' + po + '_' + i, el, 'Save…', function () {
+      return Fin.write(po, function (lines) {
+        lines[i].Units = nu; lines[i].Value = nu * num(lines[i].Mrp); },
+        l.SkuName + ' — ' + nu + ' units');
+    });
+  },
+  drop: function (po, i) {
+    var s = Fin.one(po); if (!s) return;
+    var l = s.lines[i]; if (!l) return;
+    return UI.confirm({ icon:'', title:'Line hatao?', danger:true,
+      msg:'<b>' + esc(l.SkuName) + '</b> is order se hat jayega.',
+      ok:'Haan, hatao', cancel:'Nahi' }).then(function (go) {
+      if (!go) return;
+      Fin.q = {};
+      return Fin.write(po, function (lines) { lines.splice(i, 1); }, l.SkuName + ' hata diya');
+    });
+  },
+  setStatus: function (po, st) {
+    var s = Fin.one(po); if (!s) return;
+    return Fin.write(po, null, 'Status — ' + st, st);
+  },
+  /* "add" belongs in the order flow, not in a second product picker: pick the shop up again and hand
+     the rep the shelf he already knows */
+  add: function (po) {
+    var s = Fin.one(po); if (!s) return;
+    var store = (DB.myStores() || []).filter(function (x) {
+      return String(x.CompanyCode || x.ClientId) === s.code ||
+             String(x.StoreName || '').toUpperCase() === String(s.name).toUpperCase(); })[0];
+    if (!store) return toast('Ye shop master me nahi mila — Field tab se add karo');
+    if (Gate.locked()) return toast('Aaj ka din lock hai — pehle din dobara kholo');
+    Field.store = store;
+    Field.src = s.src || 'Store Visit';
+    Field.srcSet = true;
+    Field.lines = s.lines.slice();
+    Field.editPo = s.po;                       /* so the order screen updates THIS po, not a new one */
+    Stk.open = ''; Stk.qty = {};
+    Router.go('stk');
+    toast(s.name + ' — shelf khul gaya, product add karo aur order complete karo', 4000);
+  },
+  one: function (po) {
+    return Fin.shops().filter(function (s) { return s.po === String(po); })[0];
+  },
+  /* every write goes through Sec.commit, so the header, the lines and LinesJson stay in step */
+  write: function (po, edit, msg, status) {
+    var s = Fin.one(po); if (!s) return Promise.resolve();
+    var lines = s.lines.map(function (l) { return Object.assign({}, l); });
+    if (edit) edit(lines);
+    var u = 0, v = 0;
+    lines.forEach(function (l) { u += num(l.Units); v += num(l.Value); });
+    var nu = Object.assign({}, s.o, { TotSku:lines.length, TotUnits:u, TotValue:v,
+      TotNsvLakh:Math.round(v * .6 / 1e5 * 10000) / 10000, UpdatedAt:Date.now() });
+    if (status) { nu.Status = status; nu.StatusAt = new Date().toISOString(); }
+    return Sec.commit(nu, lines, msg).then(function () {
+      Fin.q = {}; render();
+    });
   }
 };
 
@@ -7744,6 +8359,17 @@ var Trk = {
     });
   },
 
+  /* how much OPEN work each type is carrying — read straight from the rows, so the badge on a tab is
+     that tab's own number whether or not it is the one on screen */
+  openCounts: function () {
+    var was = Trk.kind, out = {};
+    Trk.KINDS.forEach(function (c) {
+      Trk.kind = c[0];
+      out[c[0]] = Trk.rows().filter(function (r) { return !Trk.shut(r.st); }).length;
+    });
+    Trk.kind = was;
+    return out;
+  },
   html: function () {
     var all = Trk.rows();
     var open = all.filter(function (r) { return !Trk.shut(r.st); });
@@ -7751,22 +8377,26 @@ var Trk = {
       'Apne order, naye outlet aur POSM ka status khud update karo. Koi approval nahi — ' +
       'ASM se baat karke jo hua wahi yahan mark kar do, sheet me chala jayega.');
 
-    h += '<div class="kpis k3">' + UI.kpi(all.length, 'Total', 'b') +
-      UI.kpi(open.length, 'Open', open.length ? 'w' : 'g') +
-      UI.kpi(all.length - open.length, 'Closed', 'g') + '</div>';
+    h += '<div class="kpis k3">' +
+      UI.kpi(open.length, 'Open — action chahiye', open.length ? 'r' : 'g') +
+      UI.kpi(all.length - open.length, 'Closed', 'g') +
+      UI.kpi(all.length, 'Total', 'b') + '</div>';
 
-    h += '<div class="card" style="padding:10px"><div class="chips" id="tk_chips">' +
+    /* one count per type — of its OWN open items, not of whichever tab happens to be showing */
+    var openBy = Trk.openCounts();
+    h += '<div class="card" style="padding:10px 14px 0"><div class="tnav" id="tk_chips">' +
       Trk.KINDS.map(function (c) {
-        var n = c[0] === Trk.kind ? open.length : 0;
-        return '<button class="btn ' + (Trk.kind === c[0] ? '' : 'ghost') + ' sm"' +
+        var n = openBy[c[0]] || 0;
+        return '<button class="' + (Trk.kind === c[0] ? 'on' : '') + '"' +
           (Trk.kind === c[0] ? ' data-on="1"' : '') + ' onclick="Trk.go(\'' + c[0] + '\')">' +
-          esc(c[1]) + (n ? ' (' + n + ')' : '') + '</button>'; }).join('') + '</div>';
+          esc(c[1]) + (n ? '<span class="bdg">' + n + '</span>' : '') + '</button>'; }).join('') + '</div>';
 
-    var chips = [['open', 'Open (' + open.length + ')'], ['done', 'Closed (' + (all.length - open.length) + ')'],
-                 ['all', 'All (' + all.length + ')']];
-    h += '<div style="display:flex;gap:6px;margin-top:8px">' + chips.map(function (c) {
+    /* the number belongs on OPEN only — "Closed (12)" is a fact, not something that needs doing */
+    var chips = [['open', 'Open', open.length], ['done', 'Closed', 0], ['all', 'All', 0]];
+    h += '<div style="display:flex;gap:6px;margin:10px 0 4px">' + chips.map(function (c) {
       return '<button class="btn ' + (Trk.filter === c[0] ? '' : 'ghost') + ' sm" style="flex:1 1 0"' +
-        ' onclick="Trk.set(\'' + c[0] + '\')">' + esc(c[1]) + '</button>'; }).join('') + '</div></div>';
+        ' onclick="Trk.set(\'' + c[0] + '\')">' + esc(c[1]) +
+        (c[2] ? ' <span class="bdg">' + c[2] + '</span>' : '') + '</button>'; }).join('') + '</div></div>';
 
     var show = all.filter(function (r) {
       return Trk.filter === 'all' || (Trk.filter === 'open' ? !Trk.shut(r.st) : Trk.shut(r.st)); });
@@ -7976,31 +8606,9 @@ var Tada = {
   /* STATIONS: what kind of day it was. Derived from the CITY (see stFor) and overridable per day. */
   ST:[['hq', 'HQ (base city)'], ['ex', 'Ex-HQ (same-day return)'],
       ['out', 'Outstation (night stay)'], ['meet', 'Team meeting'], ['off', 'Off / leave / holiday']],
-  /* HOW he travelled, in the policy's own words. Own vehicle is paid per km against a logbook;
-     everything else is the actual fare against a ticket or a bill. */
-  MODE:[['none', 'Koi travel nahi'], ['2w', '2 wheeler (apni gaadi)'], ['4w', '4 wheeler (apni gaadi)'],
-        ['bus', 'Bus'], ['train', 'Train'], ['auto', 'Auto / rickshaw'],
-        ['cab', 'Cab / taxi (Ola, Uber)'], ['air', 'Flight']],
-  OWN:['2w', '4w'],
-  FARE:['bus', 'train', 'auto', 'cab', 'air'],
-  mLbl: function (m) {
-    var x = Tada.MODE.filter(function (y) { return y[0] === m; })[0];
-    return x ? x[1] : m || '—';
-  },
   stLbl: function (s) {
     var x = Tada.ST.filter(function (y) { return y[0] === s; })[0];
     return x ? x[1] : s || '—';
-  },
-  /* which modes this station and slab actually allow — a dropdown that offers what the policy forbids
-     is a claim that comes back deducted */
-  modes: function (st, P) {
-    return Tada.MODE.filter(function (m) {
-      if (m[0] === 'none') return true;
-      if (Tada.OWN.indexOf(m[0]) >= 0) return !!P.perKm;
-      if (m[0] === 'cab') return !!P.cab;
-      if (m[0] === 'air') return st === 'out';
-      return true;                                        /* bus, train, auto — always on actuals */
-    });
   },
 
   /* ── city → station ──
@@ -8038,18 +8646,6 @@ var Tada = {
     if (sh && sc) return sh === sc ? 'ex' : 'out';
     return 'ex';                                          /* known city, unknown state — same-day trip */
   },
-  /* said on screen, because an auto-filled station that nobody can explain is an argument later */
-  stWhy: function (city) {
-    var c = String(city || '').trim();
-    if (!c) return 'City bharo — station isi se decide hota hai.';
-    var hq = Tada.hqCity(), st = Tada.stFor(c);
-    /* whole sentences, one string each: a sentence stitched from fragments translates in half */
-    if (st === 'hq') return 'Ye aapka HQ hai, isliye HQ. City: ' + c;
-    if (st === 'ex') return 'HQ se alag city, wapas usi din — isliye Ex-HQ. HQ: ' + (hq || '—') +
-      ', city: ' + c;
-    return 'HQ se doosre state me — isliye Outstation. City: ' + c +
-      ' (' + (Plan.stateOf(c) || '—') + ')';
-  },
   /* every city this rep can pick: his own towns from the master, plus whatever the PJP already says */
   cities: function (extra) {
     var a = Plan.towns('');
@@ -8065,38 +8661,50 @@ var Tada = {
     var p = DB.find('DayPlan', DB.me.code + '_' + k);
     if (p) return { ww:String(p.WorkingWith || ''), city:String(p.Town || ''), station:String(p.Station || '') };
     var m = DB.pjpFor(DB.me.code, k);
-    return m ? { ww:String(m.Ww || m.Week || ''), city:String(m.Town || ''), station:'' }
+    return m ? { ww:String(m.Ww || m.Week || ''), city:String(m.Town || ''),
+                 station:String(m.Station || '') }
              : { ww:'', city:'', station:'' };
   },
 
   /* a day with nothing claimed — the shape every day has, so a month saved by an older build still
      prices correctly */
   blank: function () {
-    return { st:'hq', city:'', mode:'none', km:0, fare:0, da:0, food:0, lodge:0, night:0,
-             daT:0, foodT:0, stT:0, note:'', from:'' };
+    return { st:'hq', city:'', ta:0, da:0, lodge:0, night:0,
+             taT:0, daT:0, note:'', from:'' };
   },
   /* pre-fill a day from the PJP */
-  seed: function (k) {
-    var p = Tada.plan(k), b = Tada.blank();
+  /* the PJP is the source of truth for WHERE a day was worked; the claim only prices it */
+  fromPlan: function (k) {
+    var p = Tada.plan(k);
     var city = Tada.OFFISH.test(String(p.city).trim()) ? '' : String(p.city).trim();
-    b.st = /meeting|activity/i.test(p.ww) ? 'meet'
+    var st = /meeting|activity/i.test(p.ww) ? 'meet'
       : /weekly off|leave|holiday|off day|sunday/i.test(p.ww) ? 'off'
       : /outstation/i.test(p.station) ? 'out'
       : /ex.?hq/i.test(p.station) ? 'ex'
+      : /hq/i.test(p.station) ? 'hq'
       : (Tada.stFor(city) || 'hq');
-    b.city = city;
+    return { st:st, city:city, has:!!(p.ww || p.city || p.station) };
+  },
+  seed: function (k) {
+    var b = Tada.blank(), f = Tada.fromPlan(k);
+    b.st = f.st; b.city = f.city;
     b.night = b.st === 'out' ? 1 : 0;
     b.from = 'plan';
     return b;
   },
-  /* an older draft called the city "town" and the mode "da / km / ticket / cab" */
+  /* Older drafts: the city was "town", travel was a mode + km/fare, and food was its own figure.
+     Fold them into the two numbers the screen now shows, so a month saved last week still adds up. */
   migrate: function (r) {
     if (!r) return r;
     if (r.town && !r.city) r.city = r.town;
-    if (r.mode === 'da') r.mode = 'none';
-    else if (r.mode === 'km') r.mode = '2w';
-    else if (r.mode === 'ticket') r.mode = 'bus';
-    if (!r.fare && (r.ticket || r.cab)) r.fare = num(r.ticket) + num(r.cab);
+    if (r.ta === undefined) {
+      var t = 0;
+      if (r.fare !== undefined) t += num(r.fare);
+      if (r.ticket !== undefined) t += num(r.ticket);
+      if (r.cab !== undefined) t += num(r.cab);
+      r.ta = t; r.taT = t ? 1 : 0;
+    }
+    if (r.food !== undefined && num(r.food) && !r.daT) { r.da = num(r.da) + num(r.food); r.daT = 1; }
     return r;
   },
   load: function () {
@@ -8106,7 +8714,12 @@ var Tada = {
     try { saved = JSON.parse(r.DaysJson || '{}') || {}; } catch (e) {}
     Tada.days = {};
     Tada.dates().forEach(function (d) {
-      Tada.days[d] = saved[d] ? Tada.migrate(Object.assign(Tada.seed(d), saved[d])) : Tada.seed(d);
+      var row = saved[d] ? Tada.migrate(Object.assign(Tada.seed(d), saved[d])) : Tada.seed(d);
+      /* the rep cannot edit these two, so a plan that changed after he saved must win here */
+      var f = Tada.fromPlan(d);
+      if (f.has) { row.st = f.st; row.city = f.city; if (row.st !== 'out') { row.night = 0; row.lodge = 0; }
+                   else if (!row.night) row.night = 1; }
+      Tada.days[d] = row;
     });
     Tada._for = k;
     return r;
@@ -8121,39 +8734,28 @@ var Tada = {
     return { days:days, S:Tada.slab(r.Designation), code:r.EmpCode };
   },
 
+  /* The station and the city belong to the PJP, so they are not in here: what the rep owns is what the
+     day cost him and a note about it. */
   set: function (d, f, v) {
     Tada.load();
     if (!Tada.days[d]) Tada.days[d] = Tada.seed(d);
     var r = Tada.days[d];
-    r[f] = (f === 'st' || f === 'mode' || f === 'note' || f === 'city') ? v : num(v);
+    if (f === 'st' || f === 'city') return;                 /* the plan's, not his */
+    r[f] = f === 'note' ? v : num(v);
     r.from = 'rep';
     /* the rep's own numbers, once typed, are never silently rewritten by a policy default */
     if (f === 'da') r.daT = 1;
-    if (f === 'food') r.foodT = 1;
-    if (f === 'st') {
-      r.stT = 1;
-      if (v === 'off' || v === 'meet') { r.km = 0; r.fare = 0; r.food = 0; r.lodge = 0; r.night = 0;
-        r.da = 0; r.daT = 0; r.foodT = 0; r.mode = 'none'; }
-      if (v !== 'out') { r.lodge = 0; r.night = 0; }
-      if (v === 'out' && !r.night) r.night = 1;
-    }
-    /* a city change re-derives the station, unless the rep has said otherwise for this day */
-    if (f === 'city' && !r.stT && r.st !== 'off' && r.st !== 'meet') {
-      var st = Tada.stFor(v);
-      if (st) { r.st = st; if (st === 'out' && !r.night) r.night = 1; if (st !== 'out') { r.night = 0; r.lodge = 0; } }
-    }
+    if (f === 'ta') r.taT = 1;
     Tada._dirty = true;
     clearTimeout(Tada._t);
-    if (f === 'st' || f === 'mode' || f === 'city') { Tada.flush(); render(); }
-    else Tada._t = setTimeout(Tada.flush, 900);
+    Tada._t = setTimeout(Tada.flush, 900);
   },
-  /* "policy rate wapas lo" — drop an edit and go back to what the slab says */
+  /* drop an edit and go back to what the slab says */
   reset: function (d, f) {
     Tada.load();
     var r = Tada.days[d]; if (!r) return;
     if (f === 'da') { r.daT = 0; r.da = 0; }
-    if (f === 'food') { r.foodT = 0; r.food = 0; }
-    if (f === 'st') { r.stT = 0; var st = Tada.stFor(r.city); if (st) r.st = st; }
+    if (f === 'ta') { r.taT = 0; r.ta = 0; }
     Tada._dirty = true; Tada.flush(); render();
   },
 
@@ -8161,18 +8763,25 @@ var Tada = {
   pol: function (d, cx) {
     cx = cx || Tada.ctx();
     var r = (cx.days || {})[d] || Tada.blank(), S = cx.S;
-    if (r.st === 'off' || r.st === 'meet') return { da:0, food:0, foodIn:false };
+    /* a meeting day and an off day pay no daily allowance — the policy is explicit */
+    if (r.st === 'off' || r.st === 'meet') return { da:0, lodge:0, nights:0 };
+    /* and a day the PJP does not cover has no rate to offer: without a city there is no metro / non-metro
+       and no station to price, so the day stays empty until the plan says something */
+    if (!String(r.city || '').trim()) return { da:0, lodge:0, nights:0, noPlan:true };
     var P = r.st === 'hq' ? S.hq : r.st === 'ex' ? S.ex : S.out;
     var metro = Tada.isMetro(r.city), nights = Math.max(1, num(r.night));
     if (r.st === 'out') {
+      /* "bills only" slabs (R-KAM, RSM, ZSM) have no fixed outstation allowance at all — pre-filling
+         their food ceiling as if it were a DA would be inviting a claim nobody has a bill for */
       var per = P.billsOnly ? 0 : (metro ? P.metro : P.nonMetro);
-      /* the policy's outstation row carries a food figure of its own, per night and metro-dependent */
-      var cap = P.foodMonth ? 0 : (metro ? P.foodMetro : P.foodNonMetro) * nights;
-      return { da:per * nights, food:cap, foodCap:cap };
+      var food = (P.billsOnly || P.foodMonth) ? 0 : (metro ? P.foodMetro : P.foodNonMetro);
+      var L = S.lodge, cap = Tada.isMumbai(r.city) ? L.mumbai : (metro ? L.metro : L.nonMetro);
+      /* the policy's own words: a woman may take the next level up in a non-metro */
+      if (Tada.female(cx.code) && !metro && !Tada.isMumbai(r.city)) cap = L.metro;
+      return { da:(per + food) * nights, lodge:cap * nights, nights:nights, perNight:per + food };
     }
-    var own = Tada.OWN.indexOf(r.mode) >= 0;
-    /* per-km is paid INSTEAD of the fixed daily allowance */
-    return { da:own ? 0 : num(P.da), food:P.foodMonth ? 0 : num(P.food), foodCap:0 };
+    /* HQ and Ex-HQ: the fixed daily allowance and the food figure are one number to the rep */
+    return { da:num(P.da) + (P.foodMonth ? 0 : num(P.food)), lodge:0, nights:0 };
   },
 
   /* ── what one day is worth ──
@@ -8181,106 +8790,67 @@ var Tada = {
   calc: function (d, cx) {
     cx = cx || Tada.ctx();
     var S = cx.S, r = (cx.days || {})[d] || Tada.blank();
-    var out = { da:0, food:0, travel:0, lodge:0, station:0, why:[], warn:[], bills:[] };
+    var out = { da:0, ta:0, lodge:0, why:[], warn:[], bills:[] };
     if (r.st === 'off') { out.why.push('Off / leave / holiday — policy me DA nahi milta'); return out; }
-    if (r.st === 'meet') { out.why.push('Meeting day — DA aur food dono lagu nahi hote'); return out; }
-    var P = r.st === 'hq' ? S.hq : r.st === 'ex' ? S.ex : S.out;
-    var metro = Tada.isMetro(r.city), nights = Math.max(1, num(r.night));
     var pol = Tada.pol(d, cx);
-    if (!String(r.city || '').trim())
-      out.warn.push('City nahi bhari — HQ / Ex-HQ / Outstation isi se decide hota hai');
+    var nights = Math.max(1, num(r.night));
 
-    /* DA — the policy rate is an estimate the rep may correct; over the rate is flagged, not silently
-       paid, so the HOD sees it here and not in a payroll query next month */
+    /* TA — what the journey actually cost. There is no policy rate for it: the bill decides, and the
+       slab's own travel class (printed above) says what he may travel by. */
+    out.ta = num(r.ta);
+    if (out.ta) out.bills.push('Travel bill / ticket / logbook');
+
+    if (r.st === 'meet') {
+      /* the policy pays a meeting day nothing but the travel to it */
+      out.why.push('Meeting day — sirf TA milta hai, DA nahi');
+      if (num(r.da)) out.warn.push('Meeting day par DA nahi milta — HOD ise deduct kar sakta hai');
+      return out;
+    }
+
+    /* only worth saying once he has actually claimed something for the day */
+    if (pol.noPlan && (r.taT || r.daT || num(r.lodge)))
+      out.warn.push('Is din ka city PJP me nahi hai — PJP theek karao, tabhi rate lagega');
+
+    /* DA — the policy figure is filled in and the rep may correct it; over the figure is paid into the
+       claim and flagged, so the HOD sees it here instead of finding it in payroll */
     out.da = r.daT ? num(r.da) : pol.da;
     if (out.da) {
-      out.why.push(r.st === 'out' ? nights + ' night × ' + inr(pol.da / nights) + ' (' +
-        (metro ? 'metro' : 'non-metro') + ')' : 'Daily allowance ' + inr(out.da));
+      out.why.push(r.st === 'out'
+        ? nights + ' night × ' + inr(pol.perNight || 0) + ' (DA + food)'
+        : 'DA ' + inr(pol.da) + ' policy ke hisaab se');
     }
-    if (r.daT && num(r.da) > pol.da)
+    if (r.daT && num(r.da) > pol.da && pol.da)
       out.warn.push('DA policy rate ' + inr(pol.da) + ' se zyada likha hai — HOD check karega');
-    if (!out.da && !pol.da && r.st === 'out' && P.billsOnly)
-      out.warn.push('Is role ke liye outstation DA nahi hai — bills lagao');
-    else if (!out.da && !pol.da && r.st !== 'out' && !P.da && Tada.OWN.indexOf(r.mode) < 0)
-      out.warn.push('Is role ke liye fixed DA nahi hai — per-km ya actual fare claim karo');
+    if (!pol.da && !out.da)
+      out.why.push('Is role ke liye fixed DA nahi hai — TA aur bills par claim hota hai');
 
-    /* TRAVEL — own vehicle is per km against a logbook, everything else is the actual fare */
-    if (Tada.OWN.indexOf(r.mode) >= 0) {
-      if (!P.perKm) out.warn.push('Is role ke liye per-km allowed nahi hai');
-      else {
-        var cap = (P.kmCap || 0) * (r.st === 'out' ? nights : 1);
-        var km = num(r.km), ok = cap ? Math.min(km, cap) : km;
-        out.travel = ok * P.perKm;
-        out.why.push(ok + ' km × ' + inr(P.perKm) + (cap ? ' (cap ' + cap + ' km)' : ''));
-        if (cap && km > cap) out.warn.push('Cap ' + cap + ' km — uske aage public transport hi allowed hai');
-        if (out.travel) out.bills.push('Logbook');
-      }
-    } else if (Tada.FARE.indexOf(r.mode) >= 0) {
-      var okMode = true;
-      if (r.mode === 'cab' && !P.cab) { okMode = false; out.warn.push('Is role ke liye cab allowed nahi hai'); }
-      if (r.mode === 'air' && r.st !== 'out') { okMode = false; out.warn.push('Flight sirf outstation ke liye hai'); }
-      if (okMode) {
-        out.travel = num(r.fare);
-        if (out.travel) out.bills.push(r.mode === 'air' ? 'Flight ticket' :
-          r.mode === 'cab' ? 'Cab bill' : r.mode === 'auto' ? 'Auto receipt' : 'Ticket');
-        if (r.mode === 'air') out.why.push('Flight — manager ki prior approval zaroori hai');
-        out.why.push(Tada.mLbl(r.mode) + ' — actual ' + inr(out.travel));
-      }
-      /* the policy's extra for reaching the bus stand / station on an inter-city Ex-HQ trip */
-      if (r.st === 'ex' && P.station && r.mode !== 'cab') {
-        out.station = P.station; out.why.push('Station tak aane-jaane ka ' + inr(P.station));
-      }
-    }
-
-    /* FOOD — a per-day figure for the junior slabs, a monthly budget for the senior ones, and a
-       per-night capped bill on outstation */
-    if (P.foodMonth) {
-      out.food = num(r.food);
-      if (out.food) out.bills.push('Food bill');
-    } else if (r.st === 'out') {
-      out.food = r.foodT ? num(r.food) : pol.food;
-      if (pol.foodCap && out.food > pol.foodCap) {
-        out.warn.push('Food cap ' + inr(pol.foodCap) + ' (' + nights + ' din)');
-        out.food = pol.foodCap;
-      }
-      if (out.food) { out.bills.push('Food bill'); out.why.push('Food ' + inr(out.food) + ' (bill ke saath)'); }
-    } else {
-      out.food = r.foodT ? num(r.food) : pol.food;
-      if (out.food) out.why.push('Food allowance ' + inr(out.food));
-      if (r.foodT && num(r.food) > pol.food)
-        out.warn.push('Food policy rate ' + inr(pol.food) + ' se zyada likha hai — HOD check karega');
-    }
-
-    /* LODGING — capped per night, one level up for a woman in a non-metro */
+    /* LODGING — outstation only, capped per night by town (Mumbai has its own rate) */
     if (r.st === 'out') {
-      var L = S.lodge, capL = Tada.isMumbai(r.city) ? L.mumbai : (metro ? L.metro : L.nonMetro);
-      if (Tada.female(cx.code) && !metro && !Tada.isMumbai(r.city)) capL = L.metro;
-      out.lodge = Math.min(num(r.lodge), capL * nights);
-      if (num(r.lodge) > capL * nights) out.warn.push('Lodging cap ' + inr(capL) + '/din');
+      out.lodge = Math.min(num(r.lodge), pol.lodge || 0);
+      if (pol.lodge && num(r.lodge) > pol.lodge) out.warn.push('Lodging cap ' + inr(pol.lodge / nights) + '/raat');
       if (out.lodge) out.bills.push('Hotel bill (GST of the state)');
+      if (!num(r.night)) out.warn.push('Kitni raat ruke, wo bharo');
     }
-    /* A day the rep has not filled in yet claims nothing, and nothing is not an error: a slab with no
-       fixed DA (RSM, ZSM) would otherwise open the month with a red flag on all 31 days. The advice
-       stays — as advice, not as a warning that says money is at risk. */
-    if (!Tada.dayTot(out) && r.mode === 'none' && !r.daT && !r.foodT && !num(r.lodge)) {
-      out.why = out.warn.length ? [out.warn[0]] : [];
+
+    /* a day the rep has not filled in yet claims nothing, and nothing is not a mistake */
+    if (!Tada.dayTot(out) && !r.taT && !r.daT && !num(r.lodge)) {
+      out.why = ['Is din ka koi claim nahi bhara'];
       out.warn = [];
-      out.why.unshift('Is din ka koi claim nahi bhara');
     }
     return out;
   },
-  dayTot: function (c) { return c.da + c.food + c.travel + c.lodge + c.station; },
+  dayTot: function (c) { return num(c.da) + num(c.ta) + num(c.lodge); },
 
   total: function (cx, dates) {
     if (!cx) { Tada.load(); cx = Tada.ctx(); }
-    var S = cx.S, t = { da:0, food:0, travel:0, lodge:0, station:0, days:0, nights:0,
+    var S = cx.S, t = { da:0, ta:0, lodge:0, days:0, nights:0,
       warn:0, bills:{}, byStation:{ hq:0, ex:0, out:0, meet:0, off:0 } };
     (dates || Tada.dates()).forEach(function (d) {
       var r = (cx.days || {})[d] || Tada.blank(), c = Tada.calc(d, cx);
       t.byStation[r.st] = (t.byStation[r.st] || 0) + 1;
       if (r.st === 'out') t.nights += Math.max(1, num(r.night));
       if (Tada.dayTot(c)) t.days++;
-      t.da += c.da; t.food += c.food; t.travel += c.travel; t.lodge += c.lodge; t.station += c.station;
+      t.da += c.da; t.ta += c.ta; t.lodge += c.lodge;
       t.warn += c.warn.length;
       c.bills.forEach(function (b) { t.bills[b] = (t.bills[b] || 0) + 1; });
     });
@@ -8288,7 +8858,7 @@ var Tada = {
     t.meet = num(row.MeetAmount);
     t.meetCap = Tada.MEET[S.id] || 0;
     t.foodMonth = (S.hq.foodMonth || 0);
-    t.grand = t.da + t.food + t.travel + t.lodge + t.station + t.meet;
+    t.grand = t.da + t.ta + t.lodge + t.meet;
     t.deduct = Tada.dedTot(row);
     t.net = Math.max(0, t.grand - t.deduct);
     return t;
@@ -8316,8 +8886,8 @@ var Tada = {
     return DB.save('TaDa', { Id:Tada.key(), EmpCode:DB.me.code, EmpName:DB.me.name, Month:Tada.mon(),
       Designation:(DB.emp(DB.me.code) || {}).Designation || DB.me.desig || '',
       Station:'', Status:/pending|approved|return/i.test(r.Status || '') ? r.Status : 'Draft',
-      DaysJson:JSON.stringify(Tada.days), DaAmount:t.da, FoodAmount:t.food, TravelAmount:t.travel,
-      LodgeAmount:t.lodge, MeetAmount:t.meet, MeetCity:r.MeetCity || '', OtherAmount:t.station,
+      DaysJson:JSON.stringify(Tada.days), DaAmount:t.da, FoodAmount:0, TravelAmount:t.ta,
+      LodgeAmount:t.lodge, MeetAmount:t.meet, MeetCity:r.MeetCity || '', OtherAmount:0,
       Nights:t.nights, DeductJson:r.DeductJson || '', DeductTotal:t.deduct, NetTotal:t.net,
       Total:t.grand, UpdatedAt:Date.now() }, { quiet:true });
   },
@@ -8386,7 +8956,7 @@ var Tada = {
         UI.kpi(t.days, 'Claim din', 'g') +
         UI.kpi(t.warn, 'Warning', t.warn ? 'r' : 'g') + '</div>' +
       '<div class="tw" style="margin-top:10px"><table><tbody>' +
-      [['Daily allowance', t.da], ['Food', t.food], ['Travel (km / fare / station)', t.travel + t.station],
+      [['DA (daily allowance)', t.da], ['TA (travel allowance)', t.ta],
        ['Lodging cost', t.lodge], ['Team meeting', t.meet]]
       .map(function (x) { return '<tr><td>' + esc(x[0]) + '</td><td class="num">' + inr(x[1]) + '</td></tr>'; }).join('') +
       /* counts, not money: how much of the month was spent away from base */
@@ -8397,9 +8967,8 @@ var Tada = {
         '<td class="num" style="color:var(--bad)">− ' + inr(t.deduct) + '</td></tr>' +
         '<tr class="tot"><td><b>Net payable</b></td><td class="num"><b>' + inr(t.net) + '</b></td></tr>' : '') +
       '</tbody></table></div>' +
-      (t.foodMonth ? '<div class="hint" style="margin-top:8px">Food budget: ' + inr(t.food) + ' / ' +
-        inr(t.foodMonth) + ' per month' + (t.food > t.foodMonth ? ' — <b>cap se zyada</b>' : '') +
-        '. HQ, Ex-HQ aur outstation ka food isi me aata hai.</div>' : '') +
+      (t.foodMonth ? '<div class="hint" style="margin-top:8px">Is role ka food monthly budget ' +
+        inr(t.foodMonth) + ' hai — DA me alag se food nahi jodte, bill lagao.</div>' : '') +
       (t.meetCap ? '<div class="row two" style="margin-top:10px"><div><label class="f">Team meeting bill (' +
         inr(t.meetCap) + (S.id === 's3' || S.id === 's4' ? ' per employee' : ' per zone') + ' / month)</label>' +
         '<input class="in" type="number" min="0" value="' + num(t.meet) +
@@ -8435,7 +9004,7 @@ var Tada = {
             /* an off day owes no city; a claimable day without one cannot be priced, so it is flagged */
             (row.st === 'off' || row.st === 'meet' ? (row.city ? ' · ' + esc(row.city) : '')
               : ' · ' + (row.city ? esc(row.city) : '<b style="color:var(--bad)">city nahi</b>')) +
-            (row.mode !== 'none' ? ' · ' + esc(Tada.mLbl(row.mode)) : '') +
+            (row.st === 'out' && num(row.night) ? ' · ' + num(row.night) + ' raat' : '') +
             (amt ? ' · ' + inr(amt) : ' · —') + '</div></div>' +
         '<button class="btn ghost xs" onclick="Tada.tap(\'' + d + '\')">' + (op ? 'Close' : 'Edit') + '</button></div>' +
         (num(dd.amt) > 0 ? '<div class="hint" style="color:var(--bad);font-weight:700;margin:2px 0 0">' +
@@ -8456,6 +9025,9 @@ var Tada = {
       '<div class="btns"><button class="btn' + (okd ? ' ghost' : '') + '" onclick="Tada.send(this)"' +
         (okd ? ' disabled' : '') + '>' + (sent || back ? 'Dobara bhejo' : 'HOD ko bhejo') + '</button>' +
       '<button class="btn ghost" onclick="Tada.excel()">Excel</button></div>' +
+      '<div class="btns" style="margin-top:8px">' +
+        '<button class="btn ghost" onclick="Tada.pdf()">TA/DA PDF download</button>' +
+        '<button class="btn ghost" onclick="Tada.policy()">Travel policy PDF</button></div>' +
       (r.HodRemarks ? '<div class="banner ' + (back ? 'r' : 'b') + '" style="margin-top:10px">' +
         '<span></span><div><b>HOD ka message</b><br><span style="font-weight:500">' + esc(r.HodRemarks) + '</span></div></div>' : '') +
       '</div>';
@@ -8470,17 +9042,8 @@ var Tada = {
   },
   slabTable: function (S) {
     var line = function (P, what) {
-      var bits = [];
-      if (P.da) bits.push('DA ' + inr(P.da));
-      if (P.metro || P.nonMetro) bits.push('DA ' + inr(P.metro) + ' metro / ' + inr(P.nonMetro) + ' non-metro');
-      if (P.perKm) bits.push(inr(P.perKm) + '/km' + (P.kmCap ? ' upto ' + P.kmCap + ' km' : ''));
-      if (P.tickets) bits.push('bus / train actual');
-      if (P.cab) bits.push('cab actual');
-      if (P.billsOnly && !P.metro) bits.push('bills only — fixed DA nahi');
-      var food = P.foodMonth ? inr(P.foodMonth) + ' / month'
-        : P.food ? inr(P.food) + ' / din'
-        : (P.foodMetro ? inr(P.foodMetro) + ' metro / ' + inr(P.foodNonMetro) + ' non-metro' : '—');
-      return '<tr><td>' + what + '</td><td>' + esc(bits.join(' · ') || '—') + '</td><td>' + esc(food) + '</td></tr>';
+      return '<tr><td>' + what + '</td><td>' + esc(Tada.polLine(P)) + '</td><td>' +
+        esc(Tada.polFood(P)) + '</td></tr>';
     };
     return '<div class="tw"><table><thead><tr><th>Station</th><th>Travel</th><th>Food</th></tr></thead><tbody>' +
       line(S.hq, 'HQ') + line(S.ex, 'Ex-HQ') + line(S.out, 'Outstation') +
@@ -8489,53 +9052,45 @@ var Tada = {
       ' Mumbai</b></td></tr></tbody></table></div>';
   },
   dayEdit: function (d, r, c, S) {
-    var P = r.st === 'hq' ? S.hq : r.st === 'ex' ? S.ex : S.out;
     var pol = Tada.pol(d);
-    var sel = function (f, list, cur) {
-      return '<select class="in" onchange="Tada.set(\'' + d + '\',\'' + f + '\',this.value)">' +
-        list.map(function (x) { return '<option value="' + x[0] + '"' + (x[0] === cur ? ' selected' : '') +
-          '>' + esc(x[1]) + '</option>'; }).join('') + '</select>';
-    };
     var numf = function (f, lbl, v, extra) {
       return '<div><label class="f">' + lbl + '</label><input class="in" type="number" min="0" value="' +
-        num(v) + '" oninput="Tada.set(\'' + d + '\',\'' + f + '\',this.value)">' +
-        (extra || '') + '</div>';
+        num(v) + '" oninput="Tada.set(\'' + d + '\',\'' + f + '\',this.value)">' + (extra || '') + '</div>';
     };
-    /* city first: the station follows from it */
+    /* the station and the city are the PJP's word, so they are shown, not offered */
     var h = '<div class="dr-b">' +
-      '<div class="row two"><div><label class="f">City</label>' + Tada.citySel(d, r.city || '') + '</div>' +
-      '<div><label class="f">Ye din kya tha</label>' + sel('st', Tada.ST, r.st) + '</div></div>' +
-      '<div class="hint" style="margin-top:6px">' + esc(Tada.stWhy(r.city)) +
-        (r.stT ? ' <b>Aapne khud badla hai.</b>' : '') +
-        (r.stT ? ' <a class="pl" onclick="Tada.reset(\'' + d + '\',\'st\')">City se dobara set karo</a>' : '') +
-        '</div>';
-    if (r.st === 'off' || r.st === 'meet') {
-      h += '<div class="hint" style="margin-top:8px">' + esc(c.why[0] || '') + '</div>' +
-        Tada.dayBar(d);
+      '<div class="row two"><div><label class="f">Station</label>' +
+        '<input class="in lk" readonly value="' + esc(Tada.stLbl(r.st)) + '"></div>' +
+      '<div><label class="f">City</label>' +
+        '<input class="in lk" readonly value="' + esc(r.city || '—') + '"></div></div>' +
+      '<div class="hint" style="margin-top:6px">Station aur city PJP se aate hain — badalna ho to PJP ' +
+        '(ya Change PJP) me badlo.</div>';
+
+    if (r.st === 'off') {
+      h += '<div class="hint" style="margin-top:8px">' + esc(c.why[0] || '') + '</div>' + Tada.dayBar(d);
       return h + '</div>';
     }
-    h += '<div class="row two" style="margin-top:8px"><div><label class="f">Kaise gaye</label>' +
-      sel('mode', Tada.modes(r.st, P), r.mode) + '</div>' +
-      (r.st === 'out' ? numf('night', 'Kitni raat ruke', r.night) : '<div></div>') + '</div>';
+
     var f2 = [];
-    if (Tada.OWN.indexOf(r.mode) >= 0) f2.push(numf('km', 'Kitne km (logbook)', r.km));
-    if (Tada.FARE.indexOf(r.mode) >= 0) f2.push(numf('fare', Tada.mLbl(r.mode) + ' ka actual ₹', r.fare));
-    /* DA and food are estimates the rep owns */
-    f2.push(numf('da', 'DA ₹ (estimate)', r.daT ? r.da : pol.da,
+    /* TA is asked on every claimable day; DA only where the policy pays one */
+    f2.push(numf('ta', 'TA — travel ₹', r.ta,
+      '<div class="hint">Bus / train / auto / cab / apni gaadi — jo kharch hua</div>'));
+    if (r.st !== 'meet') f2.push(numf('da', 'DA — daily allowance ₹', r.daT ? r.da : pol.da,
       '<div class="hint">Policy ' + inr(pol.da) + (r.daT ? ' · <a class="pl" onclick="Tada.reset(\'' + d +
         '\',\'da\')">policy rate wapas</a>' : '') + '</div>'));
-    f2.push(numf('food', 'Food ₹ (estimate)', r.foodT ? r.food : pol.food,
-      '<div class="hint">' + 'Policy ' + inr(pol.food || pol.foodCap || 0) +
-      (r.st === 'out' ? ' — bill lagega' : '') +
-      (r.foodT ? ' · <a class="pl" onclick="Tada.reset(\'' + d + '\',\'food\')">policy rate wapas</a>' : '') +
-      '</div>'));
-    if (r.st === 'out') f2.push(numf('lodge', 'Hotel ₹ (GST ke saath)', r.lodge));
+    if (r.st === 'out') {
+      f2.push(numf('night', 'Kitni raat ruke', r.night));
+      f2.push(numf('lodge', 'Lodge cost ₹ (GST ke saath)', r.lodge,
+        '<div class="hint">Cap ' + inr(pol.lodge) + ' (' + Math.max(1, num(r.night)) + ' raat)</div>'));
+    }
     while (f2.length % 2) f2.push('<div></div>');
     for (var i = 0; i < f2.length; i += 2) h += '<div class="row two" style="margin-top:8px">' + f2[i] + f2[i + 1] + '</div>';
-    h += '<label class="f">Note</label><input class="in" value="' + esc(r.note || '') +
+    if (r.st === 'meet') h += '<div class="hint" style="margin-top:6px">Meeting day par sirf TA milta hai.</div>';
+
+    h += '<label class="f">Note (optional)</label><input class="in" value="' + esc(r.note || '') +
       '" oninput="Tada.set(\'' + d + '\',\'note\',this.value)">';
     h += '<div class="tw" style="margin-top:10px"><table><tbody>' +
-      [['DA', c.da], ['Food', c.food], ['Travel', c.travel], ['Station tak', c.station], ['Lodging cost', c.lodge]]
+      [['DA', c.da], ['TA', c.ta], ['Lodge cost', c.lodge]]
       .filter(function (x) { return x[1]; })
       .map(function (x) { return '<tr><td>' + x[0] + '</td><td class="num">' + inr(x[1]) + '</td></tr>'; }).join('') +
       '<tr class="tot"><td><b>Din ka total</b></td><td class="num"><b>' +
@@ -8576,8 +9131,8 @@ var Tada = {
         var r2 = Tada.row();
         return DB.save('TaDa', Object.assign({}, r2, { Id:Tada.key(), Month:Tada.mon(),
           Designation:(DB.emp(DB.me.code) || {}).Designation || DB.me.desig || '',
-          DaysJson:JSON.stringify(Tada.days), DaAmount:t.da, FoodAmount:t.food, TravelAmount:t.travel,
-          LodgeAmount:t.lodge, MeetAmount:t.meet, OtherAmount:t.station, Nights:t.nights,
+          DaysJson:JSON.stringify(Tada.days), DaAmount:t.da, FoodAmount:0, TravelAmount:t.ta,
+          LodgeAmount:t.lodge, MeetAmount:t.meet, OtherAmount:0, Nights:t.nights,
           DeductTotal:t.deduct, NetTotal:t.net,
           Revision:num(r2.Revision) + 1,
           Total:t.grand, Remarks:val('td_rm'), Status:'Pending', HodAt:'', HodBy:'',
@@ -8589,6 +9144,101 @@ var Tada = {
     });
   },
   excel: function () { return Rep.tada(Tada.mon()); },
+
+  /* ── the two documents a rep asks for ──
+     the policy he is paid under, and his own claim in a form he can forward or keep. */
+  POLICY:'Travel-Policy.pdf',
+  policy: function () {
+    /* the file ships beside the app; a Master_Config key can point at a newer copy in Drive */
+    var url = String(DB.cfg('Policy_PDF_URL', '') || '').trim() || Tada.POLICY;
+    var a = document.createElement('a');
+    a.href = url; a.target = '_blank'; a.rel = 'noopener';
+    if (!/^https?:/i.test(url)) a.download = 'Honasa-Travel-Policy.pdf';
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { document.body.removeChild(a); }, 3000);
+    toast('Travel policy PDF khul rahi hai');
+  },
+  pdf: function () {
+    var r = Tada.load(), S = Tada.slab(), t = Tada.total(), e = DB.emp(DB.me.code) || {};
+    var ded = Tada.ded(r), ds = Tada.dates();
+    var d = Pdf.doc();
+    Pdf.head(d, 'TA / DA claim', monthName(Tada.mon()) + '  ·  ' + DB.me.name + ' (' + DB.me.code + ')');
+
+    Pdf.h2(d, 'Employee');
+    Pdf.kv(d, [
+      ['Employee', DB.me.name + ' (' + DB.me.code + ')'],
+      ['Designation', e.Designation || DB.me.desig || '—'],
+      ['HQ', Tada.hqCity() || '—'], ['Zone', e.Zone || '—'],
+      ['Policy slab', S.name],
+      ['Status', String(r.Status || 'Draft')],
+      ['ASM', e.AsmName || '—'], ['HOD', e.HodName || '—']
+    ]);
+
+    Pdf.h2(d, 'Claim');
+    var money = [['DA (daily allowance)', inr(t.da)], ['TA (travel allowance)', inr(t.ta)],
+                 ['Lodge cost', inr(t.lodge)], ['Team meeting', inr(t.meet)]];
+    Pdf.table(d, [{ t:'Head', w:300 }, { t:'Amount', w:110, a:'r' }],
+      money.concat([{ c:['TOTAL', inr(t.grand)], bold:true, fill:0.93 }])
+        .concat(t.deduct ? [{ c:['HOD deduction', '- ' + inr(t.deduct)] },
+                            { c:['NET PAYABLE', inr(t.net)], bold:true, fill:0.93 }] : []));
+    d.y -= 4;
+    Pdf.kv(d, [['Claim days', String(t.days)], ['Outstation nights', String(t.nights)],
+               ['Ex-HQ visits', String(t.byStation.ex)], ['Outstation visits', String(t.byStation.out)],
+               ['HQ days', String(t.byStation.hq)], ['Warnings', String(t.warn)]]);
+
+    Pdf.h2(d, 'Day-wise');
+    var DAY = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    var cols = [{ t:'Date', w:52 }, { t:'Day', w:26 }, { t:'Station', w:64 }, { t:'City', w:78 },
+                { t:'Nt', w:20, a:'r' }, { t:'DA', w:48, a:'r' }, { t:'TA', w:48, a:'r' },
+                { t:'Lodge', w:48, a:'r' }, { t:'Total', w:52, a:'r' }, { t:'Ded.', w:44, a:'r' },
+                { t:'Note / reason', w:139 }];
+    var rows = ds.map(function (k) {
+      var row = Tada.days[k], c = Tada.calc(k), dd = ded[k] || {};
+      var note = [row.note || '', dd.note ? 'HOD: ' + dd.note : ''].filter(Boolean).join(' | ');
+      return { c:[dmy(k), DAY[new Date(k + 'T00:00:00').getDay()], Tada.stLbl(row.st), row.city || '—',
+                  row.st === 'out' ? String(num(row.night)) : '', c.da ? inr(c.da) : '',
+                  c.ta ? inr(c.ta) : '', c.lodge ? inr(c.lodge) : '',
+                  Tada.dayTot(c) ? inr(Tada.dayTot(c)) : '', num(dd.amt) ? '- ' + inr(dd.amt) : '', note],
+               fill:num(dd.amt) ? 0.96 : -1 };
+    });
+    rows.push({ c:['TOTAL', '', '', '', String(t.nights), inr(t.da), inr(t.ta), inr(t.lodge),
+                   inr(t.grand - t.meet), t.deduct ? '- ' + inr(t.deduct) : '', ''],
+                bold:true, fill:0.93 });
+    Pdf.table(d, cols, rows);
+
+    Pdf.h2(d, 'Policy — ' + S.name);
+    Pdf.table(d, [{ t:'Station', w:70 }, { t:'Travel', w:230 }, { t:'Food', w:110 }],
+      [['HQ', Tada.polLine(S.hq), Tada.polFood(S.hq)],
+       ['Ex-HQ', Tada.polLine(S.ex), Tada.polFood(S.ex)],
+       ['Outstation', Tada.polLine(S.out), Tada.polFood(S.out)],
+       { c:['Lodging', inr(S.lodge.nonMetro) + ' non-metro / ' + inr(S.lodge.metro) + ' metro / ' +
+            inr(S.lodge.mumbai) + ' Mumbai', ''], bold:true }]);
+    d.y -= 2;
+    d.text(Pdf.ML, d.y, Pdf.clip('Travel class: ' + S.travel, 8, Pdf.W - Pdf.ML - Pdf.MR), 8, false, 0.4);
+
+    Pdf.foot(d, 'GARUDA · ' + DB.me.name + ' · ' + monthName(Tada.mon()) +
+      ' · generated ' + dmy(today()) + '. One claim per month; approved by the 5th is paid on the 17th, ' +
+      'by the 15th on the 30th.');
+    var f = Pdf.save(d, 'TADA_' + DB.me.code + '_' + Tada.mon(), 'TA/DA ' + monthName(Tada.mon()));
+    toast('PDF ban gaya — ' + f.name);
+    return f;
+  },
+  /* the slab's own row, in one line each — shared by the screen table and the PDF */
+  polLine: function (P) {
+    var bits = [];
+    if (P.da) bits.push('DA ' + inr(P.da));
+    if (P.metro || P.nonMetro) bits.push('DA ' + inr(P.metro) + ' metro / ' + inr(P.nonMetro) + ' non-metro');
+    if (P.perKm) bits.push(inr(P.perKm) + '/km' + (P.kmCap ? ' upto ' + P.kmCap + ' km' : ''));
+    if (P.tickets) bits.push('bus / train actual');
+    if (P.cab) bits.push('cab actual');
+    if (P.billsOnly && !P.metro) bits.push('bills only');
+    return bits.join(' · ') || '—';
+  },
+  polFood: function (P) {
+    return P.foodMonth ? inr(P.foodMonth) + ' / month'
+      : P.food ? inr(P.food) + ' / din'
+      : (P.foodMetro ? inr(P.foodMetro) + ' metro / ' + inr(P.foodNonMetro) + ' non-metro' : '—');
+  },
 
   /* ══════════ THE HOD's SIDE ══════════
      A claim is a month of days, not a number: the HOD reads every day the way the rep filled it, and
@@ -8650,9 +9300,8 @@ var Tada = {
       '<tr><td>Deduction</td><td class="num" id="tdh_ded" style="color:var(--bad)">− ' + inr(s.ded) + '</td></tr>' +
       '<tr class="tot"><td><b>Net payable</b></td><td class="num"><b id="tdh_net">' + inr(s.net) + '</b></td></tr>' +
       '</tbody></table></div>' +
-      '<div class="hint" style="margin-top:6px">DA ' + inr(s.t.da) + ' · Food ' + inr(s.t.food) +
-        ' · Travel ' + inr(s.t.travel + s.t.station) + ' · Lodging ' + inr(s.t.lodge) +
-        ' · Meeting ' + inr(s.t.meet) + '</div>' +
+      '<div class="hint" style="margin-top:6px">DA ' + inr(s.t.da) + ' · TA ' + inr(s.t.ta) +
+        ' · Lodge ' + inr(s.t.lodge) + ' · Meeting ' + inr(s.t.meet) + '</div>' +
       '<div class="hint">Ex-HQ ' + s.t.byStation.ex + ' din · Outstation ' + s.t.byStation.out +
         ' din (' + s.t.nights + ' raat) · HQ ' + s.t.byStation.hq + ' din</div>' +
       (r.Remarks ? '<div class="hint" style="margin-top:6px">Rep ka remark: ' + esc(r.Remarks) + '</div>' : '') +
@@ -8672,13 +9321,11 @@ var Tada = {
           '<div class="t">' + dmy(d) + ' <span class="hint">' +
             DAY[new Date(d + 'T00:00:00').getDay()] + '</span></div>' +
           '<div class="s">' + esc(Tada.stLbl(row.st)) + ' · ' + esc(row.city || '—') +
-            (row.mode !== 'none' ? ' · ' + esc(Tada.mLbl(row.mode)) : '') +
-            (num(row.km) ? ' · ' + num(row.km) + ' km' : '') +
             (row.st === 'out' ? ' · ' + Math.max(1, num(row.night)) + ' raat' : '') + '</div></div>' +
         '<span class="pill p-grey">' + inr(amt) + '</span></div>';
       h += '<div class="dr-b">' +
-        '<div class="hint">DA ' + inr(c.da) + ' · Food ' + inr(c.food) + ' · Travel ' +
-          inr(c.travel + c.station) + (c.lodge ? ' · Hotel ' + inr(c.lodge) : '') + '</div>' +
+        '<div class="hint">DA ' + inr(c.da) + ' · TA ' + inr(c.ta) +
+          (c.lodge ? ' · Lodge ' + inr(c.lodge) : '') + '</div>' +
         (c.why.length ? '<div class="hint">' + esc(c.why.join(' · ')) + '</div>' : '') +
         (row.note ? '<div class="hint">Rep: ' + esc(row.note) + '</div>' : '') +
         c.warn.map(function (w) { return '<div class="hint" style="color:var(--bad);font-weight:700">! ' +
@@ -8901,6 +9548,7 @@ var Appr = {
         note:d.HodRemarks || '',
         rows:[['PJP me tha', (d.PlannedTown || '—') + ' / ' + (d.PlannedBeat || '—')],
               ['Aap ne maanga', (d.NewTown || '—') + ' / ' + (d.NewBeat || '—')],
+              ['Station', Pjp.stn(d.NewStation)],
               ['Aapka reason', d.Reason || '—']],
         tip:st === 'rejected' ? 'Ye beat dobara request nahi kar sakte — koi dusra beat chuno.' : '' });
     });
@@ -9204,8 +9852,8 @@ var Admin = {
         return '<option value="' + m + '"' + (m === mon ? ' selected' : '') + '>' + (monthName(m) || m) + '</option>'; }).join('') +
       '</select></div>';
 
-    /* one employee opened -> show their whole month */
-    if (Admin.pjpEmp) return h + Admin.pjpOne(Admin.pjpEmp, mon);
+    /* one employee opened -> show their whole month, and let the HOD settle its adherence */
+    if (Admin.pjpEmp) return h + Admin.pjpOne(Admin.pjpEmp, mon) + Admin.adh(Admin.pjpEmp, mon);
 
     h += '<div class="sec-title">' + (monthName(mon) || mon) + ' \u2014 ' + emps.length + ' employee</div><div class="card">';
     h += emps.map(function (e) {
@@ -9379,6 +10027,74 @@ var Admin = {
       });
     });
     return h;
+  },
+
+  /* ══ PJP adherence, day by day ══
+     The app can infer whether a day was worked on plan, off plan or missed — but only the HOD knows
+     that a rep sat at home on a day that has an order on it, or that a missed day was agreed. So every
+     day of the month can be marked here, and a marking beats the inference on the rep's Summary.
+     It is stored on the rep's own DayPlan row (PjpStatus), which the HOD may write because he is
+     privileged; the row is created if the rep never saved one. */
+  ADH:[['', '— auto —'], ['On PJP', 'On planned PJP'], ['Off PJP', 'Off PJP (approved)'],
+       ['Missed', 'Missed']],
+  adhDays: function (code, mon) {
+    var out = [], t = today(), doj = DB.doj(code);
+    var a = mon.split('-'), y = +a[0], m = +a[1], n = new Date(y, m, 0).getDate();
+    for (var d = 1; d <= n; d++) {
+      var k = y + '-' + p2(m) + '-' + p2(d);
+      if (k > t) break;
+      if (doj && k < doj) continue;
+      var pjp = DB.pjpFor(code, k) || {};
+      var pl = DB.find('DayPlan', code + '_' + k) || {};
+      var ww = String(pl.WorkingWith || pjp.Ww || pjp.Week || '');
+      out.push({ d:k, ww:ww, field:Home.FIELD.test(ww),
+        town:pl.Town || pjp.Town || '', beat:pl.Beat || pjp.Beat || '',
+        off:String(pl.OffPjp || '') === 'Yes', app:String(pl.Approval || ''),
+        mark:String(pl.PjpStatus || ''), by:pl.PjpStatusBy || '' });
+    }
+    return out;
+  },
+  adh: function (code, mon) {
+    var days = Admin.adhDays(code, mon);
+    var work = days.filter(function (x) { return x.field; }).length;
+    var mk = { 'On PJP':0, 'Off PJP':0, 'Missed':0 };
+    days.forEach(function (x) { if (mk[x.mark] !== undefined) mk[x.mark]++; });
+    var h = '<div class="sec-title">PJP adherence — ' + esc(monthName(mon) || mon) + '</div><div class="card">' +
+      '<div class="hint">Working din <b>' + work + '</b> · marked: on-PJP ' + mk['On PJP'] +
+      ' · off-PJP ' + mk['Off PJP'] + ' · missed ' + mk.Missed +
+      '. Jo mark nahi kiya wo app khud nikalta hai (order hua = on-PJP, approved change = off-PJP, ' +
+      'kuch nahi = missed).</div>';
+    h += '<div class="pane" style="max-height:430px;margin-top:8px">';
+    days.forEach(function (x) {
+      h += '<div class="drow' + (x.mark === 'Missed' ? ' bad inset' : '') + '">' +
+        '<div class="dr-h"><div class="m"><div class="t">' + dmy(x.d) +
+          (x.field ? '' : ' <span class="pill p-grey">' + esc(x.ww || 'OFF') + '</span>') +
+          (x.mark ? ' <span class="pill ' + (x.mark === 'Missed' ? 'p-bad' : 'p-ok') + '">' +
+            esc(x.mark) + '</span>' : '') + '</div>' +
+        '<div class="s">' + esc(x.town || '—') + (x.beat ? ' · ' + esc(x.beat) : '') +
+          (x.off ? ' · change: ' + esc(x.app || 'Pending') : '') +
+          (x.by ? ' · ' + esc(x.by) : '') + '</div></div>' +
+        '<select class="in" style="width:auto;flex:0 0 auto;padding:7px 26px 7px 8px;font-size:12px"' +
+          ' onchange="Admin.setAdh(\'' + esc(code) + '\',\'' + x.d + '\',this.value)">' +
+          Admin.ADH.map(function (o) {
+            return '<option value="' + o[0] + '"' + (o[0] === x.mark ? ' selected' : '') + '>' +
+              o[1] + '</option>'; }).join('') + '</select>' +
+        '</div></div>';
+    });
+    return h + '</div><div class="hint" style="margin-top:8px">List scroll karo — ' + days.length +
+      ' din</div></div>';
+  },
+  setAdh: function (code, d, v) {
+    var e = DB.emp(code) || {}, id = code + '_' + d;
+    var row = DB.find('DayPlan', id) || { Id:id, Date:d, EmpCode:code, EmpName:e.Name || '' };
+    return DB.save('DayPlan', Object.assign({}, row, { Id:id, Date:d, EmpCode:code,
+      EmpName:row.EmpName || e.Name || '', PjpStatus:v,
+      PjpStatusBy:v ? (DB.me.name + ' (' + Admin.role() + ')') : '',
+      PjpStatusAt:v ? new Date().toISOString() : '' })).then(function () {
+      Log.add('DayPlan', 'Adherence ' + (v || 'auto'), id, code);
+      render();
+      toast(dmy(d) + ' — ' + (v || 'auto') + ' mark ho gaya');
+    });
   },
 
   /* who is deciding, and in what capacity — stamped on every decision so the sheet keeps the trail */
