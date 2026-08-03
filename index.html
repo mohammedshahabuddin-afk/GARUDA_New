@@ -920,7 +920,10 @@ var I18n = {
       [/(\d+)\s+ghante\b/g, 'hour', 'hours'], [/(\d+)\s+minute\b/g, 'min', 'min'],
       [/(\d+)\s+store\b/g, 'store', 'stores'], [/(\d+)\s+audit\b/g, 'audit', 'audits'],
       [/(\d+)\s+dukaan\b/g, 'shop', 'shops'], [/(\d+)\s+request\b/g, 'request', 'requests'],
-      [/(\d+)\s+photo\b/g, 'photo', 'photos'], [/(\d+)\s+user\b/g, 'user', 'users']],
+      [/(\d+)\s+photo\b/g, 'photo', 'photos'], [/(\d+)\s+user\b/g, 'user', 'users'],
+      /* the download and delete screens count rows out loud — 1 rows reads like a bug */
+      [/(\d+)\s+rows?\b/g, 'row', 'rows'], [/(\d+)\s+draft\b/g, 'draft', 'drafts'],
+      [/(\d+)\s+line\b/g, 'line', 'lines'], [/(\d+)\s+tab\b/g, 'tab', 'tabs']],
   /* translate a plain string (a toast, a dialog title, a canvas label) */
   s: function (str) {
     if (I18n.lang === 'hing' || str == null) return str;
@@ -1164,6 +1167,7 @@ I18n.D.en = I18n.EN = {
   'PJP tab me reason dekho aur dusra plan bhejo':'See the reason in the PJP tab and send a different plan',
   'PJP adhoora hai':'PJP is incomplete',
   'Bhara hua plan wahin hai — poora karke HOD ko bhejo':'What you filled is still there — complete it and send to the HOD',
+  'PJP band hai':'The PJP is shut',
   'PJP banao':'Build your PJP',
   'Is month ka beat plan banao aur HOD ko bhejo':'Build this month’s beat plan and send it to the HOD',
   'Plan HOD ko bhejo':'Send the plan to your HOD',
@@ -2378,6 +2382,58 @@ I18n.D.en = I18n.EN = {
   'Naam par tap karo — us employee ka poora din, PJP aur photo dikhega.':'Tap a name — that employee’s whole day, PJP and photos.',
   'Tick karke Compare dabao — do ya zyada log side by side.':'Tick people and hit Compare — two or more, side by side.',
   'sheet me hi rehta hai':'stays in the sheet',
+  'Admin ne aapka PJP band kar rakha hai — unse baat karo':'Your admin has kept the PJP shut — talk to them',
+  'ka PJP window':'’s PJP window closed on',
+  'ko band ho gaya — admin se khulwao':'— ask your admin to open it',
+  'Admin ne aapka PJP hata diya hai':'Your admin removed your PJP',
+  'Admin ne aapka data hata diya hai':'Your admin removed some of your data',
+  'PJP — published days + month draft':'PJP — published days + month draft',
+  'Published PJP sirf ek aadmi ka hatta hai — sab ka ek saath nahi.':'A published PJP is only ever removed for one person — never for everybody at once.',
+  'Jayega:':'Will go:',
+  'Month chuna hai to poora month — aage ke din bhi.':'A month means the whole month — the days still to come as well.',
+  'app sirf approve par likhta hai — aur upar se ek employee ka delete':'the app writes it on approval only — plus a one-employee delete from above',
+  'Ek employee chuno':'Pick an employee',
+  'PJP window abhi khula hai (27–1) — hataane ke baad wo khud se dobara bana sakta hai.':'The PJP window is open (27th–1st) — after this he can build it again himself.',
+  'PJP window band hai, par is month ka draft nahi ja raha — uska current plan chalta rahega.':'The window is shut, but this month’s draft is not going — his current plan stays.',
+  'ko band ho gaya — hataane ke baad wo khud dobara nahi bana payega. Users tab se uska PJP kholna padega.':'— after this he cannot build it again himself. You will have to open his PJP from the Users tab.',
+  'PJP hat gaya aur window band hai — Users tab se uska PJP kholna padega':'The PJP is gone and the window is shut — open his PJP from the Users tab',
+  'PJP me poore month ka range hone par hi us month ka draft jata hai — ek din delete karne se poora plan nahi jata.':'A month’s draft only goes when the range covers that whole month — deleting one day never takes the whole plan.',
+  'din master me':'days in the master',
+  'koi draft nahi':'no draft',
+  'tab KHULA (admin ne khola)':'tab OPEN (an admin opened it)',
+  'tab BAND (admin ne band kiya)':'tab SHUT (an admin shut it)',
+  'tab KHULA (bypass)':'tab OPEN (bypass)',
+  'tab band (approve ho gaya)':'tab shut (it is approved)',
+  'tab KHULA (window 27–1 chalu hai)':'tab OPEN (the 27th–1st window is on)',
+  'tab KHULA (decision baaki hai)':'tab OPEN (a decision is still owed)',
+  'ko band ho gaya)':'closed)',
+  'published din':'published days',
+  'month ka draft':'month draft(s)',
+  'sheet me hi rehta hai':'stays in the sheet',
+  'Kya hatana hai, kiska, aur kis range ka — teen cheezein. Employee aur date range upar se aati hain.':'What goes, whose, and over which days — three things. The employee and the date range come from above.',
+  'Kya delete karna hai':'What do you want to delete',
+  'Sab kuch — poora data':'Everything — the whole of his data',
+  'Orders — lines aur photos ke saath':'Orders — with their lines and photos',
+  'Naye shop — photos ke saath':'New shops — with their photos',
+  'POSM — audit aur requirement':'POSM — audit and requirement',
+  'Day plan aur plan change':'Day plans and plan changes',
+  'EOD aur DFR':'EOD and DFR',
+  'Stock remark':'Stock remarks',
+  'Photos (row — Drive file rehti hai)':'Photos (the row — the Drive file stays)',
+  'Ek tab':'One tab',
+  'is device par':'on this device:',
+  'Poora data jayega':'The whole of his data will go',
+  'Orders (+lines), naye shop, POSM, day plan, plan change, PJP (published + draft), TA/DA, EOD, DFR, stock remark aur photo row — sab is range ke.':'Orders (+lines), new shops, POSM, day plans, plan changes, the PJP (published + draft), TA/DA, EOD, DFR, stock remarks and photo rows — all of them, for this range.',
+  'Activity log nahi jata (wo record hai), Drive ki photo file nahi jati, master tab nahi jate.':'The activity log stays (it is the record), the Drive photo files stay, and no master tab is touched.',
+  '"Sab kuch" ek aadmi ka hi hatta hai. Sab ke liye — ek-ek report chuno, ya Days range ke saath.':'"Everything" only ever goes for one person. For the whole team, pick the reports one at a time, with a Days range.',
+  'Parent ke saath child row apne aap jaati hai — order ke saath uski lines aur photo, shop/POSM ke saath unki photo. Koi aadha record nahi bachta.':'A child row always follows its parent — an order takes its lines and photos, a shop or POSM audit takes its photos. No half record is left.',
+  'Month wali cheezein (PJP draft, TA/DA) tabhi jaati hain jab poora month range me ho — ek din delete karne se poora month nahi jata.':'Month-keyed things (the PJP draft, TA/DA) only go when the whole month is inside the range — deleting one day never takes the month.',
+  'Activity log apne aap nahi jata, Drive ki photo file nahi jati, master tab (employee, store, product, config, phasing) kabhi nahi chhutte.':'The activity log is never taken automatically, Drive photo files stay, and the master tabs (employees, stores, products, config, phasing) are never touched.',
+  'Delete sirf Admin kar sakta hai, HOD nahi. Employee ke paas delete hai hi nahi — uske Data tab me sirf download hai.':'Only an Admin can delete, not an HOD. An employee has no delete at all — his Data tab is download only.',
+  'What is in this file':'What is in this file',
+  'Order ke saath uski lines aur us par li gayi photo row bhi jayegi — aadha record nahi bachega.':'An order takes its lines and the photo rows shot on it — no half record is left behind.',
+  'Naye shop ke saath uski photo row bhi jayegi. Store master (Master_Stores) chhuta nahi.':'A new shop takes its photo rows with it. The store master (Master_Stores) is untouched.',
+  'Activity log record hai — kisne kya kiya. Isse hataane par wo history chali jayegi.':'The activity log is the record of who did what. Remove it and that history is gone.',
   'Order punch karo':'Punch the order',
   /* live updates + the read-only plan / waiting screen */
   'HOD ne approve kar diya — aage badho':'The HOD approved it — carry on',
@@ -2534,6 +2590,8 @@ var DB = {
       DB.me = r.me || DB.me;
       DB.pulledAt = Date.now();
       DB.cache();
+      /* the sheet is the truth: drop anything this device is holding that no longer exists there */
+      DB.reconcile();
       /* SOMEONE ELSE TOUCHED THE SHEET → the masters we just skipped are stale. Re-pull them right
          now, in the same cycle, so "transactional-only" can never mean "out of date". */
       if (txnOnly && r.mver && DB.mver && r.mver !== DB.mver) {
@@ -2545,6 +2603,32 @@ var DB = {
       syncChip('Sheet se sync ho gaya');
       return r;
     }).catch(function () { Load.unblock(); syncChip('! Offline — local data'); return { ok:false }; });
+  },
+  /* ── after every pull: forget local state whose row is GONE ──
+     An admin can remove data from the console. The pull replaces every transactional tab, so the row
+     disappears — but a screen may still be holding it, and a flush on tab-leave would write it back.
+     Everything a device could be mid-edit on is checked against the sheet here, in one place, so no
+     screen has to remember to do it. */
+  reconcile: function () {
+    var lost = [];
+    try { if (Pjp.reconcile()) lost.push('PJP'); } catch (e) {}
+    try {
+      /* an order being adjusted that is no longer there */
+      if (Field.editPo && !DB.rows('SecOrders').some(function (o) {
+            return String(o.PoNumber) === String(Field.editPo); })) {
+        Field.editPo = ''; Field.lines = []; Field.store = null; Field.mode = 'order';
+        lost.push('order');
+      }
+      if (Sec.edit && !DB.rows('SecOrders').some(function (o) {
+            return String(o.PoNumber) === String(Sec.edit); })) Sec.edit = null;
+      if (Fin.open && !DB.rows('SecOrders').some(function (o) {
+            return String(o.PoNumber) === String(Fin.open); })) Fin.open = '';
+    } catch (e) {}
+    if (lost.length) {
+      try { Nav.build(); } catch (e) {}
+      toast(I18n.s('Admin ne aapka ' + (lost[0] === 'PJP' ? 'PJP' : 'data') + ' hata diya hai'), 5000);
+    }
+    return lost;
   },
   fresh: function (ms) { return Date.now() - DB.pulledAt < (ms || 90000); },
   /* pull if stale — called on tab open / foreground. Transactional-only, so opening a tab costs a
@@ -3060,14 +3144,28 @@ var Gate = {
     /* adjusting an order that already exists is not part of today's sequence — a rep gets that call
        whether or not he has punched anything since */
     if (v === 'fin') return true;
-    /* PJP is a once-a-month job: open until HOD approves the month the window is for, then shut
-       until the 27th comes round again — unless an admin has forced it either way, for this rep or for
-       the whole team, from the console's Users tab. */
+    /* PJP is a once-a-month job, and the WINDOW is the rule — not merely "is something approved".
+       That distinction only shows up when data is removed: deleting a rep's plan on the 3rd used to
+       swing the tab open again (nothing approved → open), which quietly reopened a deadline that had
+       passed on the 1st. So, in order:
+         · an admin's per-user switch, then the team-wide one, win outright;
+         · inside the window (27th–1st) it is his job — open, unless that month is already approved;
+         · outside it: open only while a submission is still in flight (the HOD owes a decision, or
+           sent days back to be fixed), or for somebody who JOINED after the window shut and never had
+           one. Nothing there at all — never started, or removed by an admin — stays shut, and an
+           admin re-opens it from Users. */
     if (v === 'pjp') {
       var f = String((DB.me && DB.me.pjpOpen) || '') || String(DB.cfg('Global_PjpOpen', '') || '');
       if (/^yes$/i.test(f)) return true;
       if (/^no$/i.test(f)) return false;
-      return !Pjp.approvedFor(Pjp.winMonth());
+      var wm = Pjp.winMonth();
+      if (Pjp.approvedFor(wm)) return false;
+      if (Pjp.winOpen()) return true;
+      var ps2 = Gate.pjpState();
+      if (ps2.month === wm && /pending|rejected|partial/.test(String(ps2.s))) return true;
+      var doj2 = DB.doj(DB.me.code);
+      if (doj2 && doj2 > Pjp.winShut()) return true;
+      return false;
     }
     return true;
   },
@@ -3080,7 +3178,16 @@ var Gate = {
       if (ps.s === 'rejected') return 'PJP reject hua — PJP tab me reason dekho aur dobara bhejo';
       return 'Pehle is month ka PJP banao aur HOD se approve karwao';
     }
-    if (v === 'pjp') return monthName(Pjp.winMonth()) + ' ka PJP approve ho gaya — agli PJP 27 tarikh se khulegi';
+    if (v === 'pjp') {
+      var wm2 = Pjp.winMonth();
+      if (Pjp.approvedFor(wm2))
+        return monthName(wm2) + ' ka PJP approve ho gaya — agli PJP 27 tarikh se khulegi';
+      if (/^no$/i.test(String((DB.me && DB.me.pjpOpen) || '')))
+        return 'Admin ne aapka PJP band kar rakha hai — unse baat karo';
+      /* the window shut and there is nothing here: this is what a removed plan looks like */
+      return monthName(wm2) + ' ka PJP window ' + dmy(Pjp.winShut()) +
+        ' ko band ho gaya — admin se khulwao';
+    }
     if (v === 'field' && l < 2) {
       var p = DB.find('DayPlan', DB.me.code + '_' + today());
       if (p && p.PlanAt && !p.NotifiedAt) return 'Plan HOD ko bhejo (Notify) — tabhi Field khulega';
@@ -3528,7 +3635,18 @@ var Zip = {
 var Xl = {
   /* style ids — they line up with the <cellXfs> order below */
   S:{ T:1, H:2, L:3, txt:4, int:5, money:6, dec:7, pct:8, date:9,
-      tot:10, totM:11, totI:12, totD:13, totP:14, good:15, warn:16, bad:17, sub:18, wrap:19 },
+      tot:10, totM:11, totI:12, totD:13, totP:14, good:15, warn:16, bad:17, sub:18, wrap:19,
+      /* every second data row carries the band version of its own format, so a row reads straight
+         across without losing its number formatting */
+      bTxt:20, bInt:21, bMoney:22, bDec:23, bPct:24, bDate:25, bWrap:26,
+      K:27, V:28, T2:29 },
+  /* the band twin of a style — used on alternate rows */
+  BAND:{ 0:20, 4:20, 5:21, 6:22, 7:23, 8:24, 9:25, 19:26 },
+  band: function (c) {
+    if (!c || typeof c !== 'object') return c;
+    var b = Xl.BAND[c.s || 0];
+    return b ? { v:c.v, k:c.k, f:c.f, s:b } : c;
+  },
 
   /* cell builders */
   t: function (v, s) { return { v:v == null ? '' : String(v), k:'s', s:s || 0 }; },
@@ -3554,6 +3672,22 @@ var Xl = {
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); },
   col: function (i) { var s = ''; i++; while (i > 0) { var r = (i - 1) % 26; s = String.fromCharCode(65 + r) + s; i = (i - 1 - r) / 26; } return s; },
+  /* how wide a column has to be to show what is IN it — a guessed width from the header alone is why
+     store names used to sit under three hashes. Measured over the first 300 rows, clamped so one long
+     remark cannot push the table off the page (it wraps instead). */
+  widths: function (headers, rows, wrapAt) {
+    return headers.map(function (h, i) {
+      var w = String(h == null ? '' : h).length + 3;
+      for (var r = 0; r < rows.length && r < 300; r++) {
+        var c = rows[r][i];
+        var v = c && typeof c === 'object' ? c.v : c;
+        if (c && typeof c === 'object' && c.k === 'n' && c.s === Xl.S.date) v = 'dd-mm-yyyy';
+        var n = String(v == null ? '' : v).length + 2;
+        if (n > w) w = n;
+      }
+      return Math.min(wrapAt || 42, Math.max(9, w));
+    });
+  },
 
   cellXml: function (c, ref) {
     if (c === null || c === undefined || c === '') return '';
@@ -3571,15 +3705,20 @@ var Xl = {
   sheetXml: function (sh) {
     var x = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
       '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';
-    if (sh.freeze) x += '<sheetViews><sheetView workbookViewId="0"><pane ySplit="' + sh.freeze +
+    /* sheetPr must come first, and it carries the tab colour + "fit to one page wide" */
+    x += '<sheetPr><tabColor rgb="' + (sh.tab || 'FF1D4ED8') + '"/>' +
+      '<pageSetUpPr fitToPage="1"/></sheetPr>';
+    if (sh.freeze) x += '<sheetViews><sheetView showGridLines="0" workbookViewId="0"><pane ySplit="' + sh.freeze +
       '" topLeftCell="A' + (sh.freeze + 1) + '" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>';
+    else x += '<sheetViews><sheetView showGridLines="0" workbookViewId="0"/></sheetViews>';
     x += '<sheetFormatPr defaultRowHeight="15"/>';
     if (sh.cols && sh.cols.length) x += '<cols>' + sh.cols.map(function (w, i) {
       return '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"/>'; }).join('') + '</cols>';
     x += '<sheetData>';
     (sh.rows || []).forEach(function (r, ri) {
-      if (!r || !r.length) { x += '<row r="' + (ri + 1) + '"/>'; return; }
-      x += '<row r="' + (ri + 1) + '">';
+      var ht = sh.rowH && sh.rowH[ri + 1] ? ' ht="' + sh.rowH[ri + 1] + '" customHeight="1"' : '';
+      if (!r || !r.length) { x += '<row r="' + (ri + 1) + '"' + ht + '/>'; return; }
+      x += '<row r="' + (ri + 1) + '"' + ht + '>';
       for (var ci = 0; ci < r.length; ci++) x += Xl.cellXml(r[ci], Xl.col(ci) + (ri + 1));
       x += '</row>';
     });
@@ -3587,6 +3726,11 @@ var Xl = {
     if (sh.filter) x += '<autoFilter ref="' + sh.filter + '"/>';         /* must precede mergeCells */
     if (sh.merges && sh.merges.length) x += '<mergeCells count="' + sh.merges.length + '">' +
       sh.merges.map(function (m) { return '<mergeCell ref="' + m + '"/>'; }).join('') + '</mergeCells>';
+    /* a report that prints badly is not finished: landscape, one page wide, a little margin */
+    x += '<printOptions horizontalCentered="1"/>' +
+      '<pageMargins left="0.4" right="0.4" top="0.6" bottom="0.5" header="0.3" footer="0.3"/>' +
+      '<pageSetup orientation="' + (sh.portrait ? 'portrait' : 'landscape') +
+      '" fitToWidth="1" fitToHeight="0" paperSize="9"/>';
     return x + '</worksheet>';
   },
 
@@ -3600,21 +3744,25 @@ var Xl = {
       '<font><b/><sz val="11"/><name val="Calibri"/></font>' +
       '<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>' +
       '<font><b/><sz val="14"/><color rgb="FF1D4ED8"/><name val="Calibri"/></font>' +
-      '<font><i/><sz val="9"/><color rgb="FF8890A6"/><name val="Calibri"/></font></fonts>' +
-    '<fills count="7">' +
+      '<font><i/><sz val="9"/><color rgb="FF8890A6"/><name val="Calibri"/></font>' +
+      '<font><b/><sz val="10"/><color rgb="FF475069"/><name val="Calibri"/></font>' +        /* 5 label */
+      '<font><b/><sz val="12"/><color rgb="FF1D4ED8"/><name val="Calibri"/></font></fonts>' +  /* 6 section */
+    '<fills count="9">' +
       '<fill><patternFill patternType="none"/></fill>' +
       '<fill><patternFill patternType="gray125"/></fill>' +
       '<fill><patternFill patternType="solid"><fgColor rgb="FF1D4ED8"/><bgColor indexed="64"/></patternFill></fill>' +
       '<fill><patternFill patternType="solid"><fgColor rgb="FFEFF4FF"/><bgColor indexed="64"/></patternFill></fill>' +
       '<fill><patternFill patternType="solid"><fgColor rgb="FFE8F7EF"/><bgColor indexed="64"/></patternFill></fill>' +
       '<fill><patternFill patternType="solid"><fgColor rgb="FFFDF6E7"/><bgColor indexed="64"/></patternFill></fill>' +
-      '<fill><patternFill patternType="solid"><fgColor rgb="FFFDEEEC"/><bgColor indexed="64"/></patternFill></fill></fills>' +
+      '<fill><patternFill patternType="solid"><fgColor rgb="FFFDEEEC"/><bgColor indexed="64"/></patternFill></fill>' +
+      '<fill><patternFill patternType="solid"><fgColor rgb="FFF7F9FD"/><bgColor indexed="64"/></patternFill></fill>' +   /* 7 band */
+      '<fill><patternFill patternType="solid"><fgColor rgb="FFF1F5FF"/><bgColor indexed="64"/></patternFill></fill></fills>' +  /* 8 title */
     '<borders count="3"><border/>' +
       '<border><top style="thin"><color rgb="FFB8C4DA"/></top></border>' +
       '<border><left style="thin"><color rgb="FFB8C4DA"/></left><right style="thin"><color rgb="FFB8C4DA"/></right>' +
         '<top style="thin"><color rgb="FFB8C4DA"/></top><bottom style="thin"><color rgb="FFB8C4DA"/></bottom></border></borders>' +
     '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
-    '<cellXfs count="20">' +
+    '<cellXfs count="30">' +
       '<xf xfId="0"/>' +                                                                  /* 0 default */
       '<xf xfId="0" fontId="3" applyFont="1"/>' +                                          /* 1 title */
       '<xf xfId="0" fontId="2" fillId="2" borderId="2" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">' +
@@ -3636,6 +3784,19 @@ var Xl = {
       '<xf xfId="0" fillId="6" applyFill="1"/>' +                                          /* 17 bad  */
       '<xf xfId="0" fontId="4" applyFont="1"/>' +                                          /* 18 sub  */
       '<xf xfId="0" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf>' +    /* 19 wrap */
+      /* 20–26: the same again on the band fill */
+      '<xf xfId="0" fillId="7" applyFill="1" applyAlignment="1"><alignment vertical="top"/></xf>' +
+      '<xf xfId="0" fillId="7" numFmtId="3" applyFill="1" applyNumberFormat="1"/>' +
+      '<xf xfId="0" fillId="7" numFmtId="164" applyFill="1" applyNumberFormat="1"/>' +
+      '<xf xfId="0" fillId="7" numFmtId="2" applyFill="1" applyNumberFormat="1"/>' +
+      '<xf xfId="0" fillId="7" numFmtId="9" applyFill="1" applyNumberFormat="1"/>' +
+      '<xf xfId="0" fillId="7" numFmtId="165" applyFill="1" applyNumberFormat="1"/>' +
+      '<xf xfId="0" fillId="7" applyFill="1" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf>' +
+      /* 27 key label · 28 value · 29 section heading */
+      '<xf xfId="0" fontId="5" applyFont="1" applyAlignment="1"><alignment vertical="top"/></xf>' +
+      '<xf xfId="0" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>' +
+      '<xf xfId="0" fontId="6" fillId="8" applyFont="1" applyFill="1" applyAlignment="1">' +
+        '<alignment vertical="center"/></xf>' +
     '</cellXfs>' +
     '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
   },
@@ -4579,8 +4740,13 @@ var Home = {
         ps.s === 'pending'? { t:'PJP HOD ke paas hai', v:'appr',
                                 s:(monthName(ps.month) || ps.month) + ' ka plan bheja hua hai — aapka bhara hua data safe hai, approval ka wait karo' }
       : ps.s === 'rejected' ? { t:'PJP reject hua', v:'pjp', s:'PJP tab me reason dekho aur dusra plan bhejo' }
-      : ps.s === 'draft'? { t:'PJP adhoora hai', v:'pjp', s:'Bhara hua plan wahin hai — poora karke HOD ko bhejo' }
-      :                       { t:'PJP banao', v:'pjp', s:'Is month ka beat plan banao aur HOD ko bhejo' })
+      : ps.s === 'draft' && Gate.allowed('pjp')
+                        ? { t:'PJP adhoora hai', v:'pjp', s:'Bhara hua plan wahin hai — poora karke HOD ko bhejo' }
+      /* nothing filed and the window has shut — including the case where an admin removed it. Sending
+         him to a tab that will refuse him is worse than saying so. */
+      : !Gate.allowed('pjp')
+                        ? { t:'PJP band hai', v:'home', s:I18n.s(Gate.why('pjp')) }
+      :                   { t:'PJP banao', v:'pjp', s:'Is month ka beat plan banao aur HOD ko bhejo' })
       : l === 1 ? (plan && plan.PlanAt ? { t:'Plan HOD ko bhejo', s:'Notify karo — tabhi Field khulega', v:'plan' }
                                        : { t:'Aaj ka Plan save karo', s:'Town, beat aur target confirm karo', v:'plan' })
       : l === 2 ? { t:'Field shuru karo', s:'Store select karke order punch karo', v:'field' }
@@ -5045,6 +5211,18 @@ var Team = {
 /* ═══════════════ PJP — month beat plan ═══════════════ */
 var Pjp = {
   month:'', days:null,
+  /* ── the month this device is holding was deleted on the sheet ──
+     A pull replaces every table, so the row is gone; but Pjp.days still holds the month in memory and
+     Pjp.full() writes the WHOLE month on the next flush — which would re-create exactly what an admin
+     removed. Unsaved typing is kept while the tab is still open to him; anything else is forgotten. */
+  reconcile: function () {
+    if (!Pjp.days || !Pjp.month) return false;
+    if (DB.find('PjpDraft', Pjp.key())) return false;
+    if (Pjp._dirty && Gate.allowed('pjp')) return false;
+    Pjp.days = null; Pjp.loadedKey = ''; Pjp.hydratedAt = 0; Pjp._dirty = false;
+    delete Flush.jobs.pjp;
+    return true;
+  },
   key: function () { return DB.me.code + '__' + Pjp.month; },
   draft: function () {
     var r = DB.find('PjpDraft', Pjp.key());
@@ -5205,6 +5383,8 @@ var Pjp = {
     return y + '-' + p2(m + 1);
   },
   winOpen: function () { var d = new Date().getDate(); return d >= 27 || d === 1; },
+  /* the window for month M closes on the 1st of M — the date the gate measures "too late" against */
+  winShut: function () { return Pjp.winMonth() + '-01'; },
   approvedFor: function (mo) {
     var r = DB.find('PjpDraft', DB.me.code + '__' + mo);
     return !!(r && /approved|accepted/i.test(r.Status || ''));
@@ -7222,10 +7402,17 @@ var Pdf = {
    hua" — and the later tabs hold the detail behind those numbers. */
 var Rep = {
   ttl: function (title, sub, wide) {
-    /* the title and the section labels are app copy — translate them like everything else */
+    /* the title and the section labels are app copy — translate them like everything else.
+       Row 1 is the title band, row 2 the subtitle, row 3 a thin spacer — the same masthead every data
+       sheet uses, so a workbook looks like one document. */
+    var last = Xl.col((wide || 6) - 1);
     return { rows:[[Xl.t(I18n.s(title), Xl.S.T)], [Xl.t(sub, Xl.S.sub)], []],
-             merges:['A1:' + Xl.col((wide || 6) - 1) + '1', 'A2:' + Xl.col((wide || 6) - 1) + '2'] };
+             merges:['A1:' + last + '1', 'A2:' + last + '2'],
+             rowH:{ 1:24, 2:16, 3:6 } };
   },
+  /* a key → value line on the cover, with the label in its own style */
+  kv: function (k, v) { return [Xl.t(I18n.s(k), Xl.S.K), v == null ? Xl.t('') :
+    (typeof v === 'object' ? v : Xl.t(String(v), Xl.S.V))]; },
   sec: function (label) { return [[], [Xl.t(I18n.s(label), Xl.S.L)]]; },
   pct: function (a, b) { return b ? a / b : 0; },
   photo: function (store, date, code) {
@@ -7787,34 +7974,54 @@ var Rep = {
     });
   },
   /* one sheet definition, shared by the single download and the everything download */
-  anySheet: function (kind, rows) {
-    var def = Rep.ANY[kind] || { t:kind, cols:[] };
+  anySheet: function (kind, rows, over, sub) {
+    /* `over` = an explicit column map for a tab that is deliberately NOT in Rep.ANY (Master_PJP: it is
+       a master, and putting it in ANY would drop it into every "all reports" workbook)
+       `sub`  = the line under the title: who and which days this sheet covers */
+    var def = over || Rep.ANY[kind] || { t:kind, cols:[] };
     var cols = def.cols.length ? def.cols
       : (rows.length ? Object.keys(rows[0]).filter(function (c) { return c !== 'LastSync'; })
           .map(function (c) { return [c, c]; }) : [['—', '—']]);
-    var out = [cols.map(function (c) { return Xl.h(c[1]); })];
-    rows.forEach(function (r) {
-      out.push(cols.map(function (c) {
+    var wide = function (label) {
+      return /remark|reason|detail|address|note|message/i.test(label); };
+    /* the body first, so the column widths can be measured from what is actually in it */
+    var body = rows.map(function (r, ri) {
+      var cells = cols.map(function (c) {
         var v = r[c[0]], k = c[2];
         if (k === 'd') return Xl.dt(toISO(v) || v);
         if (k === 'm') return Xl.m(num(v));
-        if (k === 'n') return Xl.n(num(v));
-        return Xl.t(v == null ? '' : String(v), /remark|reason|detail|address|note|message/i.test(c[1]) ? Xl.S.wrap : null);
-      }));
+        /* a value in LAKHS is never a whole number — #,##0 turned ₹3,240 of NSV into "0" */
+        if (k === 'n') return /₹l|lakh|nsv/i.test(c[1]) ? Xl.d2(num(v)) : Xl.n(num(v));
+        return Xl.t(v == null ? '' : String(v), wide(c[1]) ? Xl.S.wrap : Xl.S.txt);
+      });
+      /* banded: every second row on a faint fill, keeping each cell's own number format */
+      return ri % 2 ? cells.map(Xl.band) : cells;
     });
+    var head = cols.map(function (c) { return Xl.h(c[1]); });
+    var wcols = Xl.widths(cols.map(function (c) { return I18n.s(c[1]); }), body, 44);
+    var last = Xl.col(cols.length - 1);
+
+    /* ── the four-row masthead every sheet shares ── */
+    var out = [
+      [Xl.t(I18n.s(def.t), Xl.S.T)],
+      [Xl.t(sub || (rows.length + ' row'), Xl.S.sub)],
+      [],
+      head
+    ];
+    body.forEach(function (r) { out.push(r); });
     if ((def.tot || []).length && rows.length) {
       out.push(cols.map(function (c, i) {
         if (!i) return Xl.t('TOTAL', Xl.S.tot);
-        if ((def.tot || []).indexOf(c[0]) < 0) return '';
-        var s = rows.reduce(function (a, r) { return a + num(r[c[0]]); }, 0);
-        return c[2] === 'm' ? Xl.m(s, Xl.S.totM) : Xl.n(s, Xl.S.totI);
+        if ((def.tot || []).indexOf(c[0]) < 0) return Xl.t('', Xl.S.tot);
+        var t = rows.reduce(function (a, r) { return a + num(r[c[0]]); }, 0);
+        return c[2] === 'm' ? Xl.m(t, Xl.S.totM)
+             : /₹l|lakh|nsv/i.test(c[1]) ? Xl.d2(t, Xl.S.totD) : Xl.n(t, Xl.S.totI);
       }));
     }
-    return { name:def.t.slice(0, 31), rows:out, freeze:1,
-      cols:cols.map(function (c) {
-        return /remark|reason|detail|address|note|message|product|store|link/i.test(c[1]) ? 34
-          : Math.min(26, Math.max(10, String(c[1]).length + 4)); }),
-      filter:'A1:' + Xl.col(cols.length - 1) + out.length };
+    return { name:def.t.slice(0, 31), rows:out, freeze:4, cols:wcols,
+      rowH:{ 1:22, 2:16, 3:6, 4:30 },
+      merges:['A1:' + last + '1', 'A2:' + last + '2'],
+      filter:'A4:' + last + out.length };
   },
   who: function (code) {
     if (!code) return 'sab employee';
@@ -7826,17 +8033,20 @@ var Rep = {
     var def = Rep.ANY[kind] || { t:kind };
     var ttl = Rep.ttl('GARUDA — ' + def.t, Rep.who(code) + '  ·  ' + dmy(from) + ' – ' + dmy(to) +
       '  ·  ' + rows.length + ' row', 8);
-    var sheets = [{ name:'About', cols:[26, 30, 18, 18, 14, 14, 14, 14], rows:ttl.rows.concat([
-      ['Report', Xl.t(def.t)], ['Employee', Xl.t(Rep.who(code))],
-      ['From', Xl.dt(from)], ['To', Xl.dt(to)], ['Rows', Xl.n(rows.length)],
-      ['Downloaded', Xl.t(dmy(today()) + ' ' + new Date().toLocaleTimeString('en-IN'))],
-      ['By', Xl.t(DB.me.name + ' (' + DB.me.code + ')')]]), merges:ttl.merges },
-      Rep.anySheet(kind, rows)];
+    var sheets = [{ name:'About', cols:[24, 44, 14, 14, 14, 14, 14, 14], tab:'FF8890A6', portrait:1,
+      rowH:ttl.rowH, rows:ttl.rows.concat([
+      Rep.kv('Report', Xl.t(I18n.s(def.t), Xl.S.V)), Rep.kv('Employee', Xl.t(Rep.who(code), Xl.S.V)),
+      Rep.kv('From', Xl.dt(from)), Rep.kv('To', Xl.dt(to)), Rep.kv('Rows', Xl.n(rows.length)),
+      Rep.kv('Downloaded', Xl.t(dmy(today()) + ' ' + new Date().toLocaleTimeString('en-IN'), Xl.S.V)),
+      Rep.kv('By', Xl.t(DB.me.name + ' (' + DB.me.code + ')', Xl.S.V))]), merges:ttl.merges },
+      Rep.anySheet(kind, rows, null, Rep.who(code) + '  ·  ' + dmy(from) + ' – ' + dmy(to) +
+        '  ·  ' + rows.length + ' row')];
     /* an order without its lines is half a report */
     if (kind === 'SecOrders' && rows.length) {
       var pos = {}; rows.forEach(function (o) { pos[String(o.PoNumber)] = 1; });
       var lines = DB.rows('SecOrderLines').filter(function (l) { return pos[String(l.PoNumber)]; });
-      sheets.push(Rep.anySheet('SecOrderLines', lines));
+      sheets.push(Rep.anySheet('SecOrderLines', lines, null, Rep.who(code) + '  ·  ' +
+        dmy(from) + ' – ' + dmy(to) + '  ·  ' + lines.length + ' line'));
     }
     return Xl.save('GARUDA_' + def.t.replace(/\W+/g, '') + '_' + (code || 'ALL') + '_' + from + '_' + to,
       sheets);
@@ -7844,22 +8054,26 @@ var Rep = {
   /* every report in one workbook — one tab each, the same formatting */
   everything: function (code, from, to) {
     var ttl = Rep.ttl('GARUDA — all reports', Rep.who(code) + '  ·  ' + dmy(from) + ' – ' + dmy(to), 8);
-    var about = ttl.rows.concat([['Employee', Xl.t(Rep.who(code))], ['From', Xl.dt(from)],
-      ['To', Xl.dt(to)], ['By', Xl.t(DB.me.name)], []]);
+    var about = ttl.rows.concat([Rep.kv('Employee', Xl.t(Rep.who(code), Xl.S.V)),
+      Rep.kv('From', Xl.dt(from)), Rep.kv('To', Xl.dt(to)),
+      Rep.kv('By', Xl.t(DB.me.name, Xl.S.V)), [],
+      [Xl.t('What is in this file', Xl.S.T2), Xl.t('', Xl.S.T2)]]);
     var sheets = [], n = 0;
     Object.keys(Rep.ANY).forEach(function (kind) {
       if (kind === 'SecOrderLines') return;
       var rows = Rep.anyRows(kind, code, from, to);
-      about.push([Xl.t(Rep.ANY[kind].t), Xl.n(rows.length)]);
+      about.push([Xl.t(I18n.s(Rep.ANY[kind].t), Xl.S.K), Xl.n(rows.length)]);
       if (!rows.length) return;
-      sheets.push(Rep.anySheet(kind, rows)); n++;
+      var sub = Rep.who(code) + '  ·  ' + dmy(from) + ' – ' + dmy(to) + '  ·  ' + rows.length + ' row';
+      sheets.push(Rep.anySheet(kind, rows, null, sub)); n++;
       if (kind === 'SecOrders') {
         var pos = {}; rows.forEach(function (o) { pos[String(o.PoNumber)] = 1; });
         var lines = DB.rows('SecOrderLines').filter(function (l) { return pos[String(l.PoNumber)]; });
-        if (lines.length) { sheets.push(Rep.anySheet('SecOrderLines', lines)); n++; }
+        if (lines.length) { sheets.push(Rep.anySheet('SecOrderLines', lines, null, sub)); n++; }
       }
     });
-    sheets.unshift({ name:'About', cols:[26, 30, 18, 18, 14, 14, 14, 14], rows:about, merges:ttl.merges });
+    sheets.unshift({ name:'About', cols:[30, 16, 14, 14, 14, 14, 14, 14], tab:'FF8890A6', portrait:1,
+      rowH:ttl.rowH, rows:about, merges:ttl.merges });
     Xl.save('GARUDA_ALL_' + (code || 'ALL') + '_' + from + '_' + to, sheets);
     return { sheets:n };
   },
@@ -10462,10 +10676,19 @@ var Admin = {
     var m = Admin.month(), last = new Date(+m.slice(0, 4), +m.slice(5, 7), 0);
     return [m + '-01', m === t.slice(0, 7) ? t : iso(last)];
   },
-  rangeLbl: function () {
-    var r = Admin.range();
-    return Admin.per === 'D' ? dmy(r[0])
+  rangeLbl: function (r) {
+    r = r || Admin.range();
+    return Admin.per === 'D' && r[0] === r[1] ? dmy(r[0])
       : r[0] === r[1] ? dmy(r[0]) : dmy(r[0]) + ' – ' + dmy(r[1]);
+  },
+  /* the Data screen's own range: a month is the whole month, future days included. A plan for the 20th
+     is a row like any other, and a delete that stops at today could never cover a month — so the month
+     draft would always survive the one action that is supposed to remove it. */
+  dRange: function () {
+    var r = Admin.range();
+    if (Admin.per !== 'M') return r;
+    var m = Admin.month(), last = new Date(+m.slice(0, 4), +m.slice(5, 7), 0);
+    return [m + '-01', iso(last)];
   },
   months: function () {
     var out = [], m = String(DB.cfg('Go_Live_Month', '2026-07')).slice(0, 7), t = today().slice(0, 7), g = 0;
@@ -10498,7 +10721,10 @@ var Admin = {
         '<select class="in" onchange="Admin.setMon(this.value)">' + Admin.months().map(function (m) {
           return '<option value="' + m + '"' + (Admin.month() === m ? ' selected' : '') + '>' +
             esc(Admin.monLbl(m)) + '</option>'; }).join('') + '</select></div>' : '') +
-      '<div class="hint" style="margin-top:8px">' + esc(Admin.rangeLbl()) + '</div></div>';
+      /* the Data screen widens a month to the whole month — the strip has to say the same range as the
+         card under it, or one screen contradicts itself */
+      '<div class="hint" style="margin-top:8px">' +
+        esc(Admin.rangeLbl(Admin.tab === 'data' ? Admin.dRange() : Admin.range())) + '</div></div>';
   },
 
   /* ══ 1. SUMMARY — the total, then the same numbers per person ══ */
@@ -10909,6 +11135,7 @@ var Admin = {
     h += show.slice(0, 60).map(function (x) {
       var b = Admin.isBypass(x), pj = String(x.PjpOpen || '');
       var act = !/inactive/i.test(String(x.Status || 'Active'));
+      var pst = Admin.pjpNow(x.Code, pj, b);
       return '<div class="drow' + (b ? ' bad inset' : '') + '">' +
         '<div class="dr-h"><div class="m"><div class="t">' + esc(x.Name || x.Code) +
           ' <span class="pill ' + (/admin|hod/i.test(x.Rights || '') ? 'p-blue' : 'p-grey') + '">' +
@@ -10917,6 +11144,7 @@ var Admin = {
           (pj === 'Yes' ? ' <span class="pill p-ok">PJP khula</span>' : '') +
           (pj === 'No' ? ' <span class="pill p-bad">PJP band</span>' : '') +
           (act ? '' : ' <span class="pill p-bad">Inactive</span>') + '</div>' +
+        '<div class="s">' + esc(pst) + '</div>' +
         '<div class="s">' + esc(x.Code) + ' · ' + esc(x.Email || '') + ' · ' + esc(x.HQ || '') +
           ' · joining ' + esc(dmy(x.DateofJoining) || '—') +
           (b && x.BypassBy ? ' · bypass by ' + esc(x.BypassBy) : '') +
@@ -10936,6 +11164,25 @@ var Admin = {
         '</div></div>'; }).join('');
     if (show.length > 60) h += '<div class="hint">Sirf pehle 60 — search karo.</div>';
     return h + '</div>';
+  },
+  /* Can this person open the PJP tab right now, and why — the same rules Gate.allowed uses, said in
+     words, next to the switch that changes them. An admin removing a plan needs to see the result. */
+  pjpNow: function (code, pj, byp) {
+    var wm = Pjp.winMonth(), C = String(code || '').toUpperCase();
+    var dr = DB.rows('PjpDraft').filter(function (r) {
+      return String(r.EmpCode || '').toUpperCase() === C && String(r.Month || '').slice(0, 7) === wm; })[0];
+    var st = dr ? Appr.norm(dr.Status) : '';
+    var days = (DB.m.Master_PJP || []).filter(function (r) {
+      return DB.same(r.Code, C) && String(toISO(r.Date) || '').slice(0, 7) === wm; }).length;
+    var head = 'PJP ' + monthName(wm) + ': ' + days + ' din master me' +
+      (st ? ' · draft ' + st : ' · koi draft nahi');
+    if (/^yes$/i.test(pj)) return head + ' → tab KHULA (admin ne khola)';
+    if (/^no$/i.test(pj)) return head + ' → tab BAND (admin ne band kiya)';
+    if (byp) return head + ' → tab KHULA (bypass)';
+    if (st === 'approved') return head + ' → tab band (approve ho gaya)';
+    if (Pjp.winOpen()) return head + ' → tab KHULA (window 27–1 chalu hai)';
+    if (/pending|rejected|partial/.test(st)) return head + ' → tab KHULA (decision baaki hai)';
+    return head + ' → tab BAND (window ' + dmy(Pjp.winShut()) + ' ko band ho gaya)';
   },
   flag: function (code, name, v, el) {
     return Busy.run('flag_' + code + name, el, '…', function () {
@@ -10978,10 +11225,81 @@ var Admin = {
          ['NewStores', 'New outlets'], ['PosmAudit', 'POSM audit'],
          ['PosmRequirement', 'POSM requirement'], ['TaDa', 'TA / DA claims'],
          ['Deviation', 'Plan changes'], ['PjpDraft', 'PJP drafts'], ['Dfr', 'Daily field report'],
-         ['StockRemark', 'Stock remarks'], ['Photos', 'Photos'], ['ActivityLog', 'Activity log']],
+         ['StockRemark', 'Stock remarks'], ['Photos', 'Photos'], ['ActivityLog', 'Activity log'],
+         /* two tables under one name, because "his PJP" is not one table */
+         ['PJP', 'PJP — published days + month draft']],
   kindLbl: function (k) {
     var x = Admin.KINDS.filter(function (y) { return y[0] === k; })[0];
     return x ? x[1] : k;
+  },
+
+  /* ══ PJP as one thing ══
+     Published days live in Master_PJP (keyed Code + Date), the month draft in PjpDraft (keyed
+     EmpCode + Month). An admin means both. The DELETE is done by the server — it takes the days inside
+     the range, and the draft only when the range covers that whole month, so "delete the 3rd" can never
+     take the whole month with it. This is the same pair, read locally, for the count preview and the
+     download. */
+  PJPCOL:{ t:'Published PJP', cols:[
+    ['Date', 'Date', 'd'], ['Code', 'Code'], ['Ww', 'Working with'], ['Week', 'Week / label'],
+    ['State', 'State'], ['Town', 'Town'], ['Beat', 'Beat'], ['Station', 'Station'],
+    ['Focus', 'Focus'], ['Status', 'Status'], ['Approvals', 'Approved by'],
+    ['LastUpdated', 'Written at']] },
+  DRFCOL:{ t:'PJP drafts', cols:[
+    ['Month', 'Month'], ['EmpCode', 'Code'], ['EmpName', 'Employee'], ['Status', 'Status'],
+    ['SubmittedAt', 'Sent at'], ['HodAt', 'Decided at'], ['HodBy', 'Decided by'],
+    ['HodRemarks', 'Remarks'], ['RejectedDays', 'Days sent back'], ['UpdatedAt', 'Updated at']] },
+  pjpRows: function (code, from, to) {
+    var C = String(code || '').trim().toUpperCase();
+    var pub = (DB.m.Master_PJP || []).filter(function (r) {
+      if (C && !DB.same(r.Code, C)) return false;
+      var d = toISO(r.Date);
+      return !!d && d >= from && d <= to;
+    }).sort(function (a, b) { return String(toISO(a.Date)).localeCompare(String(toISO(b.Date))); });
+    /* a month draft counts only when the range covers the WHOLE month — exactly the server's rule, so
+       the number on the screen is the number that will go */
+    var dr = DB.rows('PjpDraft').filter(function (r) {
+      if (C && String(r.EmpCode || '').trim().toUpperCase() !== C) return false;
+      var m = String(r.Month || '').slice(0, 7);
+      if (!/^\d{4}-\d{2}$/.test(m)) return false;
+      var last = new Date(+m.slice(0, 4), +m.slice(5, 7), 0);
+      return from <= m + '-01' && to >= iso(last);
+    });
+    var whole = dr.map(function (r) { return String(r.Month).slice(0, 7); });
+    return { pub:pub, dr:dr, whole:whole };
+  },
+  pjpXl: function (code, from, to) {
+    var x = Admin.pjpRows(code, from, to);
+    var ttl = Rep.ttl('GARUDA — PJP', Rep.who(code) + '  ·  ' + dmy(from) + ' – ' + dmy(to) + '  ·  ' +
+      x.pub.length + ' published day, ' + x.dr.length + ' draft', 8);
+    var sheets = [{ name:'About', cols:[24, 44, 14, 14, 14, 14, 14, 14], tab:'FF8890A6', portrait:1,
+      rowH:ttl.rowH, rows:ttl.rows.concat([
+      Rep.kv('Report', Xl.t(I18n.s('PJP — published days + month draft'), Xl.S.V)),
+      Rep.kv('Employee', Xl.t(Rep.who(code), Xl.S.V)),
+      Rep.kv('From', Xl.dt(from)), Rep.kv('To', Xl.dt(to)),
+      Rep.kv('Published days', Xl.n(x.pub.length)), Rep.kv('Drafts', Xl.n(x.dr.length)),
+      Rep.kv('Downloaded', Xl.t(dmy(today()) + ' ' + new Date().toLocaleTimeString('en-IN'), Xl.S.V)),
+      Rep.kv('By', Xl.t(DB.me.name + ' (' + DB.me.code + ')', Xl.S.V))]), merges:ttl.merges },
+      Rep.anySheet('Master_PJP', x.pub, Admin.PJPCOL, Rep.who(code) + '  ·  ' + dmy(from) +
+        ' – ' + dmy(to) + '  ·  ' + x.pub.length + ' din'),
+      Rep.anySheet('PjpDraft', x.dr, Admin.DRFCOL, Rep.who(code) + '  ·  ' + x.dr.length + ' draft')];
+    return Xl.save('GARUDA_PJP_' + (code || 'ALL') + '_' + from + '_' + to, sheets);
+  },
+  /* what removing it will DO — the sentence an admin needs before pressing delete, not after */
+  pjpWarn: function (code, r) {
+    r = r || Admin.dRange();
+    var C = code === undefined ? Admin.dcode : code;
+    var x = Admin.pjpRows(C, r[0], r[1]);
+    var open = Pjp.winOpen(), wm = Pjp.winMonth();
+    var hits = x.whole.indexOf(wm) >= 0;
+    return '<div class="banner ' + (open ? 'g' : 'w') + '"><span>i</span><div>' +
+      '<b>Jayega: ' + x.pub.length + ' published din' + (x.whole.length ? ' + ' + x.whole.length +
+        ' month ka draft' : '') + '</b><br><span style="font-weight:500">' +
+      (open
+        ? 'PJP window abhi khula hai (27–1) — hataane ke baad wo khud se dobara bana sakta hai.'
+        : (hits ? 'PJP window ' + dmy(Pjp.winShut()) + ' ko band ho gaya — hataane ke baad wo khud ' +
+            'dobara nahi bana payega. Users tab se uska PJP kholna padega.'
+          : 'PJP window band hai, par is month ka draft nahi ja raha — uska current plan chalta rahega.')) +
+      '</span></div></div>';
   },
   /* every employee, for the pickers — searchable once there are more than ten */
   emps: function () {
@@ -11028,7 +11346,7 @@ var Admin = {
   setCode: function (v) { Admin.dcode = Admin.codeOf(v); Admin.ddel = null; render(); },
 
   data: function () {
-    var r = Admin.range(), code = Admin.dcode;
+    var r = Admin.dRange(), code = Admin.dcode;
     var who = code ? (function () { var e = DB.emp(code) || {}; return (e.Name || code) + ' (' + code + ')'; })()
                    : 'sab employee';
     var rows = Admin.pick(Admin.dkind, code, r);
@@ -11041,18 +11359,40 @@ var Admin = {
       '<label class="f" style="margin-top:8px">Employee</label>' +
       Admin.empPick('ad_emp', code, 'Admin.setCode(this.value)') +
       '<div class="hint" style="margin-top:8px">' + rows.length + ' row milenge — ' +
-      esc(Admin.kindLbl(Admin.dkind)) + ' · ' + esc(who) + ' · ' + esc(Admin.rangeLbl()) + '</div>' +
+      esc(Admin.kindLbl(Admin.dkind)) + ' · ' + esc(who) + ' · ' + esc(Admin.rangeLbl(r)) + '</div>' +
+      (Admin.per === 'M' ? '<div class="hint">Month chuna hai to poora month — aage ke din bhi.</div>' : '') +
       '<div class="btns"><button class="btn" onclick="Admin.dl(this)"' + (rows.length ? '' : ' disabled') +
       '>Excel download</button>' +
       '<button class="btn ghost" onclick="Admin.dlAll(this)">Sab reports (ek file)</button></div></div>';
 
-    /* ── delete ── */
-    var d = Admin.ddel;
+    /* ── delete ── it asks its own question, so looking at a report can never change what goes ── */
+    var d = Admin.ddel, w = Admin.dwhat;
+    var stop = !w || (Admin.needEmp(w) && !code);
+    var prev = w ? Admin.delRows(w, code, r) : { n:0, tabs:{} };
     h += '<div class="sec-title">Data delete</div><div class="card">' +
-      '<div class="sub">Jo report, jo employee aur jo date range upar chuna hai — wahi delete hoga.</div>' +
-      '<div class="sub">Pehle count dekho, phir confirm karo. Master tab kabhi nahi chhutte.</div>' +
-      '<div class="btns"><button class="btn ghost" onclick="Admin.count(this)">Kitna delete hoga? (count)</button>' +
-      '<button class="btn bad" onclick="Admin.purge(this)"' + (d && d.matched ? '' : ' disabled') +
+      '<div class="sub">Kya hatana hai, kiska, aur kis range ka — teen cheezein. Employee aur date ' +
+      'range upar se aati hain.</div>' +
+      '<label class="f">Kya delete karna hai</label>' +
+      '<select class="in" onchange="Admin.setDel(this.value)">' +
+        '<option value="">Chuno…</option>' +
+        '<optgroup label="Group">' + Admin.DEL.map(function (x) {
+          return '<option value="' + x[0] + '"' + (w === x[0] ? ' selected' : '') + '>' + esc(x[1]) +
+            '</option>'; }).join('') + '</optgroup>' +
+        '<optgroup label="Ek tab">' + Admin.KINDS.filter(function (k) { return k[0] !== 'PJP'; })
+          .map(function (k) {
+            return '<option value="' + k[0] + '"' + (w === k[0] ? ' selected' : '') + '>' + esc(k[1]) +
+              '</option>'; }).join('') + '</optgroup>' +
+      '</select>' +
+      (w && !(Admin.needEmp(w) && !code)
+        ? '<div class="hint" style="margin-top:8px">' + esc(Admin.delLbl(w)) + ' · ' + esc(who) +
+        ' · ' + esc(Admin.rangeLbl(r)) + ' — is device par <b>' + prev.n + ' row</b>' +
+        (Object.keys(prev.tabs).length ? ' <i>(' + esc(Object.keys(prev.tabs).map(function (t) {
+          return t + ' ' + prev.tabs[t]; }).join(', ')) + ')</i>' : '') + '</div>' : '') +
+      Admin.delWarn(w, code, r) +
+      '<div class="btns"><button class="btn ghost" onclick="Admin.count(this)"' +
+        (stop ? ' disabled' : '') + '>Kitna delete hoga? (count)</button>' +
+      '<button class="btn bad" onclick="Admin.purge(this)"' +
+      (d && d.matched && !stop ? '' : ' disabled') +
       '>Delete karo' + (d && d.matched ? ' (' + d.matched + ')' : '') + '</button></div>' +
       (d ? '<div class="strip ' + (d.matched ? 'w' : 'b') + '" style="margin-bottom:0"><span class="g">' +
         (d.matched ? '!' : 'i') + '</span><div class="m"><b>' + d.matched + ' row delete honge</b> <i>· ' +
@@ -11060,14 +11400,25 @@ var Admin = {
           .map(function (k) { return k + ' ' + d.tabs[k]; }).join(', ') || 'kuch nahi') + '</i></div></div>' +
         ((d.sample || []).length ? '<div class="hint" style="margin-top:6px">' +
           esc(d.sample.join(' · ')) + (d.matched > d.sample.length ? ' …' : '') + '</div>' : '') : '') +
-      '<div class="hint" style="margin-top:8px">Order delete karne par uski SecOrderLines bhi jaati hain.</div>' +
-      '<div class="hint">Delete sirf Admin kar sakta hai, HOD nahi.</div></div>';
+      '<div class="hint" style="margin-top:8px">Parent ke saath child row apne aap jaati hai — order ' +
+      'ke saath uski lines aur photo, shop/POSM ke saath unki photo. Koi aadha record nahi bachta.</div>' +
+      '<div class="hint">Month wali cheezein (PJP draft, TA/DA) tabhi jaati hain jab poora month range ' +
+      'me ho — ek din delete karne se poora month nahi jata.</div>' +
+      '<div class="hint">Activity log apne aap nahi jata, Drive ki photo file nahi jati, master tab ' +
+      '(employee, store, product, config, phasing) kabhi nahi chhutte.</div>' +
+      '<div class="hint">Delete sirf Admin kar sakta hai, HOD nahi. Employee ke paas delete hai hi ' +
+      'nahi — uske Data tab me sirf download hai.</div></div>';
 
     h += Admin.master();
     return h;
   },
   /* the rows a choice describes, on this device — the same filter the server will apply */
   pick: function (kind, code, r) {
+    /* the PJP is two tables: published days, plus the drafts of the months the range touches */
+    if (kind === 'PJP') {
+      var x = Admin.pjpRows(code, r ? r[0] : '0000-01-01', r ? r[1] : '9999-12-31');
+      return x.pub.concat(x.dr);
+    }
     return DB.rows(kind).filter(function (x) {
       if (code && String(x.EmpCode || '').toUpperCase() !== String(code).toUpperCase()) return false;
       var d = toISO(x.Date);
@@ -11075,16 +11426,96 @@ var Admin = {
       return d >= r[0] && d <= r[1];
     });
   },
+
+  /* ══ WHAT GOES ══
+     The groups an admin thinks in. Each one is a set of tabs the server takes together, children
+     included (an order's lines and photos, a shop's photos), so the sheet never keeps half a record.
+     `emp` = an employee must be named. `warn` = the extra sentence this choice deserves. */
+  dwhat:'',
+  DEL:[
+    ['EVERYTHING', 'Sab kuch — poora data', 1],
+    ['PJP',        'PJP — published din + month draft', 0],
+    ['ORDERS',     'Orders — lines aur photos ke saath', 0],
+    ['SHOPS',      'Naye shop — photos ke saath', 0],
+    ['POSM',       'POSM — audit aur requirement', 0],
+    ['PLAN',       'Day plan aur plan change', 0],
+    ['CLAIMS',     'TA / DA claim', 0],
+    ['DAYEND',     'EOD aur DFR', 0],
+    ['STOCK',      'Stock remark', 0],
+    ['PHOTOS',     'Photos (row — Drive file rehti hai)', 0],
+    ['LOG',        'Activity log', 0]
+  ],
+  /* the same tabs the server groups them into, so the count on the screen is the count that goes */
+  GRP:{ EVERYTHING:['Master_PJP','SecOrders','SecOrderLines','NewStores','PosmAudit','PosmRequirement',
+                    'DayPlan','Deviation','PjpDraft','TaDa','Eod','Dfr','StockRemark','Photos'],
+        PJP:['Master_PJP','PjpDraft'], ORDERS:['SecOrders','SecOrderLines'], SHOPS:['NewStores'],
+        POSM:['PosmAudit','PosmRequirement'], PLAN:['DayPlan','Deviation'], CLAIMS:['TaDa'],
+        DAYEND:['Eod','Dfr'], STOCK:['StockRemark'], PHOTOS:['Photos'], LOG:['ActivityLog'] },
+  delLbl: function (w) {
+    var x = Admin.DEL.filter(function (y) { return y[0] === w; })[0];
+    if (x) return x[1];
+    var k = Admin.KINDS.filter(function (y) { return y[0] === w; })[0];
+    return k ? k[1] : (w || '—');
+  },
+  needEmp: function (w) {
+    var x = Admin.DEL.filter(function (y) { return y[0] === w; })[0];
+    return !!(x && x[2]);
+  },
+  tabsOf: function (w) { return Admin.GRP[w] ? Admin.GRP[w].slice() : (w ? [w] : []); },
+  /* what that choice describes on this device — the server's dry run is still the authority, this is
+     what the screen can say before he taps anything */
+  delRows: function (w, code, r) {
+    var out = { n:0, tabs:{} };
+    Admin.tabsOf(w).forEach(function (t) {
+      var rows = t === 'Master_PJP' ? Admin.pjpRows(code, r[0], r[1]).pub
+               : t === 'PjpDraft' ? Admin.pjpRows(code, r[0], r[1]).dr
+               : Admin.pick(t, code, r);
+      if (rows.length) out.tabs[t] = rows.length;
+      out.n += rows.length;
+    });
+    return out;
+  },
+  setDel: function (v) { Admin.dwhat = v; Admin.ddel = null; render(); },
+  /* the sentence this particular choice deserves — said BEFORE the button */
+  delWarn: function (w, code, r) {
+    if (!w) return '';
+    if (Admin.needEmp(w) && !code)
+      return '<div class="banner w"><span>!</span><div><b>Ek employee chuno</b><br>' +
+        '<span style="font-weight:500">"Sab kuch" ek aadmi ka hi hatta hai. Sab ke liye — ek-ek report ' +
+        'chuno, ya Days range ke saath.</span></div></div>';
+    var h = '';
+    if (w === 'EVERYTHING')
+      h += '<div class="banner w"><span>!</span><div><b>Poora data jayega</b><br>' +
+        '<span style="font-weight:500">Orders (+lines), naye shop, POSM, day plan, plan change, PJP ' +
+        '(published + draft), TA/DA, EOD, DFR, stock remark aur photo row — sab is range ke.<br>' +
+        'Activity log nahi jata (wo record hai), Drive ki photo file nahi jati, master tab nahi jate.' +
+        '</span></div></div>';
+    if (w === 'EVERYTHING' || w === 'PJP') h += Admin.pjpWarn(code, r);
+    if (w === 'ORDERS')
+      h += '<div class="banner b"><span>i</span><div>' +
+        'Order ke saath uski lines aur us par li gayi photo row bhi jayegi — aadha record nahi bachega.' +
+        '</div></div>';
+    if (w === 'SHOPS')
+      h += '<div class="banner b"><span>i</span><div>' +
+        'Naye shop ke saath uski photo row bhi jayegi. Store master (Master_Stores) chhuta nahi.' +
+        '</div></div>';
+    if (w === 'LOG')
+      h += '<div class="banner w"><span>!</span><div>' +
+        'Activity log record hai — kisne kya kiya. Isse hataane par wo history chali jayegi.' +
+        '</div></div>';
+    return h;
+  },
   dl: function (el) {
-    var r = Admin.range();
+    var r = Admin.dRange();
     return Busy.run('dl', el, 'Ban raha hai…', function () {
-      var f = Rep.any(Admin.dkind, Admin.dcode, r[0], r[1]);
+      var f = Admin.dkind === 'PJP' ? Admin.pjpXl(Admin.dcode, r[0], r[1])
+                                    : Rep.any(Admin.dkind, Admin.dcode, r[0], r[1]);
       toast('Download shuru — ' + Admin.kindLbl(Admin.dkind));
       return Promise.resolve(f);
     });
   },
   dlAll: function (el) {
-    var r = Admin.range();
+    var r = Admin.dRange();
     return Busy.run('dlall', el, 'Ban raha hai…', function () {
       var f = Rep.everything(Admin.dcode, r[0], r[1]);
       toast('Download shuru — ' + f.sheets + ' tab');
@@ -11092,10 +11523,10 @@ var Admin = {
     });
   },
   count: function (el) {
-    var r = Admin.range();
+    var r = Admin.dRange();
     return Busy.run('cnt', el, 'Gin raha hai…', function () {
       return Api.post({ action:'purge', email:Auth.session().email, dry:1,
-        sheet:Admin.dkind, code:Admin.dcode || 'ALL', from:r[0], to:r[1] }).then(function (res) {
+        sheet:Admin.dwhat, code:Admin.dcode || 'ALL', from:r[0], to:r[1] }).then(function (res) {
         if (!res || !res.ok) { Admin.ddel = null; render();
           return toast('! ' + ((res && res.error) || 'Count nahi hua'), 4000); }
         Admin.ddel = res; render();
@@ -11104,11 +11535,11 @@ var Admin = {
     });
   },
   purge: function (el) {
-    var r = Admin.range(), d = Admin.ddel;
+    var r = Admin.dRange(), d = Admin.ddel;
     if (!d || !d.matched) return toast('Pehle count dekho');
     var who = Admin.dcode || 'SAB employee';
     return UI.prompt({ icon:'', title:d.matched + ' row delete karne hain?', danger:true,
-      msg:'<b>' + esc(Admin.kindLbl(Admin.dkind)) + '</b> · ' + esc(who) + ' · ' + esc(Admin.rangeLbl()) +
+      msg:'<b>' + esc(Admin.delLbl(Admin.dwhat)) + '</b> · ' + esc(who) + ' · ' + esc(Admin.rangeLbl(r)) +
         '<br>Ye wapas nahi aayega. Confirm karne ke liye niche DELETE likho.',
       label:'DELETE likho', placeholder:'DELETE', required:true, requiredMsg:'DELETE likhna zaroori hai',
       ok:'Haan, delete karo', cancel:'Abhi nahi' }).then(function (v) {
@@ -11116,13 +11547,19 @@ var Admin = {
       if (String(v).trim().toUpperCase() !== 'DELETE') return toast('DELETE likhna zaroori hai');
       return Busy.run('purge', el, 'Delete ho raha hai…', function () {
         return Api.post({ action:'purge', email:Auth.session().email,
-          sheet:Admin.dkind, code:Admin.dcode || 'ALL', from:r[0], to:r[1] }).then(function (res) {
+          sheet:Admin.dwhat, code:Admin.dcode || 'ALL', from:r[0], to:r[1] }).then(function (res) {
           if (!res || !res.ok) return toast('! ' + ((res && res.error) || 'Delete nahi hua'), 5000);
-          Log.add('Data', 'Deleted ' + res.deleted + ' rows from ' + Admin.dkind,
+          Log.add('Data', 'Deleted ' + res.deleted + ' rows from ' + Admin.dwhat +
+            ((res.months || []).length ? ' (' + res.months.join(', ') + ')' : ''),
             Admin.dcode || 'ALL', r[0] + '..' + r[1]);
           Admin.ddel = null;
           toast(res.deleted + ' row delete ho gaye — sync kar raha hai', 4000);
-          return Sync.now(false).then(function () { render(); });
+          /* a FULL pull: the published PJP lives in a master, and a light sync does not fetch those */
+          return DB.pull(true).then(function () {
+            render();
+            if (/^(PJP|EVERYTHING)$/.test(Admin.dwhat) && !Pjp.winOpen())
+              toast('PJP hat gaya aur window band hai — Users tab se uska PJP kholna padega', 7000);
+          });
         });
       });
     });
@@ -11746,7 +12183,9 @@ var Admin = {
         /* Stock_* is no longer downloaded (95k rows) — the backend sends its row count instead */
         var n = DB.counts[x[0]] != null && !(DB.m[x[0]] || []).length ? DB.counts[x[0]] : (DB.m[x[0]] || []).length;
         return '<div class="lrow"><div class="m"><div class="t">' + x[1] + '</div><div class="s">' + x[0] +
-          (/^Stock_/.test(x[0]) ? ' · sheet me hi rehta hai' : '') + '</div></div>' +
+          (/^Stock_/.test(x[0]) ? ' · sheet me hi rehta hai' : '') +
+          (x[0] === 'Master_PJP' ? ' · app sirf approve par likhta hai — aur upar se ek employee ka delete' : '') +
+          '</div></div>' +
           '<span class="pill ' + (n ? 'p-ok' : 'p-bad') + '">' + n + ' rows</span></div>'; }).join('') +
       '<div class="hint" style="margin-top:8px">Last sync: ' + (DB.pulledAt ? new Date(DB.pulledAt).toLocaleString('en-IN') : '—') + '</div>' +
       (DB.pjpDupes ? '<div class="banner w" style="margin-top:10px"><span>!</span><div>Master_PJP me <b>' + DB.pjpDupes +
