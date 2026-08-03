@@ -2483,6 +2483,31 @@ I18n.D.en = I18n.EN = {
   '7 din':'7 days',
   'Published PJP':'Published PJP',
   'PJP drafts':'PJP drafts',
+  'Pehle chuno kya delete karna hai':'First choose what to delete',
+  'Server ne ye kaha:':'The server said this:',
+  'koi jawab nahi':'no answer',
+  'Aksar iska matlab:':'This usually means:',
+  'Apps Script ka deployment purane version ka hai. backend.gs dobara paste karke New deployment karo — ya agar "admin only" likha hai to wahi purana version hai.':'the Apps Script deployment is an older version. Paste backend.gs again and make a New deployment — "admin only" means the same thing.',
+  'row delete ho gaye':'rows deleted',
+  'Kahan se:':'From where:',
+  'Kuch match nahi hua.':'Nothing matched.',
+  'Child rows (lines / photos) bhi isme hain.':'Child rows (lines / photos) are included in that.',
+  'Ye nahi gaya:':'This did NOT go:',
+  'ka month-wala row (PJP draft / TA-DA) — poora month range me hona chahiye tha.':'— the month-keyed row (PJP draft / TA-DA) needed the whole month inside the range.',
+  'Kuch match nahi hua':'Nothing matched',
+  'Is range me is employee ka koi row nahi mila. Date range ya employee badal ke dekho.':'No row for that employee in this range. Try a different range or employee.',
+  'Range poore month ka kar diya':'The range now covers the whole month',
+  'Poora month karo':'Use the whole month',
+  'ka month-wala row (PJP draft / TA-DA)':'— the month-keyed row (PJP draft / TA-DA)',
+  'nahi jayega':'will NOT go',
+  '— range poore month ka nahi hai.':'— the range is not a whole month.',
+  'server ne jawab nahi diya':'the server did not answer',
+  'Delete, PJP delete aur kuch naye column tab tak kaam nahi karenge. Apps Script me backend.gs dobara paste karo, phir Deploy → New deployment.':'Delete, the PJP delete and some newer columns will not work until then. Paste backend.gs into Apps Script again, then Deploy → New deployment.',
+  'Sheet ka script purana hai — v':'The sheet script is out of date — v',
+  'chahiye v':'this app needs v',
+  '(purane script ke liye tab-by-tab kiya gaya)':'(done tab by tab, for an older sheet script)',
+  'Ye check nahi ho paya:':'This could not be checked:',
+  'Baaki ka delete ho jayega.':'The rest will still be deleted.',
   'Order punch karo':'Punch the order',
   /* live updates + the read-only plan / waiting screen */
   'HOD ne approve kar diya — aage badho':'The HOD approved it — carry on',
@@ -10883,6 +10908,8 @@ var Log = {
 };
 
 /* ═══════════════ ADMIN CONSOLE ═══════════════ */
+/* what this build of the app needs on the sheet side. Raise it in backend.gs at the same time. */
+var NEED_VER = '2.2';
 var Admin = {
   /* ══════════════════ THE CONSOLE ══════════════════
      Five tabs, and each one answers a different question:
@@ -10915,7 +10942,10 @@ var Admin = {
     var h = UI.head('', hd[0], hd[1] + ' <i>· ' + esc(s0.rights || 'Admin') + '</i>');
     return h + (Admin[Admin.tab] ? Admin[Admin.tab]() : '');
   },
-  after: function () {},
+  after: function () {
+    /* the version question, once, and only where it matters */
+    if (Admin.ROUTE[Router.cur] === 'data') Admin.verCheck();
+  },
   /* an in-screen link to another console screen is a real tab change now */
   go: function (t) {
     Admin.emp = ''; Admin.cmpOn = false;
@@ -11498,7 +11528,10 @@ var Admin = {
   dRange: function () {
     var t = today();
     var f = Admin.dfrom, o = Admin.dto;
-    if (!f && !o) { f = t.slice(0, 8) + '01'; o = t; }
+    /* the WHOLE current month by default: a month-keyed row (the PJP draft, a TA/DA claim) only goes
+       when the range covers the month end to end, and "1st to today" silently spared it */
+    if (!f && !o) { f = t.slice(0, 8) + '01';
+      o = iso(new Date(+t.slice(0, 4), +t.slice(5, 7), 0)); }
     if (!f) f = o; if (!o) o = f;
     if (f > o) { var x = f; f = o; o = x; }
     return [f, o];
@@ -11683,8 +11716,11 @@ var Admin = {
     var r = Admin.dRange(), codes = Admin.dcodes, who = Admin.whoText();
     var kinds = Admin.dkinds, whats = Admin.dwhats;
 
+    /* the one screen where a stale deployment is the likeliest explanation for "it did nothing" */
+    var h = Admin.verStrip();
+
     /* ── the range, and nothing else ── */
-    var h = '<div class="card"><div class="pair">' +
+    h += '<div class="card"><div class="pair">' +
       '<div><label class="f">From</label><input class="in" type="date" value="' + esc(r[0]) +
         '" onchange="Admin.setD(\'dfrom\',this.value)"></div>' +
       '<div><label class="f">To</label><input class="in" type="date" value="' + esc(r[1]) +
@@ -11721,12 +11757,7 @@ var Admin = {
     var d = Admin.ddel;
     var needEmp = whats.some(function (w) { return Admin.needEmp(w); }) && !codes.length;
     var stop = !whats.length || needEmp;
-    var prev = { n:0, tabs:{} };
-    whats.forEach(function (w) {
-      var x = Admin.delRows(w, codes, r);
-      prev.n += x.n;
-      Object.keys(x.tabs).forEach(function (t) { prev.tabs[t] = x.tabs[t]; });
-    });
+    var prev = Admin.delRowsAll(codes, r);
     h += '<div class="sec-title">Data delete</div><div class="card">' +
       '<div class="sub">Kya hatana hai, kiska, aur kis range ka — teen cheezein. Employee aur date ' +
       'range upar se aati hain.</div>' +
@@ -11741,10 +11772,18 @@ var Admin = {
         (Object.keys(prev.tabs).length ? ' <i>(' + esc(Object.keys(prev.tabs).map(function (t) {
           return t + ' ' + prev.tabs[t]; }).join(', ')) + ')</i>' : '') + '</div>' : '') +
       whats.map(function (w) { return Admin.delWarn(w, codes, r); }).join('') +
+      /* a month-keyed row needs the WHOLE month inside the range — offer that in one tap rather than
+         leaving him to wonder why the draft survived */
+      (Admin.sparedMonths(r).length
+        ? '<div class="strip w"><span class="g">!</span><div class="m"><b>' +
+          esc(Admin.sparedMonths(r).join(', ')) + '</b> ka month-wala row (PJP draft / TA-DA) ' +
+          '<i>nahi jayega</i> — range poore month ka nahi hai.</div>' +
+          '<button class="btn ghost sm" style="flex:0 0 auto" onclick="Admin.wholeMonths()">' +
+          'Poora month karo</button></div>' : '') +
       '<div class="btns"><button class="btn ghost" onclick="Admin.count(this)"' +
         (stop ? ' disabled' : '') + '>Kitna delete hoga? (count)</button>' +
-      '<button class="btn bad" onclick="Admin.purge(this)"' +
-      (d && d.matched && !stop ? '' : ' disabled') +
+      /* live as soon as there is something to delete — it counts on its own before asking */
+      '<button class="btn bad" onclick="Admin.purge(this)"' + (stop ? ' disabled' : '') +
       '>Delete karo' + (d && d.matched ? ' (' + d.matched + ')' : '') + '</button></div>' +
       (d ? '<div class="strip ' + (d.matched ? 'w' : 'b') + '" style="margin-bottom:0"><span class="g">' +
         (d.matched ? '!' : 'i') + '</span><div class="m"><b>' + d.matched + ' row delete honge</b> <i>· ' +
@@ -11825,6 +11864,18 @@ var Admin = {
   tabsOf: function (w) { return Admin.GRP[w] ? Admin.GRP[w].slice() : (w ? [w] : []); },
   /* what that choice describes on this device — the server's dry run is still the authority, this is
      what the screen can say before he taps anything */
+  /* every chosen thing, counted ONCE per tab — a tab in two groups is still one tab */
+  delRowsAll: function (codes, r) {
+    var out = { n:0, tabs:{} };
+    Admin.tabList().forEach(function (t) {
+      var rows = t === 'Master_PJP' ? Admin.pjpRows(codes, r[0], r[1]).pub
+               : t === 'PjpDraft' ? Admin.pjpRows(codes, r[0], r[1]).dr
+               : Admin.pick(t, codes, r);
+      if (rows.length) out.tabs[t] = rows.length;
+      out.n += rows.length;
+    });
+    return out;
+  },
   delRows: function (w, codes, r) {
     var out = { n:0, tabs:{} };
     Admin.tabsOf(w).forEach(function (t) {
@@ -11837,6 +11888,117 @@ var Admin = {
     return out;
   },
   setDel: function (v) { Admin.dwhats = v ? [v] : []; Admin.ddel = null; render(); },
+  /* ══ ask the server ══
+     One call with every choice on it: the server resolves the groups and de-duplicates the tabs, so
+     "PJP drafts" + "PJP (published + draft)" counts the draft once. If the answer says it did not
+     understand the request — an Apps Script project that predates groups, comma lists or the PJP delete
+     — the same work is retried one TAB at a time, so whatever that older script does understand still
+     goes and the rest is reported by name. */
+  tabList: function () {
+    var out = [], seen = {};
+    Admin.dwhats.forEach(function (w) {
+      Admin.tabsOf(w).forEach(function (t) { if (!seen[t]) { seen[t] = 1; out.push(t); } });
+    });
+    return out;
+  },
+  blank: function (dry) {
+    return { ok:true, dry:!!dry, matched:0, deleted:0, tabs:{}, children:{}, months:[], sample:[],
+             errors:[], calls:0 };
+  },
+  merge: function (agg, res) {
+    agg.matched += num(res.matched); agg.deleted += num(res.deleted);
+    Object.keys(res.tabs || {}).forEach(function (t) {
+      if (num(res.tabs[t])) agg.tabs[t] = (agg.tabs[t] || 0) + num(res.tabs[t]); });
+    Object.keys(res.children || {}).forEach(function (t) {
+      agg.children[t] = (agg.children[t] || 0) + num(res.children[t]); });
+    (res.months || []).forEach(function (m) { if (agg.months.indexOf(m) < 0) agg.months.push(m); });
+    (res.sample || []).forEach(function (x) { if (agg.sample.length < 10) agg.sample.push(x); });
+    return agg;
+  },
+  /* "the other end does not understand this request" — as opposed to a real refusal like "pick an
+     employee", which must NOT be retried tab by tab */
+  stale: function (err) { return /unknown sheet|refused: *master/i.test(String(err || '')); },
+  call: function (sheet, r, dry) {
+    var body = { action:'purge', email:Auth.session().email, sheet:sheet,
+                 code:Admin.dcodes.join(',') || 'ALL', from:r[0], to:r[1] };
+    if (dry) body.dry = '1';
+    return Api.post(body).then(function (res) { return res || { ok:false, error:'server ne jawab nahi diya' }; },
+      function (e) { return { ok:false, error:String((e && e.message) || e) }; });
+  },
+  ask: function (r, dry) {
+    var agg = Admin.blank(dry);
+    if (!Admin.dwhats.length) return Promise.resolve(agg);
+    return Admin.call(Admin.dwhats.join(','), r, dry).then(function (res) {
+      agg.calls = 1;
+      if (res.ok) return Admin.merge(agg, res);
+      if (!Admin.stale(res.error)) {
+        agg.ok = false; agg.errors.push(String(res.error));
+        return agg;
+      }
+      /* an older sheet script: one tab at a time, on the de-duplicated list */
+      var tabs = Admin.tabList(), out = Admin.blank(dry);
+      out.fallback = true;
+      var step = function (k) {
+        if (k >= tabs.length) return out;
+        syncChip('Delete: ' + (k + 1) + ' / ' + tabs.length + ' …');
+        return Admin.call(tabs[k], r, dry).then(function (one) {
+          out.calls++;
+          if (one.ok) Admin.merge(out, one);
+          else { out.ok = false; out.errors.push(tabs[k] + ' — ' + String(one.error)); }
+          return step(k + 1);
+        });
+      };
+      return Promise.resolve(step(0));
+    });
+  },
+  /* a failure is never a toast: it says what the server said, and what that usually means */
+  oops: function (res) {
+    var errs = (res.errors || []).join('<br>');
+    var old = /unknown sheet|refused|admin only/i.test(errs);
+    return UI.alert({ icon:'!', title:'Delete nahi hua', ok:'Theek hai',
+      msg:'<b>Server ne ye kaha:</b><br>' + esc(errs || 'koi jawab nahi') +
+        (old ? '<br><br><b>Aksar iska matlab:</b> Apps Script ka deployment purane version ka hai' +
+               (Admin._ver && Admin._ver !== '?' ? ' (v' + esc(Admin._ver) + ', chahiye v' +
+                 esc(NEED_VER) + ')' : '') + '. ' +
+               'backend.gs dobara paste karke <b>New deployment</b> karo — ya agar "admin only" likha ' +
+               'hai to wahi purana version hai.' : '') });
+  },
+  /* what happened, in full — so "kuch nahi hua" can never be a guess */
+  told: function (res, r) {
+    var lines = Object.keys(res.tabs).filter(function (t) { return num(res.tabs[t]); })
+      .map(function (t) { return t + ' — ' + res.tabs[t]; });
+    if (res.fallback) lines.push('(purane script ke liye tab-by-tab kiya gaya)');
+    var spared = Admin.sparedMonths(r);
+    return UI.alert({ icon:'', title:res.deleted + ' row delete ho gaye', ok:'Theek hai',
+      msg:(lines.length ? '<b>Kahan se:</b><br>' + esc(lines.join('<br>')) : 'Kuch match nahi hua.') +
+        (Object.keys(res.children).length ? '<br><br><i>Child rows (lines / photos) bhi isme hain.</i>' : '') +
+        (spared.length ? '<br><br><b>Ye nahi gaya:</b> ' + esc(spared.join(', ')) +
+          ' ka month-wala row (PJP draft / TA-DA) — poora month range me hona chahiye tha.' : '') });
+  },
+  /* the months this range touches but does NOT cover end to end — exactly what a month-keyed row needs */
+  sparedMonths: function (r) {
+    if (!Admin.dwhats.some(function (w) {
+      return Admin.tabsOf(w).some(function (t) { return t === 'PjpDraft' || t === 'TaDa'; }); })) return [];
+    var out = [], m = r[0].slice(0, 7), guard = 0;
+    while (m <= r[1].slice(0, 7) && guard++ < 36) {
+      var last = new Date(+m.slice(0, 4), +m.slice(5, 7), 0);
+      if (r[0] > m + '-01' || r[1] < iso(last)) out.push(Admin.monLbl(m));
+      var y = +m.slice(0, 4), n = +m.slice(5, 7) + 1;
+      if (n > 12) { n = 1; y++; }
+      m = y + '-' + p2(n);
+    }
+    return out;
+  },
+  /* one tap to widen the range to whole months, because that is what those rows need */
+  wholeMonths: function () {
+    var r = Admin.dRange();
+    var m0 = r[0].slice(0, 7), m1 = r[1].slice(0, 7);
+    var last = new Date(+m1.slice(0, 4), +m1.slice(5, 7), 0);
+    Admin.dfrom = m0 + '-01'; Admin.dto = iso(last);
+    Admin.ddel = null; render();
+    toast('Range poore month ka kar diya — ' + dmy(Admin.dfrom) + ' se ' + dmy(Admin.dto));
+  },
+
   /* the sentence this particular choice deserves — said BEFORE the button */
   delWarn: function (w, codes, r) {
     if (!w) return '';
@@ -11890,47 +12052,60 @@ var Admin = {
   },
   count: function (el) {
     var r = Admin.dRange();
+    if (!Admin.dwhats.length) return toast('Pehle chuno kya delete karna hai');
     return Busy.run('cnt', el, 'Gin raha hai…', function () {
-      /* a STRING: this flag decides whether rows are destroyed, so it must not depend on how the
-         other end compares types */
-      return Api.post({ action:'purge', email:Auth.session().email, dry:'1',
-        sheet:Admin.dwhats.join(','), code:Admin.dcodes.join(',') || 'ALL',
-        from:r[0], to:r[1] }).then(function (res) {
-        if (!res || !res.ok) { Admin.ddel = null; render();
-          return toast('! ' + ((res && res.error) || 'Count nahi hua'), 4000); }
-        Admin.ddel = res; render();
+      return Admin.ask(r, true).then(function (res) {
+        Admin.ddel = res.ok || res.matched ? res : null;
+        render();
+        if (!res.ok) return Admin.oops(res);
         toast(res.matched + ' row delete honge');
       });
     });
   },
+  /* No separate count needed: this asks the server how many there are, shows THAT number in the
+     confirmation, and only then deletes. The Delete button used to be disabled until a count had been
+     run, which made it look broken. */
   purge: function (el) {
-    var r = Admin.dRange(), d = Admin.ddel;
-    if (!d || !d.matched) return toast('Pehle count dekho');
-    var who = Admin.whoText();
-    return UI.prompt({ icon:'', title:d.matched + ' row delete karne hain?', danger:true,
-      msg:'<b>' + esc(Admin.dwhats.map(Admin.delLbl).join(' + ')) + '</b> · ' + esc(who) + ' · ' +
-        esc(dmy(r[0]) + ' – ' + dmy(r[1])) +
-        '<br>Ye wapas nahi aayega. Confirm karne ke liye niche DELETE likho.',
-      label:'DELETE likho', placeholder:'DELETE', required:true, requiredMsg:'DELETE likhna zaroori hai',
-      ok:'Haan, delete karo', cancel:'Abhi nahi' }).then(function (v) {
-      if (!v) return;
-      if (String(v).trim().toUpperCase() !== 'DELETE') return toast('DELETE likhna zaroori hai');
-      return Busy.run('purge', el, 'Delete ho raha hai…', function () {
-        return Api.post({ action:'purge', email:Auth.session().email,
-          sheet:Admin.dwhats.join(','), code:Admin.dcodes.join(',') || 'ALL',
-          from:r[0], to:r[1] }).then(function (res) {
-          if (!res || !res.ok) return toast('! ' + ((res && res.error) || 'Delete nahi hua'), 5000);
-          Log.add('Data', 'Deleted ' + res.deleted + ' rows from ' + Admin.dwhats.join(',') +
-            ((res.months || []).length ? ' (' + res.months.join(', ') + ')' : ''),
-            Admin.dcodes.join(',') || 'ALL', r[0] + '..' + r[1]);
-          Admin.ddel = null;
-          toast(res.deleted + ' row delete ho gaye — sync kar raha hai', 4000);
-          /* a FULL pull: the published PJP lives in a master, and a light sync does not fetch those */
-          return DB.pull(true).then(function () {
-            render();
-            if (Admin.dwhats.some(function (w) { return /^(PJP|EVERYTHING)$/.test(w); }) &&
-                !Pjp.winOpen())
-              toast('PJP hat gaya aur window band hai — Users tab se uska PJP kholna padega', 7000);
+    var r = Admin.dRange(), who = Admin.whoText();
+    if (!Admin.dwhats.length) return toast('Pehle chuno kya delete karna hai');
+    if (Admin.dwhats.some(Admin.needEmp) && !Admin.dcodes.length) return toast('Ek employee chuno');
+    return Busy.run('purge', el, 'Gin raha hai…', function () {
+      return Admin.ask(r, true).then(function (d) {
+        Admin.ddel = d.ok || d.matched ? d : null;
+        render();
+        /* nothing to do at all → say why. Something to do, even with a part of it failing → offer the
+           part that works, with the failures spelled out above the confirmation. */
+        if (!d.matched) return d.ok
+          ? UI.alert({ icon:'i', title:'Kuch match nahi hua', ok:'Theek hai',
+              msg:'Is range me is employee ka koi row nahi mila. Date range ya employee badal ke dekho.' })
+          : Admin.oops(d);
+        return UI.prompt({ icon:'', title:d.matched + ' row delete karne hain?', danger:true,
+          msg:'<b>' + esc(Admin.dwhats.map(Admin.delLbl).join(' + ')) + '</b> · ' + esc(who) + ' · ' +
+            esc(dmy(r[0]) + ' – ' + dmy(r[1])) +
+            (d.errors.length ? '<br><br><b>Ye check nahi ho paya:</b><br>' + esc(d.errors.join('<br>')) +
+              '<br><i>Baaki ka delete ho jayega.</i>' : '') +
+            '<br>Ye wapas nahi aayega. Confirm karne ke liye niche DELETE likho.',
+          label:'DELETE likho', placeholder:'DELETE', required:true,
+          requiredMsg:'DELETE likhna zaroori hai',
+          ok:'Haan, delete karo', cancel:'Abhi nahi' }).then(function (v) {
+          if (!v) return;
+          if (String(v).trim().toUpperCase() !== 'DELETE') return toast('DELETE likhna zaroori hai');
+          return Admin.ask(r, false).then(function (res) {
+            Log.add('Data', 'Deleted ' + res.deleted + ' rows from ' + Admin.dwhats.join(',') +
+              ((res.months || []).length ? ' (' + res.months.join(', ') + ')' : ''),
+              Admin.dcodes.join(',') || 'ALL', r[0] + '..' + r[1]);
+            Admin.ddel = null;
+            if (!res.ok && !res.deleted) return Admin.oops(res);
+            /* a FULL pull: the published PJP lives in a master, and a light sync does not fetch those */
+            return DB.pull(true).then(function () {
+              render();
+              return Admin.told(res, r);
+            }).then(function () {
+              if (res.errors.length) return Admin.oops(res);
+              if (Admin.dwhats.some(function (w) { return /^(PJP|EVERYTHING)$/.test(w); }) &&
+                  !Pjp.winOpen())
+                toast('PJP hat gaya aur window band hai — Users tab se uska PJP kholna padega', 7000);
+            });
           });
         });
       });
@@ -12580,6 +12755,31 @@ var Admin = {
       '</div></div>';
   },
   mFold: function () { Admin.mOpen = !Admin.mOpen; render(); },
+
+  /* ══ is the sheet script the one this app expects? ══
+     `ping` reads no sheet and needs no token — the cheapest question in the API. Asked once per
+     session, the moment the Data screen opens, because that is where a stale deployment bites. */
+  _ver:undefined,
+  verCheck: function (again) {
+    if (Admin._ver !== undefined && !again) return;
+    Admin._ver = '';                                    /* asked — do not ask again this render */
+    Api.get({ action:'ping' }).then(function (r) {
+      Admin._ver = (r && r.ver) || '?';
+      render();
+    }, function () { Admin._ver = '?'; render(); });
+  },
+  verOld: function () {
+    var v = Admin._ver;
+    if (!v || v === '?') return false;
+    return String(v) !== String(NEED_VER);
+  },
+  verStrip: function () {
+    if (!Admin.verOld()) return '';
+    return '<div class="banner r"><span>!</span><div><b>Sheet ka script purana hai — v' +
+      esc(Admin._ver) + ', chahiye v' + esc(NEED_VER) + '</b><br><span style="font-weight:500">' +
+      'Delete, PJP delete aur kuch naye column tab tak kaam nahi karenge. Apps Script me backend.gs ' +
+      'dobara paste karo, phir Deploy → New deployment.</span></div></div>';
+  },
 
   /* a live "kaha tak pahucha hai" line per employee, so an HOD can see progress at a glance
      and jump into the exact screen the rep is looking at */
