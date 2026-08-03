@@ -239,12 +239,24 @@ td.num,th.num{text-align:right}
 .nav button.hot:not(.on)::after{content:'';position:absolute;top:5px;left:50%;margin-left:12px;
   width:6px;height:6px;border-radius:50%;background:var(--warn)}
 @media(min-width:900px){
-  body{padding-bottom:0;padding-left:216px}
-  .nav{top:0;bottom:0;right:auto;width:216px;flex-direction:column;border-top:0;border-right:1px solid var(--line);padding:12px 8px}
-  .nav button{flex:0 0 auto;flex-direction:row;justify-content:flex-start;gap:11px;padding:11px 12px;border-radius:var(--r-s);font-size:13.5px}
+  body{padding-bottom:0;padding-left:212px;transition:padding-left .18s}
+  .nav{top:0;bottom:0;right:auto;width:212px;flex-direction:column;border-top:0;
+    border-right:1px solid var(--line);padding:10px 8px;gap:2px;overflow-y:auto;
+    transition:transform .18s}
+  /* a ROW, not a stretched panel: `.fit` is always true for a vertical strip, and its flex:1 1 0 was
+     sharing the whole window height between eight tabs */
+  .nav button, .nav.fit button{flex:0 0 auto;flex-direction:row;justify-content:flex-start;gap:10px;
+    padding:0 12px;border-radius:var(--r-s);font-size:13.5px;min-height:40px;text-align:left}
   .nav button.on{background:var(--blue-l)}
+  .nav button.hot:not(.on)::after{top:50%;left:auto;right:12px;margin:-3px 0 0 0}
   .topbar{margin-left:0}
+  /* folded away — the topbar button brings it back */
+  body.navoff{padding-left:0}
+  body.navoff .nav{transform:translateX(-100%)}
+  body #tb_menu{display:inline-flex}   /* beats the base rule, which is declared further down */
 }
+
+#tb_menu{display:none}
 
 /* login */
 .login{min-height:100vh;display:grid;place-items:center;padding:20px;
@@ -784,6 +796,8 @@ label.f i{font-style:normal;font-weight:500;color:var(--ink-3)}
       <div class="sub" id="tb_sub">—</div>
     </div>
     <div class="right">
+      <!-- the side panel toggle: desktop only (on a phone the nav is the bottom bar) -->
+      <button class="chip" id="tb_menu" onclick="Nav.fold()" title="Menu" aria-label="Menu">☰</button>
       <!-- language is one tap from every screen: the topbar is always there -->
       <button class="chip" id="tb_lang" onclick="I18n.pick()" title="Language">EN</button>
       <button class="chip" id="tb_sync" onclick="Sync.now(true,this)">↻ Sync</button>
@@ -2440,7 +2454,7 @@ I18n.D.en = I18n.EN = {
   'Parent ke saath child row apne aap jaati hai — order ke saath uski lines aur photo, shop/POSM ke saath unki photo. Koi aadha record nahi bachta.':'A child row always follows its parent — an order takes its lines and photos, a shop or POSM audit takes its photos. No half record is left.',
   'Month wali cheezein (PJP draft, TA/DA) tabhi jaati hain jab poora month range me ho — ek din delete karne se poora month nahi jata.':'Month-keyed things (the PJP draft, TA/DA) only go when the whole month is inside the range — deleting one day never takes the month.',
   'Activity log apne aap nahi jata, Drive ki photo file nahi jati, master tab (employee, store, product, config, phasing) kabhi nahi chhutte.':'The activity log is never taken automatically, Drive photo files stay, and the master tabs (employees, stores, products, config, phasing) are never touched.',
-  'Delete sirf Admin kar sakta hai, HOD nahi. Employee ke paas delete hai hi nahi — uske Data tab me sirf download hai.':'Only an Admin can delete, not an HOD. An employee has no delete at all — his Data tab is download only.',
+  'Delete Admin aur HOD dono kar sakte hain. Employee ke paas delete hai hi nahi — uske Data tab me sirf download hai.':'An Admin and an HOD can both delete. An employee has no delete at all — his Data tab is download only.',
   'What is in this file':'What is in this file',
   'Order ke saath uski lines aur us par li gayi photo row bhi jayegi — aadha record nahi bachega.':'An order takes its lines and the photo rows shot on it — no half record is left behind.',
   'Naye shop ke saath uski photo row bhi jayegi. Store master (Master_Stores) chhuta nahi.':'A new shop takes its photo rows with it. The store master (Master_Stores) is untouched.',
@@ -2505,7 +2519,7 @@ I18n.D.en = I18n.EN = {
 };
 
 /* ═══════════════ STORE — cache + offline queue ═══════════════ */
-var K = { sess:'g2_session', cache:'g2_cache', queue:'g2_queue', users:'g2_users', pulled:'g2_pulled', lock:'g2_lock' };
+var K = { sess:'g2_session', cache:'g2_cache', queue:'g2_queue', users:'g2_users', pulled:'g2_pulled', lock:'g2_lock', navoff:'g2_navoff' };
 var Store = {
   get: function (k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
   set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
@@ -2960,6 +2974,7 @@ var Auth = {
     var g = $('login_gate'); if (g) g.style.display = 'none';
     $('app').classList.remove('hide');
     Auth.chrome();
+    Nav.restore();
     Nav.build();
     Router.go(Auth.isAdmin() ? 'admin' : 'home');
     DB.pull(true).then(function () { Nav.build(); render(); });
@@ -3358,6 +3373,18 @@ var Nav = {
     var max = el.scrollWidth - el.clientWidth;
     l.classList.toggle('on', max > 4 && el.scrollLeft > 4);
     r.classList.toggle('on', max > 4 && el.scrollLeft < max - 4);
+  },
+  /* ── the desktop side panel folds away ──
+     Remembered, so a wide screen opens the way it was left. On a phone the class does nothing: the
+     rules that read it live inside the ≥900px block. */
+  fold: function (on) {
+    var next = on === undefined ? !document.body.classList.contains('navoff') : !!on;
+    document.body.classList.toggle('navoff', next);
+    try { Store.set(K.navoff, next ? '1' : ''); } catch (e) {}
+    Nav.arrows();
+  },
+  restore: function () {
+    try { if (Store.get(K.navoff) === '1') document.body.classList.add('navoff'); } catch (e) {}
   },
   slide: function (dir) {
     var el = $('nav'); if (!el) return;
@@ -11731,7 +11758,7 @@ var Admin = {
       'me ho — ek din delete karne se poora month nahi jata.</div>' +
       '<div class="hint">Activity log apne aap nahi jata, Drive ki photo file nahi jati, master tab ' +
       '(employee, store, product, config, phasing) kabhi nahi chhutte.</div>' +
-      '<div class="hint">Delete sirf Admin kar sakta hai, HOD nahi. Employee ke paas delete hai hi ' +
+      '<div class="hint">Delete Admin aur HOD dono kar sakte hain. Employee ke paas delete hai hi ' +
       'nahi — uske Data tab me sirf download hai.</div></div>';
 
     h += Admin.master();
@@ -11864,7 +11891,9 @@ var Admin = {
   count: function (el) {
     var r = Admin.dRange();
     return Busy.run('cnt', el, 'Gin raha hai…', function () {
-      return Api.post({ action:'purge', email:Auth.session().email, dry:1,
+      /* a STRING: this flag decides whether rows are destroyed, so it must not depend on how the
+         other end compares types */
+      return Api.post({ action:'purge', email:Auth.session().email, dry:'1',
         sheet:Admin.dwhats.join(','), code:Admin.dcodes.join(',') || 'ALL',
         from:r[0], to:r[1] }).then(function (res) {
         if (!res || !res.ok) { Admin.ddel = null; render();
