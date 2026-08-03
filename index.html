@@ -56,6 +56,16 @@ input,select,textarea{font:inherit;color:var(--ink)}
 .chip{background:rgba(255,255,255,.18);border:0;color:#fff;border-radius:20px;padding:5px 12px;font-size:11.5px;font-weight:600;
   min-height:32px;display:inline-flex;align-items:center;gap:4px}
 
+/* ── a tick row in a multi-select: 40px tall, a 28px box, and the whole row is the target ── */
+.mrow{display:flex;align-items:center;gap:10px;min-height:40px;padding:4px 6px;border-radius:8px;
+  border:1px solid transparent;cursor:pointer}
+.mrow:active{background:#eef2fb}
+.mrow.on{background:var(--ok-l);border-color:#bfe5cf}
+.mrow input{width:28px;height:28px;flex:0 0 auto;accent-color:var(--ok);margin:0}
+.mrow .m{min-width:0;display:flex;flex-direction:column;gap:1px}
+.mrow .t{font-size:13px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mrow .s{font-size:11px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
 /* cards */
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px;box-shadow:var(--sh)}
 .card>h3{font-size:14.5px;display:flex;align-items:center;gap:8px;margin-bottom:4px}
@@ -923,6 +933,7 @@ var I18n = {
       [/(\d+)\s+photo\b/g, 'photo', 'photos'], [/(\d+)\s+user\b/g, 'user', 'users'],
       /* the download and delete screens count rows out loud — 1 rows reads like a bug */
       [/(\d+)\s+rows?\b/g, 'row', 'rows'], [/(\d+)\s+draft\b/g, 'draft', 'drafts'],
+      [/(\d+)\s+reports?\b/g, 'report', 'reports'], [/(\d+)\s+employees?\b/g, 'employee', 'employees'],
       [/(\d+)\s+line\b/g, 'line', 'lines'], [/(\d+)\s+tab\b/g, 'tab', 'tabs']],
   /* translate a plain string (a toast, a dialog title, a canvas label) */
   s: function (str) {
@@ -2434,6 +2445,30 @@ I18n.D.en = I18n.EN = {
   'Order ke saath uski lines aur us par li gayi photo row bhi jayegi — aadha record nahi bachega.':'An order takes its lines and the photo rows shot on it — no half record is left behind.',
   'Naye shop ke saath uski photo row bhi jayegi. Store master (Master_Stores) chhuta nahi.':'A new shop takes its photo rows with it. The store master (Master_Stores) is untouched.',
   'Activity log record hai — kisne kya kiya. Isse hataane par wo history chali jayegi.':'The activity log is the record of who did what. Remove it and that history is gone.',
+  'Order detail':'Order detail',
+  'Claim detail':'Claim detail',
+  'Store code / city':'Store code / city',
+  'Visit type':'Visit type',
+  'DA / food':'DA / food',
+  'Lodging':'Lodging',
+  'Station / city':'Station / city',
+  'Is order me koi SKU nahi — ye No Order / Cancel wala visit hai.':'No SKU in this order — it was a No Order / Cancel visit.',
+  'Kaun kaun si report':'Which reports',
+  'Ek se zyada chuno — har ek apne tab me aayegi':'Pick more than one — each gets its own tab',
+  'Kiska data':'Whose data',
+  'Khali chhodo to sab employee':'Leave it empty for every employee',
+  'Report dhoondo':'Search the reports',
+  'Group, ya seedha ek tab — ek se zyada bhi':'A group, or a single tab — more than one is fine',
+  'ek tab':'one tab',
+  'Kuch nahi mila':'Nothing matched',
+  'Pehle report chuno':'Pick a report first',
+  'Apni koi bhi report — ek ya kai — jitne din ki chahiye, Excel me. Sirf aapka data jata hai.':'Any of your own reports — one or several — for as many days as you want, as Excel. Only your data goes into it.',
+  'kholne ke liye tap karo':'tap to open',
+  'band karne ke liye tap karo':'tap to close',
+  'row · read-only ·':'rows · read-only ·',
+  '7 din':'7 days',
+  'Published PJP':'Published PJP',
+  'PJP drafts':'PJP drafts',
   'Order punch karo':'Punch the order',
   /* live updates + the read-only plan / waiting screen */
   'HOD ne approve kar diya — aage badho':'The HOD approved it — carry on',
@@ -3475,6 +3510,39 @@ var UI = {
     return '<div class="strip b"><span class="g"><span class="spin"></span></span>' +
       '<div class="m"><b>' + esc(msg || 'Data load ho raha hai…') + '</b> <i>· sheet se aa raha hai</i></div></div>' +
       card + card + card;
+  },
+
+  /* ══ MULTI-SELECT ══
+     o.items  [[value, label, hint]]      o.sel   the chosen values
+     o.tgl    'Admin.tglKind'  → called with one value          o.all 'Admin.allKinds' → (1|0)
+     o.q / o.onQ  a search box, shown once the list is long     o.max  rows before it scrolls
+     Ticks are 28px, the row is 40px: this is a list a thumb uses, not a mouse. */
+  multi: function (o) {
+    var sel = o.sel || [], items = o.items || [];
+    var has = function (v) { return sel.indexOf(v) >= 0; };
+    var q = String(o.q || '').trim().toUpperCase();
+    var show = q ? items.filter(function (x) {
+      return (String(x[1]) + ' ' + String(x[0]) + ' ' + String(x[2] || '')).toUpperCase().indexOf(q) >= 0;
+    }) : items;
+    var h = '<div class="lrow" style="padding:2px 0 6px"><div class="m">' +
+      '<div class="t" style="font-size:12.5px">' + esc(o.label || 'Chuno') +
+        (sel.length ? ' — ' + sel.length : '') + '</div>' +
+      (o.sub ? '<div class="s">' + esc(o.sub) + '</div>' : '') + '</div>' +
+      '<button class="btn ghost xs" style="flex:0 0 auto" onclick="' + o.all + '(1)">Sab</button>' +
+      '<button class="btn ghost xs" style="flex:0 0 auto" onclick="' + o.all + '(0)">Clear</button></div>';
+    if (o.onQ && items.length > 10)
+      h += '<input class="in" placeholder="' + esc(o.qph || 'Dhoondo') + '" value="' + esc(o.q || '') +
+        '" oninput="' + o.onQ + '(this.value)">' +
+        '<div class="hint" style="margin:4px 0 2px">' + show.length + ' / ' + items.length + '</div>';
+    h += '<div class="pane" style="max-height:' + (o.max || 210) + 'px;margin-top:4px">';
+    h += show.length ? show.map(function (x) {
+      return '<label class="mrow' + (has(x[0]) ? ' on' : '') + '">' +
+        '<input type="checkbox"' + (has(x[0]) ? ' checked' : '') + ' onchange="' + o.tgl +
+          '(\'' + Appr.q(x[0]) + '\')">' +
+        '<span class="m"><span class="t">' + esc(x[1]) + '</span>' +
+        (x[2] ? '<span class="s">' + esc(x[2]) + '</span>' : '') + '</span></label>';
+    }).join('') : '<div class="hint" style="padding:8px 2px">Kuch nahi mila</div>';
+    return h + '</div>';
   },
   kpi: function (v, l, cls) { return '<div class="kpi ' + (cls || '') + '"><b>' + v + '</b><span>' + esc(l) + '</span></div>'; }
 };
@@ -7963,9 +8031,19 @@ var Rep = {
       ['Ref', 'Reference'], ['Detail', 'Detail']] }
   },
   /* the rows a (report, employee, range) choice describes */
+  /* '' / [] → everybody; a string or a list of codes → only those. One definition, so the count on a
+     screen and the rows in the file can never disagree. */
+  codeSet: function (code) {
+    var a = code == null ? [] : (typeof code === 'string' ? [code] : code);
+    a = a.filter(function (c) { return c && String(c).toUpperCase() !== 'ALL'; });
+    if (!a.length) return null;
+    var out = {}; a.forEach(function (c) { out[String(c).trim().toUpperCase()] = 1; });
+    return out;
+  },
   anyRows: function (kind, code, from, to) {
+    var want = Rep.codeSet(code);
     return DB.rows(kind).filter(function (x) {
-      if (code && String(x.EmpCode || '').toUpperCase() !== String(code).toUpperCase()) return false;
+      if (want && !want[String(x.EmpCode || '').trim().toUpperCase()]) return false;
       var d = toISO(x.Date);
       if (!d) return true;                               /* TaDa / PjpDraft are keyed by Month */
       return d >= from && d <= to;
@@ -8024,9 +8102,18 @@ var Rep = {
       filter:'A4:' + last + out.length };
   },
   who: function (code) {
-    if (!code) return 'sab employee';
-    var e = DB.emp(code) || {};
-    return (e.Name || code) + ' (' + code + ')';
+    var a = code == null ? [] : (typeof code === 'string' ? [code] : code);
+    a = a.filter(function (c) { return c && String(c).toUpperCase() !== 'ALL'; });
+    if (!a.length) return 'sab employee';
+    if (a.length > 3) return a.length + ' employee';
+    return a.map(function (c) { var e = DB.emp(c) || {}; return (e.Name || c) + ' (' + c + ')'; })
+            .join(', ');
+  },
+  /* a file name cannot be a comma-separated list of thirty codes */
+  fileWho: function (code) {
+    var a = code == null ? [] : (typeof code === 'string' ? [code] : code);
+    a = a.filter(function (c) { return c && String(c).toUpperCase() !== 'ALL'; });
+    return !a.length ? 'ALL' : a.length === 1 ? String(a[0]) : (a.length + 'emp');
   },
   any: function (kind, code, from, to) {
     var rows = Rep.anyRows(kind, code, from, to);
@@ -8048,8 +8135,49 @@ var Rep = {
       sheets.push(Rep.anySheet('SecOrderLines', lines, null, Rep.who(code) + '  ·  ' +
         dmy(from) + ' – ' + dmy(to) + '  ·  ' + lines.length + ' line'));
     }
-    return Xl.save('GARUDA_' + def.t.replace(/\W+/g, '') + '_' + (code || 'ALL') + '_' + from + '_' + to,
+    return Xl.save('GARUDA_' + def.t.replace(/\W+/g, '') + '_' + Rep.fileWho(code) + '_' + from + '_' + to,
       sheets);
+  },
+
+  /* ══ the reports HE PICKED, one tab each ══
+     `everything` is this with the list left out. Kept separate so "two reports" does not mean "wait for
+     thirteen": the count on the screen is what the file holds. */
+  some: function (kinds, code, from, to) {
+    kinds = (kinds || []).filter(function (k) { return !!k; });
+    if (!kinds.length) return { sheets:0 };
+    var ttl = Rep.ttl('GARUDA — ' + kinds.length + ' report', Rep.who(code) + '  ·  ' + dmy(from) +
+      ' – ' + dmy(to), 8);
+    var about = ttl.rows.concat([Rep.kv('Employee', Xl.t(Rep.who(code), Xl.S.V)),
+      Rep.kv('From', Xl.dt(from)), Rep.kv('To', Xl.dt(to)),
+      Rep.kv('By', Xl.t(DB.me.name, Xl.S.V)), [],
+      [Xl.t('What is in this file', Xl.S.T2), Xl.t('', Xl.S.T2)]]);
+    var sheets = [], n = 0;
+    kinds.forEach(function (kind) {
+      /* the PJP is a pair of tabs of its own */
+      if (kind === 'PJP') {
+        var x = Admin.pjpRows(code, from, to);
+        about.push([Xl.t(I18n.s('Published PJP'), Xl.S.K), Xl.n(x.pub.length)]);
+        about.push([Xl.t(I18n.s('PJP drafts'), Xl.S.K), Xl.n(x.dr.length)]);
+        var sub0 = Rep.who(code) + '  ·  ' + dmy(from) + ' – ' + dmy(to);
+        if (x.pub.length) { sheets.push(Rep.anySheet('Master_PJP', x.pub, Admin.PJPCOL, sub0)); n++; }
+        if (x.dr.length) { sheets.push(Rep.anySheet('PjpDraft', x.dr, Admin.DRFCOL, sub0)); n++; }
+        return;
+      }
+      var rows = Rep.anyRows(kind, code, from, to);
+      about.push([Xl.t(I18n.s((Rep.ANY[kind] || { t:kind }).t), Xl.S.K), Xl.n(rows.length)]);
+      if (!rows.length) return;
+      var sub = Rep.who(code) + '  ·  ' + dmy(from) + ' – ' + dmy(to) + '  ·  ' + rows.length + ' row';
+      sheets.push(Rep.anySheet(kind, rows, null, sub)); n++;
+      if (kind === 'SecOrders') {
+        var pos = {}; rows.forEach(function (o) { pos[String(o.PoNumber)] = 1; });
+        var lines = DB.rows('SecOrderLines').filter(function (l) { return pos[String(l.PoNumber)]; });
+        if (lines.length) { sheets.push(Rep.anySheet('SecOrderLines', lines, null, sub)); n++; }
+      }
+    });
+    sheets.unshift({ name:'About', cols:[30, 16, 14, 14, 14, 14, 14, 14], tab:'FF8890A6', portrait:1,
+      rowH:ttl.rowH, rows:about, merges:ttl.merges });
+    Xl.save('GARUDA_' + kinds.length + 'reports_' + Rep.fileWho(code) + '_' + from + '_' + to, sheets);
+    return { sheets:n };
   },
   /* every report in one workbook — one tab each, the same formatting */
   everything: function (code, from, to) {
@@ -8074,7 +8202,7 @@ var Rep = {
     });
     sheets.unshift({ name:'About', cols:[30, 16, 14, 14, 14, 14, 14, 14], tab:'FF8890A6', portrait:1,
       rowH:ttl.rowH, rows:about, merges:ttl.merges });
-    Xl.save('GARUDA_ALL_' + (code || 'ALL') + '_' + from + '_' + to, sheets);
+    Xl.save('GARUDA_ALL_' + Rep.fileWho(code) + '_' + from + '_' + to, sheets);
     return { sheets:n };
   },
   tab: function (name, cols, rows) {
@@ -10161,7 +10289,7 @@ var Tada = {
    tab is the same machinery (Rep.any) with an employee picker; here the employee is never a choice —
    it is whoever is logged in, checked again on the way out. */
 var My = {
-  kind:'SecOrders', from:'', to:'',
+  kind:'SecOrders', kinds:['SecOrders'], from:'', to:'',
   /* only reports that belong to ONE employee. Nothing team-wide is offered, so nothing team-wide can
      be asked for. */
   KINDS:[['SecOrders', 'Mere orders (lines ke saath)'], ['Eod', 'Mera EOD'],
@@ -10191,15 +10319,16 @@ var My = {
       return String(x.EmpCode || '').trim().toUpperCase() === me; });
   },
   html: function () {
-    var r = My.range(), rows = My.rows(My.kind, r);
+    var r = My.range(), kinds = My.kinds;
+    var per = kinds.map(function (k) { return [k, My.rows(k, r).length]; });
+    var rows = per.reduce(function (a, x) { return a + x[1]; }, 0);
     var h = UI.head('', 'Mera data',
-      'Apni koi bhi report, jitne din ki chahiye — Excel me download karo. Sirf aapka data jata hai.');
+      'Apni koi bhi report — ek ya kai — jitne din ki chahiye, Excel me. Sirf aapka data jata hai.');
     h += '<div class="card">' +
-      '<label class="f">Report</label>' +
-      '<select class="in" onchange="My.set(\'kind\',this.value)">' + My.KINDS.map(function (k) {
-        return '<option value="' + k[0] + '"' + (My.kind === k[0] ? ' selected' : '') + '>' +
-          esc(k[1]) + '</option>'; }).join('') + '</select>' +
-      '<div class="pair" style="margin-top:8px">' +
+      UI.multi({ label:'Kaun kaun si report', sub:'Ek se zyada chuno — har ek apne tab me aayegi',
+        items:My.KINDS.map(function (k) { return [k[0], k[1], '']; }), sel:kinds,
+        tgl:'My.tgl', all:'My.all', max:230 }) +
+      '<div class="pair" style="margin-top:10px">' +
         '<div><label class="f">From</label><input class="in" type="date" max="' + today() +
           '" value="' + esc(r[0]) + '" onchange="My.set(\'from\',this.value)"></div>' +
         '<div><label class="f">To</label><input class="in" type="date" max="' + today() +
@@ -10207,10 +10336,10 @@ var My = {
       '<div class="btns" style="margin-top:8px">' +
         '<button class="btn ghost sm" onclick="My.quick(30)">Last 30 din</button>' +
         '<button class="btn ghost sm" onclick="My.quick(0)">Ye month</button></div>' +
-      '<div class="hint" style="margin-top:8px">' + rows.length + ' row milenge — ' +
-        esc(My.lbl(My.kind)) + ' · ' + dmy(r[0]) + ' – ' + dmy(r[1]) + '</div>' +
-      '<div class="btns"><button class="btn" onclick="My.dl(this)"' + (rows.length ? '' : ' disabled') +
-        '>Excel download</button>' +
+      '<div class="hint" style="margin-top:8px">' + rows + ' row milenge — ' + kinds.length +
+        ' report · ' + dmy(r[0]) + ' – ' + dmy(r[1]) + '</div>' +
+      '<div class="btns"><button class="btn" onclick="My.dl(this)"' +
+        (kinds.length && rows ? '' : ' disabled') + '>Excel download</button>' +
       '<button class="btn ghost" onclick="My.dlAll(this)">Sab reports (ek file)</button></div>' +
       '</div>';
 
@@ -10218,13 +10347,19 @@ var My = {
     h += '<div class="sec-title">Is period me kitna</div><div class="card"><div class="tw"><table><tbody>' +
       My.KINDS.map(function (k) {
         var n = My.rows(k[0], r).length;
-        return '<tr' + (k[0] === My.kind ? ' class="me"' : '') + '><td>' + esc(k[1]) + '</td>' +
+        return '<tr' + (kinds.indexOf(k[0]) >= 0 ? ' class="me"' : '') + '><td>' + esc(k[1]) + '</td>' +
           '<td class="num">' + n + '</td></tr>'; }).join('') +
       '</tbody></table></div>' +
       '<div class="hint" style="margin-top:8px">Ye sirf aapke rows hain — team ka data kabhi nahi ' +
       'aata. Kisi aur ka data chahiye to HOD se maango.</div></div>';
     return h;
   },
+  tgl: function (v) {
+    var a = My.kinds.slice(), i = a.indexOf(v);
+    if (i >= 0) a.splice(i, 1); else a.push(v);
+    My.kinds = a; render();
+  },
+  all: function (on) { My.kinds = on ? My.KINDS.map(function (k) { return k[0]; }) : []; render(); },
   set: function (k, v) { My[k] = v; render(); },
   quick: function (days) {
     var t = today();
@@ -10235,10 +10370,14 @@ var My = {
   dl: function (el) {
     var r = My.range(), me = String(DB.me.code || '').trim().toUpperCase();
     if (!me) return toast('Login phir se karo');
+    var kinds = My.kinds.slice();
+    if (!kinds.length) return toast('Pehle report chuno');
     return Busy.run('mydl', el, 'Ban raha hai…', function () {
-      var f = Rep.any(My.kind, me, r[0], r[1]);
-      Log.add('Data', 'Downloaded ' + My.kind, me, r[0] + '..' + r[1]);
-      toast('Download shuru — ' + My.lbl(My.kind));
+      /* the code is STILL not a parameter he can choose — it is who is logged in, every time */
+      var f = kinds.length === 1 ? Rep.any(kinds[0], me, r[0], r[1])
+                                 : Rep.some(kinds, me, r[0], r[1]);
+      Log.add('Data', 'Downloaded ' + kinds.join(','), me, r[0] + '..' + r[1]);
+      toast('Download shuru — ' + kinds.length + ' report');
       return Promise.resolve(f);
     });
   },
@@ -10477,30 +10616,35 @@ var Appr = {
        The number on a chip is what still NEEDS THIS PERSON, not how many rows exist: once a PJP is
        approved or rejected the chip goes back to plain "PJP". Same for orders — an order that has
        been moved to Billing Done / Cancel stops counting. */
+    /* a count means "this needs somebody", so it is only ever on what is still open — and it looks
+       like WhatsApp: a red circle on the chip, never "(3)" inside the label */
     var todo = all.filter(Appr.todo).length;
-    var kinds = [['all', 'Sab' + (todo ? ' (' + todo + ')' : '')]];
+    var kinds = [['all', 'Sab', todo]];
     Appr.KINDS.forEach(function (k) {
       var g = all.filter(function (o) { return o.kind === k[0]; });
       if (!g.length) return;
-      var n2 = g.filter(Appr.todo).length;
-      kinds.push([k[0], k[1] + (n2 ? ' (' + n2 + ')' : '')]);
+      kinds.push([k[0], k[1], g.filter(Appr.todo).length]);
     });
     h += '<div class="card" style="padding:10px"><div class="hint" style="margin-bottom:6px">Type</div>' +
       '<div style="display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px">' + kinds.map(function (c) {
-        return '<button class="btn ' + (Appr.kindF === c[0] ? '' : 'ghost') + ' sm" style="flex:0 0 auto"' +
-          ' onclick="Appr.setKind(&quot;' + esc(c[0]) + '&quot;)">' + esc(c[1]) + '</button>'; }).join('') + '</div>';
+        return '<button class="btn ' + (Appr.kindF === c[0] ? '' : 'ghost') + ' sm" style="flex:0 0 auto;position:relative"' +
+          ' onclick="Appr.setKind(&quot;' + esc(c[0]) + '&quot;)">' + esc(c[1]) +
+          (c[2] ? '<span class="bdg">' + (c[2] > 99 ? '99+' : c[2]) + '</span>' : '') + '</button>'; }).join('') + '</div>';
 
     var byKind = all.filter(function (o) { return Appr.kindF === 'all' || o.kind === Appr.kindF; });
     var k2 = { pending:0, approved:0, rejected:0, draft:0, partial:0 };
     byKind.forEach(function (o) { k2[o.status]++; });
-    var chips = [['all', 'Sab (' + byKind.length + ')'], ['pending', 'Pending (' + k2.pending + ')'],
-      ['approved', 'Approved (' + k2.approved + ')'], ['rejected', 'Rejected (' + k2.rejected + ')']];
-    if (k2.partial) chips.push(['partial', 'Partly rejected (' + k2.partial + ')']);
-    if (k2.draft) chips.push(['draft', 'Draft (' + k2.draft + ')']);
+    /* only what is WAITING gets a number. Approved and rejected are finished — a count there is
+       decoration, and it made the strip read like a scoreboard. */
+    var chips = [['all', 'Sab', 0], ['pending', 'Pending', k2.pending],
+      ['approved', 'Approved', 0], ['rejected', 'Rejected', 0]];
+    if (k2.partial) chips.push(['partial', 'Partly rejected', k2.partial]);
+    if (k2.draft) chips.push(['draft', 'Draft', 0]);
     h += '<div class="hint" style="margin:10px 0 6px">Status</div>' +
       '<div style="display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px">' + chips.map(function (c) {
-        return '<button class="btn ' + (Appr.filter === c[0] ? '' : 'ghost') + ' sm" style="flex:0 0 auto"' +
-          ' onclick="Appr.set(&quot;' + c[0] + '&quot;)">' + esc(c[1]) + '</button>'; }).join('') + '</div></div>';
+        return '<button class="btn ' + (Appr.filter === c[0] ? '' : 'ghost') + ' sm" style="flex:0 0 auto;position:relative"' +
+          ' onclick="Appr.set(&quot;' + c[0] + '&quot;)">' + esc(c[1]) +
+          (c[2] ? '<span class="bdg">' + (c[2] > 99 ? '99+' : c[2]) + '</span>' : '') + '</button>'; }).join('') + '</div></div>';
 
     var show = byKind.filter(function (o) { return Appr.filter === 'all' || o.status === Appr.filter; });
     if (!show.length) {
@@ -10562,6 +10706,8 @@ var Appr = {
 
       h += '<table class="ap-t">' + o.rows.map(function (r) {
         return '<tr><td>' + esc(r[0]) + '</td><td><b>' + esc(r[1]) + '</b></td></tr>'; }).join('') + '</table>';
+      /* and then what it actually IS — the SKU lines of an order, the days of a claim */
+      h += '<div onclick="event.stopPropagation()">' + Appr.detail(o) + '</div>';
 
       if (o.note) h += '<div class="banner ' + (o.status === 'rejected' ? 'r' : 'b') + '" style="margin-top:10px">' +
         '<span></span><div><b>HOD ka message</b><br><span style="font-weight:500">' + esc(o.note) + '</span></div></div>';
@@ -10587,6 +10733,102 @@ var Appr = {
         o.go + '\')">Open that tab</button></div>';
     }
     return h + '</div>';
+  },
+
+
+  /* ══ what is actually IN this request ══
+     The timeline says when it moved; this says what it is. An order shows its SKU lines with MRP,
+     units, value and NSV — the numbers an HOD is deciding on — and a claim shows the days it is made
+     of. Nobody should have to leave the queue to find out what they are approving. */
+  detail: function (o) {
+    if (o.act === 'so') return Appr.orderDetail(o);
+    /* an HOD gets Tada.hodView below — the same days, with a deduction box on each. Printing both
+       would be the same table twice. */
+    if (o.act === 'tada') return Auth.isAdmin() ? '' : Appr.tadaDetail(o);
+    return '';
+  },
+  orderDetail: function (o) {
+    var ord = DB.rows('SecOrders').filter(function (x) {
+      return String(x.PoNumber) === String(o.key); })[0];
+    if (!ord) return '';
+    var lines = [];
+    try { lines = JSON.parse(ord.LinesJson || '[]') || []; } catch (e) {}
+    if (!lines.length) lines = DB.rows('SecOrderLines').filter(function (l) {
+      return String(l.PoNumber) === String(o.key); });
+
+    var h = '<div class="sec-title" style="margin-top:12px">Order detail</div>' +
+      '<table class="ap-t">' +
+      '<tr><td>Store</td><td><b>' + esc(ord.StoreName || '—') + '</b></td></tr>' +
+      '<tr><td>Store code / city</td><td><b>' + esc(ord.CompanyCode || '—') + ' · ' +
+        esc(ord.City || '—') + '</b></td></tr>' +
+      '<tr><td>Distributor</td><td><b>' + esc(ord.DbName || '—') + '</b></td></tr>' +
+      '<tr><td>Visit type</td><td><b>' + esc(ord.Source || '—') + '</b></td></tr>' +
+      (ord.Reason ? '<tr><td>Reason</td><td><b>' + esc(ord.Reason) + '</b></td></tr>' : '') +
+      (ord.Remarks ? '<tr><td>Remarks</td><td><b>' + esc(ord.Remarks) + '</b></td></tr>' : '') +
+      '</table>';
+
+    if (!lines.length) return h + '<div class="hint" style="margin-top:8px">Is order me koi SKU nahi — ' +
+      'ye No Order / Cancel wala visit hai.</div>';
+
+    var u = 0, v = 0, nsv = 0;
+    lines.forEach(function (l) { u += num(l.Units); v += num(l.Value); nsv += num(l.NsvLakh); });
+    h += '<div class="tw" style="margin-top:10px"><table><thead><tr><th>SKU</th>' +
+      '<th class="num">MRP</th><th class="num">Qty</th><th class="num">Value</th>' +
+      '<th class="num">NSV ₹L</th></tr></thead><tbody>' +
+      lines.map(function (l) {
+        return '<tr><td><b class="nm">' + esc(l.SkuName || l.Sku || '—') + '</b>' +
+          '<div class="hint">' + esc(l.Brand || '') + (l.Category ? ' · ' + esc(l.Category) : '') +
+          (l.MslStatus ? ' · ' + esc(l.MslStatus) : '') + ' · ' + esc(l.Sku || '') + '</div></td>' +
+          '<td class="num">' + inr(l.Mrp) + '</td>' +
+          '<td class="num">' + num(l.Units) + '</td>' +
+          '<td class="num">' + inr(l.Value) + '</td>' +
+          '<td class="num">' + lakh(l.NsvLakh) + '</td></tr>'; }).join('') +
+      '<tr class="tot"><td><b>TOTAL — ' + lines.length + ' SKU</b></td><td></td>' +
+      '<td class="num"><b>' + u + '</b></td><td class="num"><b>' + inr(v) + '</b></td>' +
+      '<td class="num"><b>' + lakh(nsv) + '</b></td></tr></tbody></table></div>';
+    return h;
+  },
+  /* the claim, day by day — the same table the rep filled, read-only, with deductions shown in red */
+  tadaDetail: function (o) {
+    var r = DB.rows('TaDa').filter(function (x) { return String(x.Id) === String(o.key); })[0];
+    if (!r) return '';
+    var days = {}, ded = {};
+    try { days = JSON.parse(r.DaysJson || '{}') || {}; } catch (e) {}
+    try { ded = JSON.parse(r.DeductJson || '{}') || {}; } catch (e) {}
+    var keys = Object.keys(days).sort();
+    var h = '<div class="sec-title" style="margin-top:12px">Claim detail</div>' +
+      '<table class="ap-t">' +
+      '<tr><td>Month</td><td><b>' + esc(monthName(r.Month) || r.Month || '—') + '</b></td></tr>' +
+      '<tr><td>Travel</td><td><b>' + inr(r.TravelAmount) + '</b></td></tr>' +
+      '<tr><td>DA / food</td><td><b>' + inr(num(r.DaAmount) + num(r.FoodAmount)) + '</b></td></tr>' +
+      (num(r.LodgeAmount) ? '<tr><td>Lodging</td><td><b>' + inr(r.LodgeAmount) + '</b></td></tr>' : '') +
+      (num(r.MeetAmount) ? '<tr><td>Meeting</td><td><b>' + inr(r.MeetAmount) + '</b></td></tr>' : '') +
+      (num(r.OtherAmount) ? '<tr><td>Other</td><td><b>' + inr(r.OtherAmount) + '</b></td></tr>' : '') +
+      '<tr><td>Claim total</td><td><b>' + inr(r.Total) + '</b></td></tr>' +
+      (num(r.DeductTotal) ? '<tr><td>Deduction</td><td><b>− ' + inr(r.DeductTotal) + '</b></td></tr>' +
+        '<tr><td>Net payable</td><td><b>' + inr(r.NetTotal || (num(r.Total) - num(r.DeductTotal))) +
+        '</b></td></tr>' : '') +
+      '</table>';
+    if (!keys.length) return h;
+    h += '<div class="tw" style="margin-top:10px"><table><thead><tr><th>Date</th><th>Station / city</th>' +
+      '<th class="num">TA</th><th class="num">DA</th><th class="num">Lodge</th>' +
+      '<th class="num">Cut</th></tr></thead><tbody>';
+    var ta = 0, da = 0, lo = 0, cut = 0;
+    keys.forEach(function (k) {
+      var d = days[k] || {}, x = num((ded[k] || {}).amt || ded[k]);
+      ta += num(d.ta); da += num(d.da) + num(d.food); lo += num(d.lodge); cut += x;
+      h += '<tr' + (x ? ' class="bad"' : '') + '><td>' + dmy(k) + '</td>' +
+        '<td>' + esc(Pjp.stn(d.st) || '—') +
+        (d.city ? '<div class="hint">' + esc(d.city) + '</div>' : '') + '</td>' +
+        '<td class="num">' + inr(d.ta) + '</td>' +
+        '<td class="num">' + inr(num(d.da) + num(d.food)) + '</td>' +
+        '<td class="num">' + (num(d.lodge) ? inr(d.lodge) : '—') + '</td>' +
+        '<td class="num">' + (x ? '− ' + inr(x) : '—') + '</td></tr>';
+    });
+    h += '<tr class="tot"><td><b>TOTAL</b></td><td></td><td class="num"><b>' + inr(ta) + '</b></td>' +
+      '<td class="num"><b>' + inr(da) + '</b></td><td class="num"><b>' + inr(lo) + '</b></td>' +
+      '<td class="num"><b>' + (cut ? '− ' + inr(cut) : '—') + '</b></td></tr></tbody></table></div>';
+    return h;
   },
 
   /* Does this row still need action FROM THE PERSON LOOKING?
@@ -11221,6 +11463,66 @@ var Admin = {
 
   /* ══ 4. DATA — a formatted download, and a delete that shows its work ══ */
   dkind:'SecOrders', dcode:'', ddel:null,
+  /* ══ the Data tab's own state ══
+     Lists, not single values: "these reports, for these people, over these days". */
+  dkinds:['SecOrders'], dwhats:[], dcodes:[], dq:'', dqe:'', dfrom:'', dto:'', mOpen:false,
+  /* a plain from–to. The Summary's Today/Days/Month strip does not belong here: a month clamped to
+     today can never cover a month, and "download August" is the whole of August. */
+  dRange: function () {
+    var t = today();
+    var f = Admin.dfrom, o = Admin.dto;
+    if (!f && !o) { f = t.slice(0, 8) + '01'; o = t; }
+    if (!f) f = o; if (!o) o = f;
+    if (f > o) { var x = f; f = o; o = x; }
+    return [f, o];
+  },
+  setD: function (k, v) { Admin[k] = v; Admin.ddel = null; render(); },
+  dQuick: function (days) {
+    var t = today();
+    if (days === 0) { Admin.dfrom = t.slice(0, 8) + '01'; Admin.dto = t; }
+    else if (days === -1) { var m = t.slice(0, 7);
+      var last = new Date(+m.slice(0, 4), +m.slice(5, 7), 0);
+      Admin.dfrom = m + '-01'; Admin.dto = iso(last); }
+    else { var d = new Date(t + 'T00:00:00'); d.setDate(d.getDate() - (days - 1));
+      Admin.dfrom = iso(d); Admin.dto = t; }
+    Admin.ddel = null; render();
+  },
+  /* ── the three tick lists ── */
+  tglKind: function (v) { Admin.dkinds = Admin.tgl(Admin.dkinds, v); render(); },
+  allKinds: function (on) {
+    Admin.dkinds = on ? Admin.KINDS.map(function (k) { return k[0]; }) : [];
+    render();
+  },
+  tglWhat: function (v) { Admin.dwhats = Admin.tgl(Admin.dwhats, v); Admin.ddel = null; render(); },
+  allWhats: function (on) {
+    /* "all" here means every GROUP — ticking single tabs as well would count the same row twice */
+    Admin.dwhats = on ? ['EVERYTHING'] : [];
+    Admin.ddel = null; render();
+  },
+  tglEmp: function (v) { Admin.dcodes = Admin.tgl(Admin.dcodes, v); Admin.ddel = null; render(); },
+  allEmps: function (on) {
+    Admin.dcodes = on ? Admin.emps().map(function (e) { return e.code; }) : [];
+    Admin.ddel = null; render();
+  },
+  tgl: function (arr, v) {
+    var a = (arr || []).slice(), i = a.indexOf(v);
+    if (i >= 0) a.splice(i, 1); else a.push(v);
+    return a;
+  },
+  setQ: function (v) { Admin.dq = v; clearTimeout(Admin._dq); Admin._dq = setTimeout(render, 320); },
+  setQe: function (v) { Admin.dqe = v; clearTimeout(Admin._dqe); Admin._dqe = setTimeout(render, 320); },
+  /* "sab employee" or the names, for every line that has to say who this is about */
+  whoText: function () {
+    if (!Admin.dcodes.length) return 'sab employee';
+    if (Admin.dcodes.length <= 2) return Admin.dcodes.map(function (c) {
+      var e = DB.emp(c) || {}; return (e.Name || c); }).join(' + ');
+    return Admin.dcodes.length + ' employee';
+  },
+  /* the employee list, as multi-select items */
+  empItems: function () {
+    return Admin.emps().map(function (e) { return [e.code, e.name, e.code + (e.hq ? ' · ' + e.hq : '')]; });
+  },
+
   KINDS:[['SecOrders', 'Orders (with lines)'], ['Eod', 'EOD'], ['DayPlan', 'Day plans'],
          ['NewStores', 'New outlets'], ['PosmAudit', 'POSM audit'],
          ['PosmRequirement', 'POSM requirement'], ['TaDa', 'TA / DA claims'],
@@ -11248,17 +11550,17 @@ var Admin = {
     ['Month', 'Month'], ['EmpCode', 'Code'], ['EmpName', 'Employee'], ['Status', 'Status'],
     ['SubmittedAt', 'Sent at'], ['HodAt', 'Decided at'], ['HodBy', 'Decided by'],
     ['HodRemarks', 'Remarks'], ['RejectedDays', 'Days sent back'], ['UpdatedAt', 'Updated at']] },
-  pjpRows: function (code, from, to) {
-    var C = String(code || '').trim().toUpperCase();
+  pjpRows: function (codes, from, to) {
+    var want = Admin.codeSet(codes);
     var pub = (DB.m.Master_PJP || []).filter(function (r) {
-      if (C && !DB.same(r.Code, C)) return false;
+      if (want && !want[String(r.Code || '').trim().toUpperCase()]) return false;
       var d = toISO(r.Date);
       return !!d && d >= from && d <= to;
     }).sort(function (a, b) { return String(toISO(a.Date)).localeCompare(String(toISO(b.Date))); });
     /* a month draft counts only when the range covers the WHOLE month — exactly the server's rule, so
        the number on the screen is the number that will go */
     var dr = DB.rows('PjpDraft').filter(function (r) {
-      if (C && String(r.EmpCode || '').trim().toUpperCase() !== C) return false;
+      if (want && !want[String(r.EmpCode || '').trim().toUpperCase()]) return false;
       var m = String(r.Month || '').slice(0, 7);
       if (!/^\d{4}-\d{2}$/.test(m)) return false;
       var last = new Date(+m.slice(0, 4), +m.slice(5, 7), 0);
@@ -11285,9 +11587,9 @@ var Admin = {
     return Xl.save('GARUDA_PJP_' + (code || 'ALL') + '_' + from + '_' + to, sheets);
   },
   /* what removing it will DO — the sentence an admin needs before pressing delete, not after */
-  pjpWarn: function (code, r) {
+  pjpWarn: function (codes, r) {
     r = r || Admin.dRange();
-    var C = code === undefined ? Admin.dcode : code;
+    var C = codes === undefined ? Admin.dcodes : codes;
     var x = Admin.pjpRows(C, r[0], r[1]);
     var open = Pjp.winOpen(), wm = Pjp.winMonth();
     var hits = x.whole.indexOf(wm) >= 0;
@@ -11343,52 +11645,75 @@ var Admin = {
     var hit = Admin.emps().filter(function (x) { return x.code === up || String(x.name).toUpperCase() === up; })[0];
     return hit ? hit.code : up;
   },
-  setCode: function (v) { Admin.dcode = Admin.codeOf(v); Admin.ddel = null; render(); },
+  /* kept: the console's other screens still hand a "NAME (CODE)" string back */
+  setCode: function (v) {
+    var c = Admin.codeOf(v);
+    Admin.dcodes = c ? [c] : [];
+    Admin.ddel = null; render();
+  },
 
   data: function () {
-    var r = Admin.dRange(), code = Admin.dcode;
-    var who = code ? (function () { var e = DB.emp(code) || {}; return (e.Name || code) + ' (' + code + ')'; })()
-                   : 'sab employee';
-    var rows = Admin.pick(Admin.dkind, code, r);
+    var r = Admin.dRange(), codes = Admin.dcodes, who = Admin.whoText();
+    var kinds = Admin.dkinds, whats = Admin.dwhats;
 
-    var h = Admin.periodCard();
+    /* ── the range, and nothing else ── */
+    var h = '<div class="card"><div class="pair">' +
+      '<div><label class="f">From</label><input class="in" type="date" value="' + esc(r[0]) +
+        '" onchange="Admin.setD(\'dfrom\',this.value)"></div>' +
+      '<div><label class="f">To</label><input class="in" type="date" value="' + esc(r[1]) +
+        '" onchange="Admin.setD(\'dto\',this.value)"></div></div>' +
+      '<div class="hint" style="margin-top:8px">' + esc(dmy(r[0]) + ' – ' + dmy(r[1])) +
+      ' · ' + esc(who) + '</div></div>';
+
+    /* ── who ── */
+    h += '<div class="sec-title">Employee</div><div class="card">' +
+      UI.multi({ label:'Kiska data', sub:'Khali chhodo to sab employee', items:Admin.empItems(),
+        sel:codes, tgl:'Admin.tglEmp', all:'Admin.allEmps', q:Admin.dqe, onQ:'Admin.setQe',
+        qph:'Naam, code ya HQ se dhoondo', max:200 }) + '</div>';
+
+    /* ── download ── */
+    var rows = 0, per = [];
+    kinds.forEach(function (k) {
+      var n = Admin.pick(k, codes, r).length;
+      rows += n; per.push([k, n]);
+    });
     h += '<div class="sec-title">Report download</div><div class="card">' +
-      '<label class="f">Report</label><select class="in" onchange="Admin.dkind=this.value;Admin.ddel=null;render()">' +
-      Admin.KINDS.map(function (k) { return '<option value="' + k[0] + '"' +
-        (Admin.dkind === k[0] ? ' selected' : '') + '>' + esc(k[1]) + '</option>'; }).join('') + '</select>' +
-      '<label class="f" style="margin-top:8px">Employee</label>' +
-      Admin.empPick('ad_emp', code, 'Admin.setCode(this.value)') +
-      '<div class="hint" style="margin-top:8px">' + rows.length + ' row milenge — ' +
-      esc(Admin.kindLbl(Admin.dkind)) + ' · ' + esc(who) + ' · ' + esc(Admin.rangeLbl(r)) + '</div>' +
-      (Admin.per === 'M' ? '<div class="hint">Month chuna hai to poora month — aage ke din bhi.</div>' : '') +
-      '<div class="btns"><button class="btn" onclick="Admin.dl(this)"' + (rows.length ? '' : ' disabled') +
-      '>Excel download</button>' +
+      UI.multi({ label:'Kaun kaun si report', sub:'Ek se zyada chuno — har ek apne tab me aayegi',
+        items:Admin.KINDS.map(function (k) { return [k[0], k[1], '']; }), sel:kinds,
+        tgl:'Admin.tglKind', all:'Admin.allKinds', q:Admin.dq, onQ:'Admin.setQ',
+        qph:'Report dhoondo', max:230 }) +
+      '<div class="hint" style="margin-top:8px">' + rows + ' row milenge — ' + kinds.length +
+        ' report · ' + esc(who) + ' · ' + esc(dmy(r[0]) + ' – ' + dmy(r[1])) + '</div>' +
+      (per.length && per.length <= 14 ? '<div class="hint">' + esc(per.map(function (x) {
+        return Admin.kindLbl(x[0]) + ' ' + x[1]; }).join(' · ')) + '</div>' : '') +
+      '<div class="btns"><button class="btn" onclick="Admin.dl(this)"' +
+        (kinds.length && rows ? '' : ' disabled') + '>Excel download</button>' +
       '<button class="btn ghost" onclick="Admin.dlAll(this)">Sab reports (ek file)</button></div></div>';
 
     /* ── delete ── it asks its own question, so looking at a report can never change what goes ── */
-    var d = Admin.ddel, w = Admin.dwhat;
-    var stop = !w || (Admin.needEmp(w) && !code);
-    var prev = w ? Admin.delRows(w, code, r) : { n:0, tabs:{} };
+    var d = Admin.ddel;
+    var needEmp = whats.some(function (w) { return Admin.needEmp(w); }) && !codes.length;
+    var stop = !whats.length || needEmp;
+    var prev = { n:0, tabs:{} };
+    whats.forEach(function (w) {
+      var x = Admin.delRows(w, codes, r);
+      prev.n += x.n;
+      Object.keys(x.tabs).forEach(function (t) { prev.tabs[t] = x.tabs[t]; });
+    });
     h += '<div class="sec-title">Data delete</div><div class="card">' +
       '<div class="sub">Kya hatana hai, kiska, aur kis range ka — teen cheezein. Employee aur date ' +
       'range upar se aati hain.</div>' +
-      '<label class="f">Kya delete karna hai</label>' +
-      '<select class="in" onchange="Admin.setDel(this.value)">' +
-        '<option value="">Chuno…</option>' +
-        '<optgroup label="Group">' + Admin.DEL.map(function (x) {
-          return '<option value="' + x[0] + '"' + (w === x[0] ? ' selected' : '') + '>' + esc(x[1]) +
-            '</option>'; }).join('') + '</optgroup>' +
-        '<optgroup label="Ek tab">' + Admin.KINDS.filter(function (k) { return k[0] !== 'PJP'; })
-          .map(function (k) {
-            return '<option value="' + k[0] + '"' + (w === k[0] ? ' selected' : '') + '>' + esc(k[1]) +
-              '</option>'; }).join('') + '</optgroup>' +
-      '</select>' +
-      (w && !(Admin.needEmp(w) && !code)
-        ? '<div class="hint" style="margin-top:8px">' + esc(Admin.delLbl(w)) + ' · ' + esc(who) +
-        ' · ' + esc(Admin.rangeLbl(r)) + ' — is device par <b>' + prev.n + ' row</b>' +
+      UI.multi({ label:'Kya delete karna hai', sub:'Group, ya seedha ek tab — ek se zyada bhi',
+        items:Admin.DEL.map(function (x) { return [x[0], x[1], '']; })
+          .concat(Admin.KINDS.filter(function (k) { return k[0] !== 'PJP'; })
+            .map(function (k) { return [k[0], k[1], 'ek tab']; })),
+        sel:whats, tgl:'Admin.tglWhat', all:'Admin.allWhats', max:230 }) +
+      (whats.length && !needEmp ? '<div class="hint" style="margin-top:8px">' +
+        esc(whats.map(Admin.delLbl).join(' + ')) + ' · ' + esc(who) + ' · ' +
+        esc(dmy(r[0]) + ' – ' + dmy(r[1])) + ' — is device par <b>' + prev.n + ' row</b>' +
         (Object.keys(prev.tabs).length ? ' <i>(' + esc(Object.keys(prev.tabs).map(function (t) {
           return t + ' ' + prev.tabs[t]; }).join(', ')) + ')</i>' : '') + '</div>' : '') +
-      Admin.delWarn(w, code, r) +
+      whats.map(function (w) { return Admin.delWarn(w, codes, r); }).join('') +
       '<div class="btns"><button class="btn ghost" onclick="Admin.count(this)"' +
         (stop ? ' disabled' : '') + '>Kitna delete hoga? (count)</button>' +
       '<button class="btn bad" onclick="Admin.purge(this)"' +
@@ -11413,18 +11738,27 @@ var Admin = {
     return h;
   },
   /* the rows a choice describes, on this device — the same filter the server will apply */
-  pick: function (kind, code, r) {
+  pick: function (kind, codes, r) {
+    var want = Admin.codeSet(codes);
     /* the PJP is two tables: published days, plus the drafts of the months the range touches */
     if (kind === 'PJP') {
-      var x = Admin.pjpRows(code, r ? r[0] : '0000-01-01', r ? r[1] : '9999-12-31');
+      var x = Admin.pjpRows(codes, r ? r[0] : '0000-01-01', r ? r[1] : '9999-12-31');
       return x.pub.concat(x.dr);
     }
     return DB.rows(kind).filter(function (x) {
-      if (code && String(x.EmpCode || '').toUpperCase() !== String(code).toUpperCase()) return false;
+      if (want && !want[String(x.EmpCode || '').trim().toUpperCase()]) return false;
       var d = toISO(x.Date);
       if (!d) return !r;                                  /* undated rows only when no range is asked */
       return d >= r[0] && d <= r[1];
     });
+  },
+  /* '' / [] / 'ALL' → everybody (null); otherwise a lookup of the codes asked for */
+  codeSet: function (codes) {
+    var a = codes == null ? [] : (typeof codes === 'string' ? [codes] : codes);
+    a = a.filter(function (c) { return c && String(c).toUpperCase() !== 'ALL'; });
+    if (!a.length) return null;
+    var out = {}; a.forEach(function (c) { out[String(c).trim().toUpperCase()] = 1; });
+    return out;
   },
 
   /* ══ WHAT GOES ══
@@ -11464,21 +11798,22 @@ var Admin = {
   tabsOf: function (w) { return Admin.GRP[w] ? Admin.GRP[w].slice() : (w ? [w] : []); },
   /* what that choice describes on this device — the server's dry run is still the authority, this is
      what the screen can say before he taps anything */
-  delRows: function (w, code, r) {
+  delRows: function (w, codes, r) {
     var out = { n:0, tabs:{} };
     Admin.tabsOf(w).forEach(function (t) {
-      var rows = t === 'Master_PJP' ? Admin.pjpRows(code, r[0], r[1]).pub
-               : t === 'PjpDraft' ? Admin.pjpRows(code, r[0], r[1]).dr
-               : Admin.pick(t, code, r);
+      var rows = t === 'Master_PJP' ? Admin.pjpRows(codes, r[0], r[1]).pub
+               : t === 'PjpDraft' ? Admin.pjpRows(codes, r[0], r[1]).dr
+               : Admin.pick(t, codes, r);
       if (rows.length) out.tabs[t] = rows.length;
       out.n += rows.length;
     });
     return out;
   },
-  setDel: function (v) { Admin.dwhat = v; Admin.ddel = null; render(); },
+  setDel: function (v) { Admin.dwhats = v ? [v] : []; Admin.ddel = null; render(); },
   /* the sentence this particular choice deserves — said BEFORE the button */
-  delWarn: function (w, code, r) {
+  delWarn: function (w, codes, r) {
     if (!w) return '';
+    var code = Admin.codeSet(codes) ? codes : null;      /* [] is truthy — count it, do not test it */
     if (Admin.needEmp(w) && !code)
       return '<div class="banner w"><span>!</span><div><b>Ek employee chuno</b><br>' +
         '<span style="font-weight:500">"Sab kuch" ek aadmi ka hi hatta hai. Sab ke liye — ek-ek report ' +
@@ -11506,18 +11841,22 @@ var Admin = {
     return h;
   },
   dl: function (el) {
-    var r = Admin.dRange();
+    var r = Admin.dRange(), kinds = Admin.dkinds.slice(), codes = Admin.dcodes.slice();
+    if (!kinds.length) return toast('Pehle report chuno');
     return Busy.run('dl', el, 'Ban raha hai…', function () {
-      var f = Admin.dkind === 'PJP' ? Admin.pjpXl(Admin.dcode, r[0], r[1])
-                                    : Rep.any(Admin.dkind, Admin.dcode, r[0], r[1]);
-      toast('Download shuru — ' + Admin.kindLbl(Admin.dkind));
+      /* one report → that report's own file; several → one file, one tab each */
+      var f = kinds.length === 1
+        ? (kinds[0] === 'PJP' ? Admin.pjpXl(codes, r[0], r[1]) : Rep.any(kinds[0], codes, r[0], r[1]))
+        : Rep.some(kinds, codes, r[0], r[1]);
+      Log.add('Data', 'Downloaded ' + kinds.join(','), codes.join(',') || 'ALL', r[0] + '..' + r[1]);
+      toast('Download shuru — ' + kinds.length + ' report');
       return Promise.resolve(f);
     });
   },
   dlAll: function (el) {
-    var r = Admin.dRange();
+    var r = Admin.dRange(), codes = Admin.dcodes.slice();
     return Busy.run('dlall', el, 'Ban raha hai…', function () {
-      var f = Rep.everything(Admin.dcode, r[0], r[1]);
+      var f = Rep.everything(codes, r[0], r[1]);
       toast('Download shuru — ' + f.sheets + ' tab');
       return Promise.resolve(f);
     });
@@ -11526,7 +11865,8 @@ var Admin = {
     var r = Admin.dRange();
     return Busy.run('cnt', el, 'Gin raha hai…', function () {
       return Api.post({ action:'purge', email:Auth.session().email, dry:1,
-        sheet:Admin.dwhat, code:Admin.dcode || 'ALL', from:r[0], to:r[1] }).then(function (res) {
+        sheet:Admin.dwhats.join(','), code:Admin.dcodes.join(',') || 'ALL',
+        from:r[0], to:r[1] }).then(function (res) {
         if (!res || !res.ok) { Admin.ddel = null; render();
           return toast('! ' + ((res && res.error) || 'Count nahi hua'), 4000); }
         Admin.ddel = res; render();
@@ -11537,9 +11877,10 @@ var Admin = {
   purge: function (el) {
     var r = Admin.dRange(), d = Admin.ddel;
     if (!d || !d.matched) return toast('Pehle count dekho');
-    var who = Admin.dcode || 'SAB employee';
+    var who = Admin.whoText();
     return UI.prompt({ icon:'', title:d.matched + ' row delete karne hain?', danger:true,
-      msg:'<b>' + esc(Admin.delLbl(Admin.dwhat)) + '</b> · ' + esc(who) + ' · ' + esc(Admin.rangeLbl(r)) +
+      msg:'<b>' + esc(Admin.dwhats.map(Admin.delLbl).join(' + ')) + '</b> · ' + esc(who) + ' · ' +
+        esc(dmy(r[0]) + ' – ' + dmy(r[1])) +
         '<br>Ye wapas nahi aayega. Confirm karne ke liye niche DELETE likho.',
       label:'DELETE likho', placeholder:'DELETE', required:true, requiredMsg:'DELETE likhna zaroori hai',
       ok:'Haan, delete karo', cancel:'Abhi nahi' }).then(function (v) {
@@ -11547,17 +11888,19 @@ var Admin = {
       if (String(v).trim().toUpperCase() !== 'DELETE') return toast('DELETE likhna zaroori hai');
       return Busy.run('purge', el, 'Delete ho raha hai…', function () {
         return Api.post({ action:'purge', email:Auth.session().email,
-          sheet:Admin.dwhat, code:Admin.dcode || 'ALL', from:r[0], to:r[1] }).then(function (res) {
+          sheet:Admin.dwhats.join(','), code:Admin.dcodes.join(',') || 'ALL',
+          from:r[0], to:r[1] }).then(function (res) {
           if (!res || !res.ok) return toast('! ' + ((res && res.error) || 'Delete nahi hua'), 5000);
-          Log.add('Data', 'Deleted ' + res.deleted + ' rows from ' + Admin.dwhat +
+          Log.add('Data', 'Deleted ' + res.deleted + ' rows from ' + Admin.dwhats.join(',') +
             ((res.months || []).length ? ' (' + res.months.join(', ') + ')' : ''),
-            Admin.dcode || 'ALL', r[0] + '..' + r[1]);
+            Admin.dcodes.join(',') || 'ALL', r[0] + '..' + r[1]);
           Admin.ddel = null;
           toast(res.deleted + ' row delete ho gaye — sync kar raha hai', 4000);
           /* a FULL pull: the published PJP lives in a master, and a light sync does not fetch those */
           return DB.pull(true).then(function () {
             render();
-            if (/^(PJP|EVERYTHING)$/.test(Admin.dwhat) && !Pjp.winOpen())
+            if (Admin.dwhats.some(function (w) { return /^(PJP|EVERYTHING)$/.test(w); }) &&
+                !Pjp.winOpen())
               toast('PJP hat gaya aur window band hai — Users tab se uska PJP kholna padega', 7000);
           });
         });
@@ -12178,8 +12521,22 @@ var Admin = {
     var s = [['Master_Employees','Employees'],['Master_Stores','Stores'],['Master_Distributors','Distributors'],
       ['Master_Products','Products'],['Master_PJP','PJP rows'],['Master_Config','Config'],['Master_Phasing','Phasing'],
       ['Stock_Distributor','DB stock'],['Stock_Store','Store stock']];
-    return '<div class="banner b"><span></span><div>Master tabs <b>read-only</b> hain — app kabhi inme likhta nahi. Sheet me change karo, app <b>Sync</b> par utha lega.</div></div>' +
-      '<div class="card">' + s.map(function (x) {
+    /* folded by default: it is reference, not work. The refresh stays at the bottom of the card. */
+    var open = !!Admin.mOpen;
+    var tot = s.reduce(function (a, x) {
+      return a + (DB.counts[x[0]] != null && !(DB.m[x[0]] || []).length ? DB.counts[x[0]]
+        : (DB.m[x[0]] || []).length); }, 0);
+    var head = '<div class="sec-title">Master tabs</div><div class="card">' +
+      '<div class="lrow" style="padding:0;cursor:pointer" onclick="Admin.mFold()">' +
+      '<div class="m"><div class="t">Master tabs — ' + s.length + ' tab</div>' +
+      '<div class="s">' + tot + ' row · read-only · ' +
+      (open ? 'band karne ke liye tap karo' : 'kholne ke liye tap karo') + '</div></div>' +
+      '<span class="pill p-grey" style="flex:0 0 auto">' + (open ? '–' : '+') + '</span></div>';
+    if (!open) return head + '</div>';
+    return head + '<div class="banner b" style="margin-top:10px"><span></span><div>Master tabs ' +
+      '<b>read-only</b> hain — app kabhi inme likhta nahi. Sheet me change karo, app <b>Sync</b> par ' +
+      'utha lega.</div></div>' +
+      '<div>' + s.map(function (x) {
         /* Stock_* is no longer downloaded (95k rows) — the backend sends its row count instead */
         var n = DB.counts[x[0]] != null && !(DB.m[x[0]] || []).length ? DB.counts[x[0]] : (DB.m[x[0]] || []).length;
         return '<div class="lrow"><div class="m"><div class="t">' + x[1] + '</div><div class="s">' + x[0] +
@@ -12190,8 +12547,10 @@ var Admin = {
       '<div class="hint" style="margin-top:8px">Last sync: ' + (DB.pulledAt ? new Date(DB.pulledAt).toLocaleString('en-IN') : '—') + '</div>' +
       (DB.pjpDupes ? '<div class="banner w" style="margin-top:10px"><span>!</span><div>Master_PJP me <b>' + DB.pjpDupes +
         ' duplicate row</b> hain (same employee + same date). App pehli row use karta hai — extra rows sheet se delete kar do.</div></div>' : '') +
-      '<div class="btns"><button class="btn" onclick="Sync.now(true)"> Master refresh karo</button></div></div>';
+      '<div class="btns"><button class="btn" onclick="Sync.now(true)"> Master refresh karo</button></div>' +
+      '</div></div>';
   },
+  mFold: function () { Admin.mOpen = !Admin.mOpen; render(); },
 
   /* a live "kaha tak pahucha hai" line per employee, so an HOD can see progress at a glance
      and jump into the exact screen the rep is looking at */
