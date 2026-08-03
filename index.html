@@ -198,11 +198,28 @@ td.num,th.num{text-align:right}
 
 /* nav */
 .nav{position:fixed;left:0;right:0;bottom:0;z-index:50;background:#fff;border-top:1px solid var(--line);
-  display:flex;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -2px 16px rgba(16,24,40,.06)}
+  display:flex;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -2px 16px rgba(16,24,40,.06);
+  /* ── the bar SLIDES ──
+     Twelve tabs do not fit a phone, and hiding four of them behind "More" meant a rep had to know
+     they were there. Now the strip scrolls, the active tab is scrolled into view on every render,
+     and an arrow on the edge says there is more that way. */
+  overflow-x:auto;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;scrollbar-width:none}
+.nav::-webkit-scrollbar{display:none}
+/* the arrows sit on the bar, not in the scrolling strip, so they stay put while it moves */
+.navar{position:fixed;bottom:0;z-index:51;width:30px;height:53px;border:0;padding:0;cursor:pointer;
+  display:none;align-items:center;justify-content:center;font-size:17px;font-weight:800;
+  color:var(--blue);margin-bottom:env(safe-area-inset-bottom)}
+.navar.on{display:flex}
+#nav_r{right:0;background:linear-gradient(to right,rgba(255,255,255,0),#fff 45%)}
+#nav_l{left:0;background:linear-gradient(to left,rgba(255,255,255,0),#fff 45%)}
+@media(min-width:900px){ .navar{display:none !important} }
 /* the tab icons were dropped for a cleaner look, so the button needs its own height — without the
    19px glyph line a text-only tab collapsed to 33px, under the thumb-target minimum */
-.nav button{position:relative;flex:1;border:0;background:0;padding:8px 2px 9px;color:var(--ink-3);font-size:11.5px;font-weight:600;
+.nav button{position:relative;flex:0 0 auto;min-width:78px;border:0;background:0;padding:8px 6px 9px;
+  color:var(--ink-3);font-size:11.5px;font-weight:600;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:52px}
+/* when they all fit, spread them out as before */
+.nav.fit button{flex:1 1 0;min-width:0;padding:8px 2px 9px}
 .nav button .g{font-size:19px;line-height:1}
 .nav button.on{color:var(--blue)}
 .nav button span:not(.g):not(.badge){max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -764,7 +781,10 @@ label.f i{font-style:normal;font-weight:500;color:var(--ink-3)}
     </div>
   </div>
   <div class="wrap" id="view"></div>
-  <nav class="nav" id="nav"></nav>
+  <!-- the arrows follow the strip while a thumb drags it, not only when a button is tapped -->
+  <nav class="nav" id="nav" onscroll="Nav.arrows()"></nav>
+  <button class="navar" id="nav_l" onclick="Nav.slide(-1)" aria-label="previous tabs">‹</button>
+  <button class="navar" id="nav_r" onclick="Nav.slide(1)" aria-label="more tabs">›</button>
 </div>
 
 <div id="toast" class="toast"></div>
@@ -2297,6 +2317,67 @@ I18n.D.en = I18n.EN = {
   'Count nahi hua':'The count did not come back',
   'login':'logins',
   'Requests — poori team':'Requests — the whole team',
+  'Is month ka PJP update nahi hai. Kuch galat lage to admin se baat karo.':'This month’s PJP is not updated. Talk to your admin if something looks wrong.',
+  'Master me is month ke':'The master has',
+  'din hain — aaj ka nahi.':'days for this month — but not today.',
+  'My data':'My data',
+  'Mera data':'My data',
+  'Apni koi bhi report, jitne din ki chahiye — Excel me download karo. Sirf aapka data jata hai.':'Any of your own reports, for as many days as you want — as an Excel file. Only your data goes into it.',
+  'Mere orders (lines ke saath)':'My orders (with lines)',
+  'Mera EOD':'My EOD',
+  'Mere day plans':'My day plans',
+  'Mera TA / DA':'My TA / DA',
+  'Plan change requests':'Plan change requests',
+  'Mere PJP drafts':'My PJP drafts',
+  'Meri photos':'My photos',
+  'Last 30 din':'Last 30 days',
+  'Ye month':'This month',
+  'Is period me kitna':'What is in this period',
+  'Ye sirf aapke rows hain — team ka data kabhi nahi aata. Kisi aur ka data chahiye to HOD se maango.':'These are your rows only — team data never comes into it. For anyone else’s data, ask your HOD.',
+  'Login phir se karo':'Log in again',
+  'Compare':'Compare',
+  'Aamne-saamne':'Head to head',
+  'Number-wise':'Number by number',
+  'Din-wise NSV':'Day-wise NSV',
+  'Din shuru':'Days started',
+  'Missed din':'Missed days',
+  'Leave / off':'Leave / off',
+  'NSV / field din':'NSV / field day',
+  'SC (target calls)':'SC (target calls)',
+  '— store visit':'— store visits',
+  '— telephonic':'— telephonic',
+  'Strike rate':'Strike rate',
+  'PJP adherence':'PJP adherence',
+  'Kaun kya kar sakta hai — bypass, PJP lock, active/inactive.':'Who may do what — bypass, PJP lock, active / inactive.',
+  'Report download karo, ya galat data hatao.':'Download a report, or take wrong data out.',
+  'Employee ka aaj ka live screen, jaisa unhe dikh raha hai.':'The employee’s live screen today, exactly as they see it.',
+  'Aaj kya hua — pehle total, phir har aadmi. Compare bhi yahin se.':'What happened — the total first, then each person. Compare from here too.',
+  'Pehle kisi ko tick karo':'Tick somebody first',
+  'Aur kisi ko add karo':'Add somebody else',
+  'Naam ya code likho':'Type a name or code',
+  'Chuno…':'Choose…',
+  'Sab employee add ho gaye.':'Every employee is already in.',
+  'Metric':'Metric',
+  'Din shuru (plan bhejo)':'Start the day (send the plan)',
+  'Save ho gaya — WhatsApp bhejna baaki':'Saved — still to be sent on WhatsApp',
+  'Plan bhej diya — din shuru, Field khul gaya':'Plan sent — day started, Field is open',
+  'Plan bheja nahi':'Plan not sent',
+  'Din shuru = plan WhatsApp par chala gaya. Sirf save karna shuruaat nahi hai.':'A day counts as started once the plan has gone out on WhatsApp. Saving it is not a start.',
+  'aage hai':'is ahead',
+  'kisi bhi metric par nahi':'on no metric at all',
+  'metric par barabar. Missed din me kam behtar hai.':'metric(s) level. On missed days, fewer is better.',
+  'Shuru:':'Started:',
+  'us row ka leader. SC, field din, telephonic aur leave par koi leader nahi — wo zyada hone se behtar nahi hota.':'leads that row. SC, field days, telephonic and leave have no leader — more of them is not better.',
+  'Neeche kisi bhi 2':'Tick any 2',
+  'logon ko tick karo — side by side dikhega':'people below — they line up side by side',
+  'Is period me kisi ka order nahi hai.':'Nobody has an order in this period.',
+  'Ek baar me':'At most',
+  'se zyada nahi — table padhne layak rehna chahiye.':'at a time — the table has to stay readable.',
+  'log — pehle kisi ko hatao':'people — drop somebody first',
+  'aur employee':'more employees',
+  'Naam par tap karo — us employee ka poora din, PJP aur photo dikhega.':'Tap a name — that employee’s whole day, PJP and photos.',
+  'Tick karke Compare dabao — do ya zyada log side by side.':'Tick people and hit Compare — two or more, side by side.',
+  'sheet me hi rehta hai':'stays in the sheet',
   'Order punch karo':'Punch the order',
   /* live updates + the read-only plan / waiting screen */
   'HOD ne approve kar diya — aage badho':'The HOD approved it — carry on',
@@ -2428,13 +2509,21 @@ var DB = {
       });
       if (r.masters) DB.mAt = Date.now();
       if (r.counts) DB.counts = r.counts;
+      /* ── normalise the columns every lookup matches on, ONCE, here ──
+         A Master_PJP row for today was being missed because the sheet cell held "HCPL2573 " with a
+         trailing space (what pasting a column does) while the app compared it to "HCPL2573". Every
+         consumer — the Plan screen, the PJP builder, adherence, the TA/DA claim — did its own
+         `String(Code).toUpperCase()` with no trim, so all of them missed it and none of them said why.
+         Trimming here means no screen can ever be caught by whitespace again; the same for the date,
+         which is normalised to ISO so an ISO-to-ISO comparison is all anyone has to do. */
+      DB.fix();
       /* Master_PJP de-dupe: the live sheet carries 31 rows where the same employee+date appears
          twice (leftovers from the previous app writing into the master). Keep the FIRST row the
          sheet returns — that is the customer's own — so a lookup can never land on a stale copy. */
       if (DB.m.Master_PJP) {
         var seen = {}, dup = 0;
         DB.m.Master_PJP = DB.m.Master_PJP.filter(function (p) {
-          var k = String(p.Code || '').toUpperCase() + '|' + toISO(p.Date);
+          var k = String(p.Code || '') + '|' + String(p.Date || '');
           if (k === '|') return true;
           if (seen[k]) { dup++; return false; }
           seen[k] = 1; return true;
@@ -2575,18 +2664,45 @@ var DB = {
     return out.length ? out : all;
   },
   products: function () { return DB.m.Master_Products || []; },
+  /* ── one comparison for every code in the app ──
+     A code arrives from three places (LoginConfig, Master_Employees, a pasted master column) and any
+     of them can carry a space or a different case. Nothing may depend on which. */
+  same: function (a, b) {
+    return String(a == null ? '' : a).trim().toUpperCase() ===
+           String(b == null ? '' : b).trim().toUpperCase();
+  },
+  /* trim the codes and ISO the dates on the masters everything is matched against. Called once per
+     pull, before the de-dupe. */
+  fix: function () {
+    ['Master_PJP', 'Master_Employees', 'Master_Phasing'].forEach(function (t) {
+      (DB.m[t] || []).forEach(function (r) {
+        if (r.Code !== undefined) r.Code = String(r.Code == null ? '' : r.Code).trim().toUpperCase();
+        if (t === 'Master_PJP' && r.Date !== undefined) r.Date = toISO(r.Date) || r.Date;
+      });
+    });
+    (DB.m.LoginConfig || []).forEach(function (r) {
+      if (r.Code !== undefined) r.Code = String(r.Code == null ? '' : r.Code).trim().toUpperCase();
+    });
+    if (DB.me && DB.me.code) DB.me.code = String(DB.me.code).trim().toUpperCase();
+  },
   /* PJP row straight from Master_PJP — admin edits here reflect immediately after a pull */
   pjpFor: function (code, date) {
-    var d = toISO(date), q = String(code || '').toUpperCase();
+    var d = toISO(date);
     var a = DB.m.Master_PJP || [];
     for (var i = 0; i < a.length; i++)
-      if (String(a[i].Code).toUpperCase() === q && toISO(a[i].Date) === d) return a[i];
+      if (DB.same(a[i].Code, code) && toISO(a[i].Date) === d) return a[i];
     return null;
   },
   pjpMonth: function (code, month) {
-    var q = String(code || '').toUpperCase();
     return (DB.m.Master_PJP || []).filter(function (r) {
-      return String(r.Code).toUpperCase() === q && toISO(r.Date).slice(0, 7) === month; });
+      return DB.same(r.Code, code) && toISO(r.Date).slice(0, 7) === month; });
+  },
+  /* what the master DOES hold for this rep in a month — so a missing day can be explained instead of
+     leaving the rep staring at "no plan" */
+  pjpNear: function (code, date) {
+    var mo = String(date || today()).slice(0, 7);
+    var days = DB.pjpMonth(code, mo).map(function (r) { return toISO(r.Date); }).sort();
+    return { month:mo, days:days, has:days.length };
   }
 };
 
@@ -2922,6 +3038,10 @@ var Gate = {
     return { s:Appr.norm(mine[0].Status), month:mine[0].Month, row:mine[0] };
   },
   allowed: function (v) {
+    /* the console's own screens, checked BEFORE bypass: a bypassed rep is excused the sequence, not
+       promoted. An admin in the middle of a preview counts as an admin here — that back tab is his
+       only way out. */
+    if (Admin.ROUTE[v]) return Auth.isAdmin() || !!Preview.real;
     if (Auth.isAdmin()) return true;
     if (Bypass.on()) return true;                  /* the sequence is one of the waived rules */
     var l = Gate.level();
@@ -2934,6 +3054,8 @@ var Gate = {
     if (v === 'stk') return l >= 2 || !!Field.editPo;
     /* a travel claim is about days ALREADY worked, so it is never gated on today's plan */
     if (v === 'tada') return true;
+    /* nor is downloading what he has already done */
+    if (v === 'mydata') return true;
     if (v === 'sec' || v === 'posm' || v === 'eod') return l >= 3;
     /* adjusting an order that already exists is not part of today's sequence — a rep gets that call
        whether or not he has punched anything since */
@@ -2996,13 +3118,21 @@ var TABS = [
   { v:'eod',   g:'', t:'EOD' },
   { v:'trk',   g:'', t:'Tracker' },
   { v:'tada',  g:'', t:'TA/DA' },
+  { v:'mydata', g:'', t:'My data' },
   { v:'appr',  g:'', t:'Approvals' }
 ];
-/* An admin/HOD does not punch orders — their nav is the console and the approval queue.
+/* An admin/HOD does not punch orders — their bar IS the console. There is no "Console" tab any
+   more and no chip strip inside it: the five screens are five real tabs, one tap each.
+     admin  Summary · appr Approvals · ausers Users · adata Data · aprev Preview
+   'admin' stays the id of the Summary screen so every existing link into the console still lands
+   somewhere sensible.
    The full salesman strip appears only while previewing a rep, which is exactly when it is useful. */
 var ADMIN_TABS = [
-  { v:'admin', g:'', t:'Console' },
-  { v:'appr',  g:'', t:'Approvals' }
+  { v:'admin',  g:'', t:'Summary' },
+  { v:'appr',   g:'', t:'Approvals' },
+  { v:'ausers', g:'', t:'Users' },
+  { v:'adata',  g:'', t:'Data' },
+  { v:'aprev',  g:'', t:'Preview' }
 ];
 var Nav = {
   hidden:[],
@@ -3011,9 +3141,10 @@ var Nav = {
        Employee    → their own requests that came back REJECTED, i.e. they must redo something.
      A rep's own PENDING request gets no badge: waiting is not a task. */
   badge: function (v) {
-    if (v !== 'admin' && v !== 'appr') return 0;
-    var b = Nav.counts();
-    return v === 'admin' ? b.admin : b.appr;
+    /* Approvals is the only tab a number means anything on. It used to sit on "Console" too, which
+       now means the Summary screen — a count of decisions on a screen that takes none. */
+    if (v !== 'appr') return 0;
+    return Nav.counts().appr;
   },
   /* Counted from Appr.list() itself — the SAME list the Approvals screen shows — so the red number can
      never disagree with the queue. It covers PJP, plan changes and TA/DA; orders are excluded because
@@ -3045,30 +3176,53 @@ var Nav = {
     try { return Pjp.winOpen() && !Pjp.approvedFor(Pjp.winMonth()); } catch (e) { return false; }
   },
   build: function () {
-    var wide = window.innerWidth >= 900;
     var list = Auth.isAdmin() ? ADMIN_TABS.slice()
-             : (Preview.on ? [{ v:'admin', g:'', t:'Console' }].concat(TABS) : TABS.slice());
-    /* How many tabs fit is a function of the WIDTH, not a magic 5. A 320px phone takes 6 buttons,
-       a 740px landscape phone or a 768px tablet takes all nine — hiding four tabs behind "More"
-       on an iPad was the nav pretending to be a small phone.
-       Remember exactly which ones didn't fit, so "More" shows those and only those (it used to
-       slice a fixed index, which duplicated a visible tab for admins). */
-    var slots = wide ? list.length : Math.min(list.length, Math.max(6, Math.floor(window.innerWidth / 82)));
-    /* when they do NOT all fit, the last visible slot becomes "More", so everything from slots-1
-       onwards is what More has to offer — off-by-one here would drop a tab entirely */
-    Nav.hidden = slots >= list.length ? [] : list.slice(slots - 1);
-    if (Nav.hidden.length) list = list.slice(0, slots - 1).concat([{ v:'more', g:'⋯', t:'More' }]);
-    /* anything hidden under "More" still has to be noticeable, so its count rolls up onto More */
-    var moreN = 0;
-    Nav.hidden.forEach(function (x) { moreN += Nav.badge(x.v); });
+             : (Preview.on ? [{ v:'admin', g:'', t:'Admin' }].concat(TABS) : TABS.slice());
+    /* ── every tab is on the bar ──
+       Nothing hides behind "More" any more: the strip slides. Nav.after scrolls the current tab into
+       view after every render, and an arrow on the edge says there is more that way — a rep should
+       never have to know a tab exists to find it. */
+    Nav.hidden = [];
+    var el = $('nav');
     /* the nav paints itself, so it has to translate itself — its labels are the most visible words
        in the app and they were staying English in every language */
-    $('nav').innerHTML = I18n.tr(list.map(function (x) {
-      var n = x.v === 'more' ? moreN : Nav.badge(x.v);
+    el.innerHTML = I18n.tr(list.map(function (x) {
       return '<button data-v="' + x.v + '" onclick="Router.go(\'' + x.v + '\')" class="' +
         (x.v === Router.cur ? 'on' : '') + (Gate.allowed(x.v) ? '' : ' lk') + (Nav.hot(x.v) ? ' hot' : '') + '">' +
-        '<span class="g">' + x.g + '</span><span>' + x.t + '</span>' + Nav.pill(n) + '</button>';
+        '<span class="g">' + x.g + '</span><span>' + x.t + '</span>' + Nav.pill(Nav.badge(x.v)) + '</button>';
     }).join(''));
+    /* when they all fit, spread them out as before */
+    el.classList.toggle('fit', el.scrollWidth <= el.clientWidth + 2);
+    Nav.after();
+  },
+  /* keep the current tab visible, and say which way the rest of them are.
+     Only ever re-centre when the TAB CHANGED: the nav is rebuilt on every background sync too, and
+     re-centring there would drag the strip back under the thumb of someone who had just slid it. */
+  _on:'',
+  after: function () {
+    var el = $('nav'); if (!el) return;
+    var on = el.querySelector('button.on');
+    if (on && Nav._on !== Router.cur) {
+      Nav._on = Router.cur;
+      var max = el.scrollWidth - el.clientWidth;
+      var want = on.offsetLeft - (el.clientWidth - on.offsetWidth) / 2;
+      el.scrollLeft = Math.max(0, Math.min(max, want));
+    }
+    Nav.arrows();
+  },
+  arrows: function () {
+    var el = $('nav'), l = $('nav_l'), r = $('nav_r');
+    if (!el || !l || !r) return;
+    var max = el.scrollWidth - el.clientWidth;
+    l.classList.toggle('on', max > 4 && el.scrollLeft > 4);
+    r.classList.toggle('on', max > 4 && el.scrollLeft < max - 4);
+  },
+  slide: function (dir) {
+    var el = $('nav'); if (!el) return;
+    /* the strip scrolls smoothly, so scrollLeft only reaches its target a few frames later. The
+       onscroll handler keeps the arrows honest while it moves; this is the settle-time fallback. */
+    el.scrollLeft += dir * Math.max(160, el.clientWidth * 0.6);
+    setTimeout(Nav.arrows, 700);
   },
   more: function () {
     var rest = (Nav.hidden && Nav.hidden.length ? Nav.hidden : TABS.slice(5)).slice();
@@ -3103,7 +3257,9 @@ function render() {
      A real tab change still starts at the top: Router.go scrolls AFTER calling render(). */
   var y = window.pageYOffset || document.documentElement.scrollTop || 0;
   var f = ({ home:Home, pjp:Pjp, plan:Plan, field:Field, stk:Stk, sec:Sec, fin:Fin, posm:Posm, trk:Trk,
-             eod:Eod, tada:Tada, appr:Appr, admin:Admin })[Router.cur];
+             eod:Eod, tada:Tada, mydata:My, appr:Appr,
+             /* the console's screens: one module, four routes (Admin.html reads Router.cur) */
+             admin:Admin, ausers:Admin, adata:Admin, aprev:Admin })[Router.cur];
   /* first ever paint and the data is still on its way — show a skeleton, never blank cards */
   /* every screen leaves through here, so ONE call translates the whole app */
   if (f && !DB.pulledAt && Api.n > 0) { $('view').innerHTML = I18n.tr(UI.skel()); return; }
@@ -4568,7 +4724,10 @@ var Home = {
 
     /* the day's own checklist stays on Home — it is the reason a rep opens the app in the morning */
     h += '<div class="sec-title">Aaj ka kaam</div><div class="card">' +
-      Home.step('1', 'Plan', plan && plan.PlanAt, plan && plan.NotifiedAt ? 'Notified' : (plan && plan.PlanAt ? 'Notify pending' : 'Pending')) +
+      /* the day starts when the plan is SENT, not when it is saved — so the tick waits for the send */
+      Home.step('1', 'Din shuru (plan bhejo)', plan && Plan.started(plan),
+        plan && Plan.started(plan) ? 'Shuru: ' + (plan.NotifiedAt || '')
+          : (plan && plan.PlanAt ? 'Save ho gaya — WhatsApp bhejna baaki' : 'Pending')) +
       Home.step('2', 'Field visits', (A.byDay[t] || {}).tc > 0, ((A.byDay[t] || {}).tc || 0) + ' store') +
       Home.step('3', 'POSM', A.posm > 0, A.posm + ' audit') +
       Home.step('4', 'EOD close', Gate.locked(), Gate.locked() ? 'Done' : 'Pending') +
@@ -4771,6 +4930,7 @@ var Team = {
       });
       e.nsv = Math.round(e.nsv * 10000) / 10000;
       if (e.sc === undefined) e.sc = 0;
+      if (e.startDays === undefined) e.startDays = 0;
       e.old = true;                                   /* so the screen can say SC is unavailable */
     });
     return rows;
@@ -4820,7 +4980,7 @@ var Team = {
     var ens = function (code, name, hq) {
       var k = String(code || 'UNK').toUpperCase();
       if (!out[k]) { out[k] = { code:k, name:name || '', hq:hq || '', sc:0, tc:0, pc:0, nsv:0, nso:0,
-          fieldDays:0, leave:0, off:0, meet:0, mark:'', b:{} };
+          fieldDays:0, startDays:0, leave:0, off:0, meet:0, mark:'', b:{} };
         ['self','team','ba','other'].forEach(function (x) { out[k].b[x] = { days:0, tc:0, pc:0, nsv:0, nso:0 }; }); }
       if (name && !out[k].name) out[k].name = name;
       if (hq && !out[k].hq) out[k].hq = hq;
@@ -4835,6 +4995,8 @@ var Team = {
       var k = Team.KIND(p.WorkingWith);
       kind[c + '|' + d] = k;
       var e = ens(c, p.EmpName, p.Hq);
+      /* the day counts as STARTED only once the WhatsApp plan went out */
+      if (Plan.started(p)) e.startDays++;
       if (k === 'F') { e.fieldDays++; e.sc += num(p.ScTarget) || sc0; }
       else if (k === 'L') e.leave++;
       else if (k === 'O' || k === 'H') e.off++;
@@ -5583,8 +5745,15 @@ var Plan = {
         '<div><label class="f">Beat / Market</label>' +
         '<input class="in lk" id="pl_beat" readonly value="' + esc(shBeat || '—') + '"></div></div>' +
         (pjp ? '<div class="fbox">' + esc(pjp.Week || '') + (pjp.Focus ? ' · Focus: ' + esc(pjp.Focus) : '') + '</div>' : '');
-    else h += '<div class="banner w" style="margin-top:8px"><span>!</span><div>Aaj (' + dmy(t) + ') ka PJP <b>Master_PJP</b> me nahi mila — apne code <b>' +
-      esc(DB.me.code) + '</b> ke liye. Admin se master update karwao, ya <b>Change PJP</b> se HOD approval lo.</div></div>';
+    else {
+      /* short, and it says what the master actually holds — a rep who sees "no plan" on a day the
+         sheet clearly has needs the fact, not a paragraph */
+      var near = DB.pjpNear(DB.me.code, t);
+      h += '<div class="banner w" style="margin-top:8px"><span>!</span><div>' +
+        'Is month ka PJP update nahi hai. Kuch galat lage to admin se baat karo.' +
+        (near.has ? '<br><span style="font-weight:500">Master me is month ke ' + near.has +
+          ' din hain — aaj ka nahi.</span>' : '') + '</div></div>';
+    }
 
     /* Working With is part of the approved plan, so it is displayed, not offered as a dropdown. The
        hidden input keeps Plan.save reading from ONE place whichever way the value was chosen. */
@@ -5797,7 +5966,7 @@ var Plan = {
       ScTarget:field ? (num(val('pl_sc')) || 7) : 0, NsoTarget:field ? num(val('pl_nso')) : 0,
       PosmTarget:field ? num(val('pl_posm')) : 0,
       PlanJson:JSON.stringify({ tgt:Plan.tgt() }), PlanAt:r.PlanAt || new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }),
-      NotifiedAt:r.NotifiedAt || '' }, { quiet:!!quiet }).then(function () {
+      NotifiedAt:r.NotifiedAt || '', StartAt:r.StartAt || '' }, { quiet:!!quiet }).then(function () {
       if (!quiet) { Log.add('Plan', 'Saved', t, (town || ww) + (beat ? ' / ' + beat : '')); toast('Plan save ho gaya'); render(); Nav.build(); }
     });
   },
@@ -5812,15 +5981,20 @@ var Plan = {
     });
   },
   /* Notifying the HOD is what unlocks the Field tab, so the stamp lives in ONE place — both the image
-     share and the text share go through it and can never disagree. */
+     share and the text share go through it and can never disagree. A cancelled share never gets here.
+     THIS is the start of the day: StartAt is the full timestamp of the moment the plan went out, and
+     every "din shuru" count in the app reads it (falling back to NotifiedAt for older rows). */
+  started: function (r) { return !!(r && (r.StartAt || r.NotifiedAt)); },
   markNotified: function () {
     var r = Plan.row();
     if (!r.PlanAt) return Promise.resolve(null);
-    return DB.save('DayPlan', Object.assign({}, r, { NotifiedAt:new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }) }))
+    return DB.save('DayPlan', Object.assign({}, r, {
+      NotifiedAt:new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }),
+      StartAt:r.StartAt || new Date().toISOString() }))
       .then(function () {
-        Log.add('Plan', 'Notified', today(), '');
+        Log.add('Plan', 'Notified', today(), 'day start');
         render(); Nav.build();
-        toast('Plan bhej diya — Field khul gaya');
+        toast('Plan bhej diya — din shuru, Field khul gaya');
       });
   },
   msg: function () {
@@ -5884,7 +6058,7 @@ var Plan = {
           State:p.state || '', Town:town, Beat:beat, WorkingWith:nw,
           Station:fld ? Pjp.stn(p.stn) : '',
           WwDetail:JSON.stringify(p.det || {}), OffPjp:'Yes', Approval:'Pending',
-          NotifiedAt:'' }), { quiet:true });
+          NotifiedAt:'', StartAt:'' }), { quiet:true });
       }).then(function () {
         Log.add('Deviation', 'Submitted', t, town + '/' + beat + ' \u2014 ' + reason);
         render(); Nav.build();
@@ -7551,7 +7725,7 @@ var Rep = {
       ['Station', 'Station'], ['State', 'State'], ['Town', 'Town'], ['Beat', 'Beat'],
       ['ScTarget', 'SC target', 'n'], ['NsoTarget', 'NSO target', 'n'], ['PosmTarget', 'POSM target', 'n'],
       ['OffPjp', 'Off PJP'], ['Approval', 'Approval'], ['PjpStatus', 'Adherence'],
-      ['PlanAt', 'Saved at'], ['NotifiedAt', 'Notified at']],
+      ['PlanAt', 'Saved at'], ['NotifiedAt', 'Notified at'], ['StartAt', 'Day started at']],
       tot:['ScTarget', 'NsoTarget', 'PosmTarget'] },
     NewStores:{ t:'New outlets', cols:[
       ['Date', 'Date', 'd'], ['StoreId', 'Id'], ['EmpName', 'Employee'], ['StoreName', 'Store'],
@@ -9768,6 +9942,104 @@ var Tada = {
 };
 
 
+/* ═══════════════ MY DATA — the rep's own reports ═══════════════
+   Everything the app has recorded about HIM, downloadable for any stretch of days. The console's Data
+   tab is the same machinery (Rep.any) with an employee picker; here the employee is never a choice —
+   it is whoever is logged in, checked again on the way out. */
+var My = {
+  kind:'SecOrders', from:'', to:'',
+  /* only reports that belong to ONE employee. Nothing team-wide is offered, so nothing team-wide can
+     be asked for. */
+  KINDS:[['SecOrders', 'Mere orders (lines ke saath)'], ['Eod', 'Mera EOD'],
+         ['DayPlan', 'Mere day plans'], ['NewStores', 'Naye outlet'],
+         ['PosmAudit', 'POSM audit'], ['PosmRequirement', 'POSM requirement'],
+         ['TaDa', 'Mera TA / DA'], ['Deviation', 'Plan change requests'],
+         ['PjpDraft', 'Mere PJP drafts'], ['StockRemark', 'Stock remarks'],
+         ['Photos', 'Meri photos']],
+  lbl: function (k) {
+    var x = My.KINDS.filter(function (y) { return y[0] === k; })[0];
+    return x ? x[1] : k;
+  },
+  range: function () {
+    var t = today();
+    var f = My.from, o = My.to;
+    if (!f && !o) { var d = new Date(t + 'T00:00:00'); d.setDate(d.getDate() - 29); f = iso(d); o = t; }
+    if (!f) f = o; if (!o) o = f;
+    if (f > o) { var x = f; f = o; o = x; }
+    if (o > t) o = t;
+    return [f, o];
+  },
+  /* MY rows, and only mine: the code is not a parameter, and every row is re-checked here */
+  rows: function (kind, r) {
+    var me = String(DB.me.code || '').trim().toUpperCase();
+    if (!me) return [];
+    return Rep.anyRows(kind, me, r[0], r[1]).filter(function (x) {
+      return String(x.EmpCode || '').trim().toUpperCase() === me; });
+  },
+  html: function () {
+    var r = My.range(), rows = My.rows(My.kind, r);
+    var h = UI.head('', 'Mera data',
+      'Apni koi bhi report, jitne din ki chahiye — Excel me download karo. Sirf aapka data jata hai.');
+    h += '<div class="card">' +
+      '<label class="f">Report</label>' +
+      '<select class="in" onchange="My.set(\'kind\',this.value)">' + My.KINDS.map(function (k) {
+        return '<option value="' + k[0] + '"' + (My.kind === k[0] ? ' selected' : '') + '>' +
+          esc(k[1]) + '</option>'; }).join('') + '</select>' +
+      '<div class="pair" style="margin-top:8px">' +
+        '<div><label class="f">From</label><input class="in" type="date" max="' + today() +
+          '" value="' + esc(r[0]) + '" onchange="My.set(\'from\',this.value)"></div>' +
+        '<div><label class="f">To</label><input class="in" type="date" max="' + today() +
+          '" value="' + esc(r[1]) + '" onchange="My.set(\'to\',this.value)"></div></div>' +
+      '<div class="btns" style="margin-top:8px">' +
+        '<button class="btn ghost sm" onclick="My.quick(30)">Last 30 din</button>' +
+        '<button class="btn ghost sm" onclick="My.quick(0)">Ye month</button></div>' +
+      '<div class="hint" style="margin-top:8px">' + rows.length + ' row milenge — ' +
+        esc(My.lbl(My.kind)) + ' · ' + dmy(r[0]) + ' – ' + dmy(r[1]) + '</div>' +
+      '<div class="btns"><button class="btn" onclick="My.dl(this)"' + (rows.length ? '' : ' disabled') +
+        '>Excel download</button>' +
+      '<button class="btn ghost" onclick="My.dlAll(this)">Sab reports (ek file)</button></div>' +
+      '</div>';
+
+    /* what is in there, before downloading it */
+    h += '<div class="sec-title">Is period me kitna</div><div class="card"><div class="tw"><table><tbody>' +
+      My.KINDS.map(function (k) {
+        var n = My.rows(k[0], r).length;
+        return '<tr' + (k[0] === My.kind ? ' class="me"' : '') + '><td>' + esc(k[1]) + '</td>' +
+          '<td class="num">' + n + '</td></tr>'; }).join('') +
+      '</tbody></table></div>' +
+      '<div class="hint" style="margin-top:8px">Ye sirf aapke rows hain — team ka data kabhi nahi ' +
+      'aata. Kisi aur ka data chahiye to HOD se maango.</div></div>';
+    return h;
+  },
+  set: function (k, v) { My[k] = v; render(); },
+  quick: function (days) {
+    var t = today();
+    if (days) { var d = new Date(t + 'T00:00:00'); d.setDate(d.getDate() - (days - 1)); My.from = iso(d); }
+    else My.from = t.slice(0, 8) + '01';
+    My.to = t; render();
+  },
+  dl: function (el) {
+    var r = My.range(), me = String(DB.me.code || '').trim().toUpperCase();
+    if (!me) return toast('Login phir se karo');
+    return Busy.run('mydl', el, 'Ban raha hai…', function () {
+      var f = Rep.any(My.kind, me, r[0], r[1]);
+      Log.add('Data', 'Downloaded ' + My.kind, me, r[0] + '..' + r[1]);
+      toast('Download shuru — ' + My.lbl(My.kind));
+      return Promise.resolve(f);
+    });
+  },
+  dlAll: function (el) {
+    var r = My.range(), me = String(DB.me.code || '').trim().toUpperCase();
+    if (!me) return toast('Login phir se karo');
+    return Busy.run('mydlall', el, 'Ban raha hai…', function () {
+      var f = Rep.everything(me, r[0], r[1]);
+      Log.add('Data', 'Downloaded all reports', me, r[0] + '..' + r[1]);
+      toast('Download shuru — ' + f.sheets + ' tab');
+      return Promise.resolve(f);
+    });
+  }
+};
+
 /* ═══════════════ APPROVALS — "meri requests" ═══════════════
    One place where a rep sees every approval they have ever asked for, and exactly when each step
    happened: request bheja at X, HOD decided at Y, and (for a PJP) published to Master_PJP at Z.
@@ -10139,28 +10411,33 @@ var Admin = {
      It used to be eight, and the console duplicated the Approvals screen. Whatever an HOD opens, there
      is exactly one place it lives. */
   tab:'sum',
-  TABS:[['sum', 'Summary'], ['appr', 'Approvals'], ['users', 'Users'], ['data', 'Data'],
-        ['prev', 'Preview']],
+  /* route on the nav  →  screen in here.  Approvals is not in this map: it is the rep's own
+     Requests screen with the buttons live, so the tab goes straight to Appr and there is exactly one
+     copy of it in the app. */
+  ROUTE:{ admin:'sum', ausers:'users', adata:'data', aprev:'prev' },
+  TABS:[['sum', 'Summary', 'admin'], ['appr', 'Approvals', 'appr'], ['users', 'Users', 'ausers'],
+        ['data', 'Data', 'adata'], ['prev', 'Preview', 'aprev']],
+  HEAD:{ sum:['Summary', 'Aaj kya hua — pehle total, phir har aadmi. Compare bhi yahin se.'],
+         users:['Users', 'Kaun kya kar sakta hai — bypass, PJP lock, active/inactive.'],
+         data:['Data', 'Report download karo, ya galat data hatao.'],
+         prev:['Preview', 'Employee ka aaj ka live screen, jaisa unhe dikh raha hai.'] },
+  route: function (t) {
+    var x = Admin.TABS.filter(function (y) { return y[0] === t; })[0];
+    return x ? x[2] : 'admin';
+  },
   html: function () {
-    var s0 = Auth.session() || {};
-    var pend = Nav.badge('admin');
-    var h = UI.head('', (s0.rights || 'Admin') + ' console',
-      'Summary, approvals, permissions, data — sab kuch yahin se.');
-    h += '<div class="card" style="padding:10px 14px 0"><div class="tnav" id="ad_chips">' +
-      Admin.TABS.map(function (t) {
-        var n = t[0] === 'appr' ? pend : 0;
-        return '<button class="' + (Admin.tab === t[0] ? 'on' : '') + '"' +
-          (Admin.tab === t[0] ? ' data-on="1"' : '') + ' onclick="Admin.go(\'' + t[0] + '\')">' +
-          esc(t[1]) + (n ? '<span class="bdg">' + n + '</span>' : '') + '</button>'; }).join('') +
-      '</div></div>';
+    /* the tab is whatever the bar says, so a back/refresh lands on the same screen */
+    Admin.tab = Admin.ROUTE[Router.cur] || 'sum';
+    var s0 = Auth.session() || {}, hd = Admin.HEAD[Admin.tab] || ['Console', ''];
+    var h = UI.head('', hd[0], hd[1] + ' <i>· ' + esc(s0.rights || 'Admin') + '</i>');
     return h + (Admin[Admin.tab] ? Admin[Admin.tab]() : '');
   },
-  after: function () { Admin.chips(); },
-  go: function (t) { Admin.tab = t; Admin.emp = ''; render(); Admin.chips(); },
-  chips: function () {
-    var s = $('ad_chips'); if (!s) return;
-    var on = s.querySelector('[data-on="1"]');
-    if (on) s.scrollLeft = Math.max(0, on.offsetLeft - (s.clientWidth - on.offsetWidth) / 2);
+  after: function () {},
+  /* an in-screen link to another console screen is a real tab change now */
+  go: function (t) {
+    Admin.emp = ''; Admin.cmpOn = false;
+    if (Admin.route(t) === Router.cur) { Admin.tab = t; render(); return; }
+    Router.go(Admin.route(t));
   },
 
   /* ── one period definition for the whole console ── */
@@ -10228,6 +10505,7 @@ var Admin = {
   emp:'',
   sum: function () {
     var r = Admin.range();
+    if (Admin.cmpOn) return Admin.periodCard() + Admin.compare(r);
     if (Admin.emp) return Admin.periodCard() + Admin.one(Admin.emp, r);
     var rows = Team.local(r[0], r[1]);
     var plans = DB.rows('DayPlan').filter(function (p) { var d = toISO(p.Date); return d >= r[0] && d <= r[1]; });
@@ -10235,7 +10513,9 @@ var Admin = {
     var t = { sc:0, tc:0, pc:0, nsv:0, nso:0 };
     rows.forEach(function (e) { ['sc', 'tc', 'pc', 'nsv', 'nso'].forEach(function (k) { t[k] += num(e[k]); }); });
     var working = rows.filter(function (e) { return e.fieldDays > 0; }).length;
-    var notified = plans.filter(function (p) { return p.NotifiedAt; }).length;
+    /* a day is STARTED when the plan went out on WhatsApp — a saved-but-unsent plan is not a start */
+    var started = plans.filter(function (p) { return Plan.started(p); }).length;
+    var unsent = plans.filter(function (p) { return p.PlanAt && !Plan.started(p); }).length;
 
     var h = Admin.periodCard();
     h += '<div class="kpis">' +
@@ -10244,16 +10524,19 @@ var Admin = {
       UI.kpi(t.pc, 'PC (order mila)', 'b') +
       UI.kpi(t.nso, 'Naye outlet', '') + '</div>';
     h += '<div class="kpis k3">' +
-      UI.kpi(working + ' / ' + rows.length, 'Field par the', working ? 'g' : 'r') +
-      UI.kpi(notified + ' / ' + plans.length, 'Plan notified', notified ? 'g' : 'w') +
-      UI.kpi(eods.length, 'EOD filed', eods.length ? 'g' : 'w') + '</div>';
+      UI.kpi(started + ' / ' + plans.length, 'Din shuru', started ? 'g' : 'r') +
+      UI.kpi(unsent, 'Plan bheja nahi', unsent ? 'r' : 'g') +
+      UI.kpi(eods.length, 'EOD filed', eods.length ? 'g' : 'w') + '</div>' +
+      '<div class="hint" style="margin-top:-4px;margin-bottom:12px">Din shuru = plan WhatsApp par ' +
+      'chala gaya. Sirf save karna shuruaat nahi hai.</div>';
 
     /* the split — one row per person, tap to open them */
     var MK = { L:'Leave', O:'Weekly off', M:'Meeting', H:'Holiday' };
     rows.sort(function (a, b) { return num(b.nsv) - num(a.nsv) ||
       String(a.name || a.code).localeCompare(String(b.name || b.code)); });
     h += '<div class="sec-title">Employee-wise — ' + esc(Admin.rangeLbl()) + '</div><div class="card">' +
-      '<div class="tw"><table><thead><tr><th>Employee</th><th class="num">SC</th><th class="num">TC</th>' +
+      Admin.cmpBar() +
+      '<div class="tw"><table><thead><tr><th>✓</th><th>Employee</th><th class="num">SC</th><th class="num">TC</th>' +
       '<th class="num">PC</th><th class="num">NSV ₹L</th><th class="num">NSO</th></tr></thead><tbody>' +
       rows.map(function (e) {
         var mk = String(e.mark || '').toUpperCase().slice(0, 1);
@@ -10262,17 +10545,25 @@ var Admin = {
           if (away) return '<td class="num"><span class="pill p-grey" title="' + MK[mk] + '">' + mk + '</span></td>';
           return '<td class="num">' + (money ? lakh(num(e[k])) : String(Math.round(num(e[k])))) + '</td>';
         };
-        return '<tr style="cursor:pointer" onclick="Admin.open(\'' + Appr.q(e.code) + '\')"><td>' +
+        /* the tick is its own cell — tapping it must not open the employee behind it.
+           No .ck class here: that is display:flex, which on a <td> breaks the column alignment. */
+        return '<tr><td style="width:36px" onclick="event.stopPropagation()">' +
+          '<input type="checkbox" style="width:28px;height:28px;accent-color:var(--ok)"' +
+          (Admin.cmpHas(e.code) ? ' checked' : '') +
+          ' aria-label="compare" onchange="Admin.cmpTick(\'' + Appr.q(e.code) + '\',this.checked)"></td>' +
+          '<td style="cursor:pointer" onclick="Admin.open(\'' + Appr.q(e.code) + '\')">' +
           esc(e.name || e.code) + '<div class="hint">' + esc(e.code) +
           (e.hq ? ' · ' + esc(e.hq) : '') + ' ›</div></td>' +
           cell('sc') + cell('tc') + cell('pc') + cell('nsv', true) + cell('nso') + '</tr>';
       }).join('') +
-      '<tr class="tot"><td><b>TOTAL</b></td><td class="num"><b>' + Math.round(t.sc) + '</b></td>' +
+      '<tr class="tot"><td></td><td><b>TOTAL</b></td><td class="num"><b>' + Math.round(t.sc) + '</b></td>' +
       '<td class="num"><b>' + Math.round(t.tc) + '</b></td><td class="num"><b>' + Math.round(t.pc) +
       '</b></td><td class="num"><b>' + lakh(t.nsv) + '</b></td><td class="num"><b>' +
       Math.round(t.nso) + '</b></td></tr></tbody></table></div>' +
-      '<div class="hint" style="margin-top:8px">Kisi bhi row par tap karo — us employee ka poora din, ' +
-      'PJP aur photo dikhega.</div>' +
+      /* no markup INSIDE either sentence: a <b> splits the text run and half of it would stay
+         Hinglish whatever the dictionary says */
+      '<div class="hint" style="margin-top:8px">Naam par tap karo — us employee ka poora din, PJP aur photo dikhega.</div>' +
+      '<div class="hint">Tick karke Compare dabao — do ya zyada log side by side.</div>' +
       '<div class="hint">L = leave, O = weekly off, M = meeting.</div>' +
       '<div class="btns"><button class="btn ghost sm" onclick="Admin.go(\'data\')">Excel chahiye? Data tab</button></div>' +
       '</div>';
@@ -10299,8 +10590,9 @@ var Admin = {
     h += '<div class="kpis k3">' + UI.kpi(lakh(num(me.nsv)), 'NSV ₹L', 'g') +
       UI.kpi(num(me.tc) + ' / ' + num(me.sc), 'TC / SC', 'b') +
       UI.kpi(num(me.pc), 'PC', 'b') + '</div>';
+    var st = mine('DayPlan').filter(function (p) { return Plan.started(p); }).length;
     h += '<div class="kpis k3">' + UI.kpi(num(me.fieldDays), 'Field din', 'b') +
-      UI.kpi(num(me.leave) + num(me.off), 'Off / leave', '') +
+      UI.kpi(st + ' / ' + num(me.fieldDays), 'Din shuru', st ? 'g' : 'r') +
       UI.kpi(mine('Eod').length, 'EOD', mine('Eod').length ? 'g' : 'w') + '</div>';
 
     /* the day-by-day of the period */
@@ -10335,6 +10627,242 @@ var Admin = {
   },
 
   /* ══ 2. APPROVALS — the same screen the rep sees, with the buttons live ══ */
+
+  /* ══ COMPARE — one, two or six people side by side ══
+     Tick people in the Employee-wise table (or add them here) and every metric lines up in one
+     column each. The leader of a row is marked; with exactly two picked there is also a plain-words
+     verdict, because "who is ahead, and by how much" is the actual question being asked. */
+  cmp:[], cmpOn:false, CMPMAX:6,
+  cmpHas: function (code) { return Admin.cmp.indexOf(String(code || '').toUpperCase()) >= 0; },
+  cmpTick: function (code, on) {
+    var c = String(code || '').toUpperCase(), i = Admin.cmp.indexOf(c);
+    if (!c) return;
+    if (on && i < 0) {
+      if (Admin.cmp.length >= Admin.CMPMAX) {
+        toast('Ek baar me ' + Admin.CMPMAX + ' log — pehle kisi ko hatao'); render(); return;
+      }
+      Admin.cmp.push(c);
+    } else if (!on && i >= 0) Admin.cmp.splice(i, 1);
+    render();
+  },
+  cmpAddSel: function (v) {
+    var c = Admin.codeOf(v);
+    if (c) Admin.cmpTick(c, true); else render();
+  },
+  cmpClear: function () { Admin.cmp = []; Admin.cmpOn = false; render(); },
+  cmpShow: function () {
+    if (!Admin.cmp.length) return toast('Pehle kisi ko tick karo');
+    Admin.cmpOn = true; Admin.emp = ''; render(); window.scrollTo(0, 0);
+  },
+  cmpBack: function () { Admin.cmpOn = false; render(); window.scrollTo(0, 0); },
+  /* the strip over the Employee-wise table: what is ticked, and the way in */
+  cmpBar: function () {
+    var n = Admin.cmp.length;
+    return '<div class="lrow" style="padding-top:0"><div class="m">' +
+      '<div class="t">Compare' + (n ? ' (' + n + ')' : '') + '</div>' +
+      '<div class="s">' + (n ? Admin.cmp.map(function (c) {
+          return esc(Admin.shortName(c)); }).join(', ')
+        : 'Neeche kisi bhi 2–' + Admin.CMPMAX + ' logon ko tick karo — side by side dikhega') +
+      '</div></div>' +
+      (n ? '<button class="btn ghost sm" style="flex:0 0 auto" onclick="Admin.cmpClear()">Clear</button>' : '') +
+      '<button class="btn sm" style="flex:0 0 auto" onclick="Admin.cmpShow()"' + (n ? '' : ' disabled') +
+        '>Compare</button></div>';
+  },
+  shortName: function (code) {
+    var e = DB.emp(code) || {};
+    var nm = String(e.Name || code || '').trim();
+    return nm.split(/\s+/)[0] || String(code || '');
+  },
+  /* every comparable number for ONE employee over the chosen range.
+     `t` is that employee's row out of Team.local, so the totals here can never disagree with the
+     table they were ticked in. */
+  cmpM: function (code, r, t) {
+    var C = String(code || '').trim().toUpperCase();
+    var e = t || { sc:0, tc:0, pc:0, nsv:0, nso:0, fieldDays:0, leave:0, off:0, meet:0 };
+    var mine = function (tab) { return DB.rows(tab).filter(function (x) {
+      var d = toISO(x.Date);
+      return String(x.EmpCode || '').trim().toUpperCase() === C && d >= r[0] && d <= r[1]; }); };
+    var visit = 0, tel = 0, day = {};
+    mine('SecOrders').forEach(function (o) {
+      if (/telephonic|phone/i.test(String(o.Source || ''))) tel++; else visit++;
+      var d = toISO(o.Date);
+      if (!day[d]) day[d] = { tc:0, nsv:0 };
+      day[d].tc++;
+      if (!Home.cancelled(o.Status)) day[d].nsv += num(o.TotNsvLakh);
+    });
+    /* the day is "started" only once the WhatsApp plan actually went out */
+    var start = mine('DayPlan').filter(function (p) { return !!(p.StartAt || p.NotifiedAt); }).length;
+    var a = Admin.cmpAdh(C, r), em = DB.emp(C) || {};
+    return { code:C, name:em.Name || e.name || C, hq:em.HQ || e.hq || '',
+      sc:num(e.sc), tc:num(e.tc), pc:num(e.pc), nsv:num(e.nsv), nso:num(e.nso),
+      field:num(e.fieldDays), leave:num(e.leave), off:num(e.off), meet:num(e.meet),
+      start:start, visit:visit, tel:tel, posm:mine('PosmAudit').length, eod:mine('Eod').length,
+      strike:num(e.tc) ? num(e.pc) / num(e.tc) * 100 : 0,
+      perDay:num(e.fieldDays) ? num(e.nsv) / num(e.fieldDays) : 0,
+      work:a.work, missed:a.missed, adh:a.work ? a.ok / a.work * 100 : 0, day:day };
+  },
+  /* PJP adherence over a RANGE, by the same rule the rep sees on his own Summary:
+     an admin's mark wins; otherwise a planned field day with no work at all is a miss. */
+  cmpAdh: function (code, r) {
+    var C = String(code || '').trim().toUpperCase(), out = { work:0, ok:0, missed:0 };
+    var worked = {};
+    DB.rows('SecOrders').forEach(function (o) {
+      if (String(o.EmpCode || '').trim().toUpperCase() !== C) return;
+      var d = toISO(o.Date); if (d) worked[d] = 1;
+    });
+    var doj = DB.doj(C), t = today(), d0 = new Date(r[0] + 'T00:00:00');
+    for (var g = 0; g < 400; g++) {
+      var k = iso(d0); if (k > r[1] || k > t) break;
+      d0.setDate(d0.getDate() + 1);
+      if (doj && k < doj) continue;
+      var pl = DB.find('DayPlan', C + '_' + k) || {}, pj = DB.pjpFor(C, k) || {};
+      var ww = String(pl.WorkingWith || pj.Ww || pj.Week || '');
+      if (!ww || !Home.FIELD.test(ww)) continue;
+      out.work++;
+      var mk = String(pl.PjpStatus || '').toLowerCase();
+      if (mk) { if (/^miss/.test(mk)) out.missed++; else out.ok++; continue; }
+      if (!worked[k]) { out.missed++; continue; }
+      out.ok++;
+    }
+    return out;
+  },
+  /* label · value · how to print it · is bigger better (a leader is marked only then) */
+  CMP:[
+    ['NSV ₹L',          function (m) { return m.nsv; },    function (v) { return lakh(v); },      1],
+    ['NSV / field din', function (m) { return m.perDay; }, function (v) { return lakh(v); },      1],
+    ['TC (total calls)', function (m) { return m.tc; },    function (v) { return Math.round(v); }, 1],
+    ['— store visit',   function (m) { return m.visit; },  function (v) { return Math.round(v); }, 1],
+    ['— telephonic',    function (m) { return m.tel; },    function (v) { return Math.round(v); }, 0],
+    ['SC (target calls)', function (m) { return m.sc; },   function (v) { return Math.round(v); }, 0],
+    ['PC (order mila)',  function (m) { return m.pc; },    function (v) { return Math.round(v); }, 1],
+    ['Strike rate',     function (m) { return m.strike; }, function (v) { return Math.round(v) + '%'; }, 1],
+    ['Naye outlet',     function (m) { return m.nso; },    function (v) { return Math.round(v); }, 1],
+    ['POSM audit',      function (m) { return m.posm; },   function (v) { return Math.round(v); }, 1],
+    ['Field din',       function (m) { return m.field; },  function (v) { return Math.round(v); }, 0],
+    ['Din shuru',       function (m) { return m.start; },  function (v) { return Math.round(v); }, 1],
+    ['EOD file kiye',   function (m) { return m.eod; },    function (v) { return Math.round(v); }, 1],
+    ['PJP adherence',   function (m) { return m.adh; },    function (v) { return Math.round(v) + '%'; }, 1],
+    ['Missed din',      function (m) { return m.missed; }, function (v) { return Math.round(v); }, -1],
+    ['Leave / off',     function (m) { return m.leave + m.off; }, function (v) { return Math.round(v); }, 0]
+  ],
+  compare: function (r) {
+    var rows = Team.local(r[0], r[1]), map = {};
+    rows.forEach(function (e) { map[String(e.code).toUpperCase()] = e; });
+    var M = Admin.cmp.map(function (c) { return Admin.cmpM(c, r, map[c]); });
+
+    /* who is in it, and who else could be */
+    var left = Admin.emps().filter(function (x) { return !Admin.cmpHas(x.code); });
+    var h = '<div class="card"><div class="lrow" style="padding-top:0">' +
+      '<button class="btn ghost sm" style="flex:0 0 auto" onclick="Admin.cmpBack()">‹ Employee list</button>' +
+      '<div class="m" style="text-align:right"><div class="t">Compare (' + M.length + ')</div>' +
+      '<div class="s">' + esc(Admin.rangeLbl()) + '</div></div></div>' +
+      '<div class="chips">' + M.map(function (m) {
+        return '<button class="btn ghost sm" onclick="Admin.cmpTick(\'' + Appr.q(m.code) + '\',false)">' +
+          esc(m.name || m.code) + ' ×</button>'; }).join('') + '</div>' +
+      (left.length && M.length < Admin.CMPMAX
+        ? '<div style="margin-top:8px">' + Admin.cmpPick(left) + '</div>'
+        : '<div class="hint" style="margin-top:8px">' + (M.length >= Admin.CMPMAX
+            ? 'Ek baar me ' + Admin.CMPMAX + ' se zyada nahi — table padhne layak rehna chahiye.'
+            : 'Sab employee add ho gaye.') + '</div>') +
+      '</div>';
+
+    if (!M.length) return h + '<div class="card"><div class="sub">Kisi ko add karo.</div></div>';
+
+    /* the table: metric per row, person per column */
+    h += '<div class="sec-title">Number-wise</div><div class="card"><div class="tw"><table>' +
+      '<thead><tr><th>Metric</th>' + M.map(function (m) {
+        return '<th class="num">' + esc(Admin.shortName(m.code)) +
+          '<div class="hint">' + esc(m.code) + '</div></th>'; }).join('') + '</tr></thead><tbody>' +
+      Admin.CMP.map(function (d) {
+        var vals = M.map(function (m) { return num(d[1](m)); });
+        var txt = vals.map(function (v) { return d[2](v); });
+        var lead = {};
+        if (d[3]) {
+          var lo = d[3] < 0;
+          var pick = lo ? Math.min.apply(null, vals) : Math.max.apply(null, vals);
+          var same = vals.every(function (v) { return v === vals[0]; });
+          /* nothing to lead when everyone is level, or when nobody has any of it.
+             The mark goes by the PRINTED value, so two people showing 100% both get it — and one
+             showing 100% can never be marked ahead of another showing 100%. */
+          if (!same && (lo || pick > 0)) {
+            var top = d[2](pick);
+            txt.forEach(function (x, i) { if (x === top) lead[i] = 1; });
+          }
+        }
+        return '<tr><td>' + esc(d[0]) + '</td>' + txt.map(function (x, i) {
+          return '<td class="num"' + (lead[i] ? ' style="color:var(--ok);font-weight:800"' : '') +
+            '>' + x + (lead[i] ? ' ▲' : '') + '</td>'; }).join('') + '</tr>';
+      }).join('') + '</tbody></table></div>' +
+      '<div class="hint" style="margin-top:8px">▲ = us row ka leader. SC, field din, telephonic aur ' +
+      'leave par koi leader nahi — wo zyada hone se behtar nahi hota.</div></div>';
+
+    /* two people = a straight verdict, in words */
+    if (M.length === 2) h += Admin.cmpVerdict(M);
+
+    /* and the shape of the period, not just its total */
+    if (r[0] !== r[1]) h += Admin.cmpDays(M, r);
+    return h;
+  },
+  cmpPick: function (left) {
+    if (left.length <= 10) {
+      return '<label class="f">Aur kisi ko add karo</label>' +
+        '<select class="in" onchange="Admin.cmpAddSel(this.value)"><option value="">Chuno…</option>' +
+        left.map(function (x) { return '<option value="' + esc(x.code) + '">' + esc(x.name) +
+          ' (' + esc(x.code) + ')</option>'; }).join('') + '</select>';
+    }
+    return '<label class="f">Aur kisi ko add karo</label>' +
+      '<input class="in" list="ad_cmp_l" placeholder="Naam ya code likho" onchange="Admin.cmpAddSel(this.value)">' +
+      '<datalist id="ad_cmp_l">' + left.map(function (x) {
+        return '<option value="' + esc(x.name) + ' (' + esc(x.code) + ')"></option>'; }).join('') +
+      '</datalist><div class="hint" style="margin-top:4px">' + left.length + ' aur employee</div>';
+  },
+  cmpVerdict: function (M) {
+    var a = M[0], b = M[1], mine = [], theirs = [], tie = 0;
+    Admin.CMP.forEach(function (d) {
+      if (d[3] !== 1 && d[3] !== -1) return;
+      var va = num(d[1](a)), vb = num(d[1](b)), lo = d[3] < 0;
+      /* level on the screen = level here, whatever the third decimal says */
+      if (va === vb || d[2](va) === d[2](vb)) { tie++; return; }
+      var aWins = lo ? va < vb : va > vb;
+      var gap = d[2](Math.abs(va - vb));
+      (aWins ? mine : theirs).push(esc(d[0]) + ' <b>+' + gap + '</b>');
+    });
+    var line = function (m, list) {
+      return '<div class="lrow"><span class="pill ' + (list.length ? 'p-ok' : 'p-grey') + '">' +
+        list.length + '</span><div class="m"><div class="t">' + esc(m.name || m.code) + ' aage hai</div>' +
+        '<div class="s">' + (list.length ? list.join(' · ') : 'kisi bhi metric par nahi') + '</div></div></div>';
+    };
+    return '<div class="sec-title">Aamne-saamne</div><div class="card">' +
+      line(a, mine) + line(b, theirs) +
+      '<div class="hint">' + tie + ' metric par barabar. Missed din me kam behtar hai.</div></div>';
+  },
+  cmpDays: function (M, r) {
+    var days = [], d0 = new Date(r[0] + 'T00:00:00');
+    for (var g = 0; g < 62; g++) {
+      var k = iso(d0); if (k > r[1]) break;
+      d0.setDate(d0.getDate() + 1);
+      days.push(k);
+    }
+    var tot = M.map(function () { return 0; });
+    var body = days.map(function (k) {
+      var any = false;
+      var tds = M.map(function (m, i) {
+        var d = m.day[k];
+        if (d) { any = true; tot[i] += d.nsv; }
+        return '<td class="num">' + (d ? lakh(d.nsv) + '<div class="hint">' + d.tc + ' call</div>' : '—') + '</td>';
+      }).join('');
+      return any ? '<tr><td>' + dmy(k) + '</td>' + tds + '</tr>' : '';
+    }).join('');
+    return '<div class="sec-title">Din-wise NSV</div><div class="card">' +
+      '<div class="pane" style="max-height:340px"><table><thead><tr><th>Date</th>' +
+      M.map(function (m) { return '<th class="num">' + esc(Admin.shortName(m.code)) + '</th>'; }).join('') +
+      '</tr></thead><tbody>' + (body ||
+        '<tr><td colspan="' + (M.length + 1) + '">Is period me kisi ka order nahi hai.</td></tr>') +
+      '<tr class="tot"><td><b>TOTAL</b></td>' + tot.map(function (v) {
+        return '<td class="num"><b>' + lakh(v) + '</b></td>'; }).join('') + '</tr>' +
+      '</tbody></table></div></div>';
+  },
+
   appr: function () { return Appr.html(); },
 
   /* ══ 3. USERS — who may do what ══ */
