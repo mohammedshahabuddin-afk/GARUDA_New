@@ -77,6 +77,11 @@ label.f .req{color:var(--bad)}
    locking the viewport instead would also stop a rep pinching a photo, which is worse. */
 .in,select.in,textarea.in{font-size:16px}
 input.in[type=number]{font-size:16px}
+/* a native date box is chunky by default; these two sit side by side on the narrowest phone, so give
+   them less height and let the two share the row instead of stacking */
+.pair{display:flex;gap:8px}
+.pair>div{flex:1 1 0;min-width:0}
+input.in[type=date]{padding:5px 8px;height:33px;line-height:20px}
 .in:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-l)}
 select.in{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' stroke='%23475069' stroke-width='2' fill='none'/></svg>");
   background-repeat:no-repeat;background-position:right 12px center;padding-right:34px}
@@ -373,13 +378,24 @@ td.num,th.num{text-align:right}
   margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
 .dsave span{font-size:11.5px;font-weight:600;color:var(--ink-3)}
 .dsave .btn{width:auto;flex:0 0 auto;min-width:104px}
+.drow.fix{background:#f2fbf5;margin:0 -14px;padding:9px 14px;box-shadow:inset 3px 0 0 var(--ok)}
+/* a returned day's save row: state on the left, button on the right, a rule to separate it */
+.dsave{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+.dsave span{font-size:11.5px;font-weight:600;color:var(--ink-3)}
+.dsave .btn{width:auto;flex:0 0 auto;min-width:104px}
 /* ── a count that means "these need you" ──
    The same red dot a phone puts on an app icon, so a rep reads it without being taught. It only ever
    carries OPEN work: a closed order is not a notification. */
-.tnav{display:flex;gap:8px;border-bottom:1px solid var(--line);margin:0 -14px;padding:0 14px}
-.tnav button{flex:1 1 0;background:none;border:0;padding:11px 4px 9px;font:inherit;font-size:13px;
+.tnav{display:flex;gap:8px;border-bottom:1px solid var(--line);margin:0 -14px;padding:0 14px;
+  overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.tnav::-webkit-scrollbar{display:none}
+/* a label must never wrap — five of them do not fit across a 390px phone, so the strip scrolls */
+.tnav button{flex:0 0 auto;background:none;border:0;padding:11px 10px 9px;font:inherit;font-size:13px;
   font-weight:600;color:var(--muted);border-bottom:2.5px solid transparent;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;gap:6px}
+  white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:6px}
+/* three tabs DO fit, so the tracker's strip still spreads */
+.tnav.fit button{flex:1 1 0;padding:11px 4px 9px}
 .tnav button.on{color:var(--blue);border-bottom-color:var(--blue)}
 .bdg{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;
   padding:0 5px;border-radius:9px;background:var(--bad);color:#fff;font-size:11px;font-weight:800;
@@ -421,8 +437,9 @@ td.num,th.num{text-align:right}
 .dr-h .t{font-weight:700;font-size:13px}
 .dr-h .s{font-size:11.5px;color:var(--ink-3);font-weight:600;margin-top:2px}
 .dr-b{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
-.ck{flex:0 0 auto;padding:2px 0}
-.ck input{width:20px;height:20px;accent-color:var(--bad)}
+/* a tick that decides a day has to be hittable with a thumb: 26px inside a 34px label */
+.ck{flex:0 0 auto;padding:4px 6px;min-height:34px;display:flex;align-items:center}
+.ck input{width:28px;height:28px;accent-color:var(--bad)}
 /* the decide-here bar: same three choices above and below the day list */
 .pjp-bar{position:relative}
 .pjp-bar .btns{margin-top:8px}
@@ -2182,6 +2199,104 @@ I18n.D.en = I18n.EN = {
   'shelf khul gaya, product add karo aur order complete karo':'— the shelf is open, add the product and complete the order',
   'ka order update ho gaya — PO':'order updated — PO',
   'units':'units',
+  'din joining se pehle ke the':'days were before the joining date',
+  'Sirf':'Only',
+  'Is period me team ka koi data nahi':'No team data for this period',
+  'Mera NSV ₹L':'My NSV ₹L',
+  'Team average ₹L':'Team average ₹L',
+  'Team —':'Team —',
+  'SC = scheduled calls (plan), TC = total calls, PC = productive calls, NSV in ₹ lakh.':'SC = scheduled calls (plan), TC = total calls, PC = productive calls, NSV in ₹ lakh.',
+  '= leave,':'= leave,',
+  '= weekly off,':'= weekly off,',
+  '= meeting — us din market me nahi the. Sab employee dikhte hain, zero ho ya na ho.':'= meeting — not in the market that day. Every employee is listed, zero or not.',
+  'Summary, approvals, permissions, data — sab kuch yahin se.':'Summary, approvals, permissions, data — all of it from here.',
+  'Summary':'Summary',
+  'Approvals':'Approvals',
+  'Users':'Users',
+  'Data':'Data',
+  'PC (order mila)':'PC (orders won)',
+  'Field par the':'In the market',
+  'Plan notified':'Plan notified',
+  'Employee-wise —':'Employee-wise —',
+  'Kisi bhi row par tap karo — us employee ka poora din, PJP aur photo dikhega.':'Tap any row for that employee’s whole day, their PJP and their photos.',
+  'L = leave, O = weekly off, M = meeting.':'L = leave, O = weekly off, M = meeting.',
+  'Excel chahiye? Data tab':'Need Excel? The Data tab',
+  'Field din':'Field days',
+  'Off / leave':'Off / leave',
+  'Is period me kuch record nahi':'Nothing recorded in this period',
+  'Is period me koi photo nahi':'No photos in this period',
+  'Photos':'Photos',
+  'Sab ke liye':'For everybody',
+  'Bypass — poori team':'Bypass — the whole team',
+  'Photo, sequence aur poora-month PJP ki majboori sab ke liye hat jayegi. Sirf tab jab kuch tut gaya ho.':'The photo, the day sequence and full-month PJP stop being compulsory for everyone. Only when something is genuinely broken.',
+  'OFF karo':'Turn OFF',
+  'ON karo':'Turn ON',
+  'Poori team par bypass ON hai':'Bypass is ON for the whole team',
+  'kaam hote hi OFF karo':'turn it off as soon as the work is done',
+  'PJP tab — poori team':'PJP tab — the whole team',
+  'Normal niyam: 27 se 1 tarikh tak khula, HOD approve karne ke baad band. Yahan se force kar sakte ho.':'The normal rule: open from the 27th to the 1st, shut once the HOD approves. You can force it either way here.',
+  'Normal niyam':'Normal rule',
+  'Sab ke liye khula':'Open for everybody',
+  'Sab ke liye band':'Shut for everybody',
+  'Password reset':'Password reset',
+  'Sab logins Honasa@123 ho jayenge, aur pehli login par change maangega.':'Every login becomes Honasa@123, and the first login will ask for a change.',
+  'Reset all':'Reset all',
+  'Bypass me kya-kya hat jata hai:':'What bypass waives:',
+  '. Data phir bhi zaroori hai.':'. The data itself is still required.',
+  'par bypass ON hai':'have bypass ON',
+  'Naam, code ya HQ se dhoondo':'Search by name, code or HQ',
+  'Is search me koi user nahi':'No user matches that search',
+  'PJP khula':'PJP open',
+  'PJP band':'PJP shut',
+  'Inactive':'Inactive',
+  'bypass by':'bypass by',
+  'Bypass OFF':'Bypass OFF',
+  'Bypass ON':'Bypass ON',
+  'PJP: normal':'PJP: normal',
+  'PJP: khula rakho':'PJP: keep open',
+  'PJP: band rakho':'PJP: keep shut',
+  'Login band karo':'Disable login',
+  'Login chalu karo':'Enable login',
+  'Sirf pehle 60 — search karo.':'First 60 only — use the search.',
+  'badalna hai?':'— change it?',
+  'Ye sab employee par lagu hoga.':'This applies to every employee.',
+  'Haan, badlo':'Yes, change it',
+  'Poori team ka bypass':'The whole team’s bypass',
+  'Poori team ka PJP tab':'The whole team’s PJP tab',
+  'normal niyam':'the normal rule',
+  'Nahi hua':'That did not go through',
+  'Report download':'Download a report',
+  'Report':'Report',
+  'row milenge —':'rows —',
+  'sab employee':'all employees',
+  'Excel download':'Download Excel',
+  'Sab reports (ek file)':'All reports (one file)',
+  'Data delete':'Delete data',
+  'Jo report, jo employee aur jo date range upar chuna hai — wahi delete hoga.':'Whatever report, employee and date range are chosen above is what gets deleted.',
+  'Pehle count dekho, phir confirm karo. Master tab kabhi nahi chhutte.':'Look at the count first, then confirm. Master tabs are never touched.',
+  'Kitna delete hoga? (count)':'How many will go? (count)',
+  'Delete karo':'Delete',
+  'row delete honge':'rows will be deleted',
+  'kuch nahi':'nothing',
+  'Order delete karne par uski SecOrderLines bhi jaati hain.':'Deleting an order takes its SecOrderLines with it.',
+  'Delete sirf Admin kar sakta hai, HOD nahi.':'Only an Admin can delete — not an HOD.',
+  'Sab employee — ya naam / code likho':'All employees — or type a name / code',
+  'employee · khali chhodo to sab':'employees · leave it blank for all',
+  'Ban raha hai…':'Building…',
+  'Download shuru —':'Download started —',
+  'Gin raha hai…':'Counting…',
+  'Pehle count dekho':'Look at the count first',
+  'row delete karne hain?':'rows — delete them?',
+  'Ye wapas nahi aayega. Confirm karne ke liye niche DELETE likho.':'This cannot be undone. Type DELETE below to confirm.',
+  'DELETE likho':'Type DELETE',
+  'DELETE likhna zaroori hai':'You have to type DELETE',
+  'Haan, delete karo':'Yes, delete',
+  'Delete ho raha hai…':'Deleting…',
+  'Delete nahi hua':'The delete did not go through',
+  'row delete ho gaye — sync kar raha hai':'rows deleted — syncing',
+  'Count nahi hua':'The count did not come back',
+  'login':'logins',
+  'Requests — poori team':'Requests — the whole team',
   'Order punch karo':'Punch the order',
   /* live updates + the read-only plan / waiting screen */
   'HOD ne approve kar diya — aage badho':'The HOD approved it — carry on',
@@ -2753,7 +2868,11 @@ var Preview = {
    The server decides: the flag arrives on `me` from the pull (and on the login row), so a device
    cannot grant itself anything. */
 var Bypass = {
-  on: function () { return !!(DB.me && DB.me.bypass); },
+  /* per user, or for the whole team from the console's Users tab */
+  on: function () {
+    if (/^(yes|true|1)$/i.test(String(DB.cfg('Global_Bypass', '') || ''))) return true;
+    return !!(DB.me && DB.me.bypass);
+  },
   by: function () { return (DB.me && DB.me.bypassBy) || ''; },
   note: function () { return (DB.me && DB.me.bypassNote) || ''; },
   /* what it waives, in the rep's language — used by the Home strip and the admin's confirm dialog */
@@ -2820,8 +2939,14 @@ var Gate = {
        whether or not he has punched anything since */
     if (v === 'fin') return true;
     /* PJP is a once-a-month job: open until HOD approves the month the window is for, then shut
-       until the 27th comes round again */
-    if (v === 'pjp') return !Pjp.approvedFor(Pjp.winMonth());
+       until the 27th comes round again — unless an admin has forced it either way, for this rep or for
+       the whole team, from the console's Users tab. */
+    if (v === 'pjp') {
+      var f = String((DB.me && DB.me.pjpOpen) || '') || String(DB.cfg('Global_PjpOpen', '') || '');
+      if (/^yes$/i.test(f)) return true;
+      if (/^no$/i.test(f)) return false;
+      return !Pjp.approvedFor(Pjp.winMonth());
+    }
     return true;
   },
   why: function (v) {
@@ -4330,7 +4455,7 @@ var Home = {
           return '<button class="' + (Home.per === p[0] ? 'on' : '') + '" onclick="Home.setPer(\'' + p[0] + '\')">' +
             esc(p[1]) + '</button>'; }).join('') + '</div>' +
       /* Days = the rolling seven, or any stretch the rep picks */
-      (Home.per === 'W' ? '<div class="row two" style="margin-top:8px">' +
+      (Home.per === 'W' ? '<div class="pair" style="margin-top:8px">' +
         '<div><label class="f">From</label><input class="in" type="date" min="' + Home.start() + '-01' +
           '" max="' + today() + '" value="' + esc(Home.from || Home.range()[0]) +
           '" onchange="Home.setDay(\'from\',this.value)"></div>' +
@@ -4560,71 +4685,67 @@ var Home = {
      aggregate (no other rep's raw data is ever sent). Admin/HOD already hold everything, so for them
      the same table is computed locally and needs no round trip. */
   teamHtml: function () {
-    var r = Home.range(), M = [['nsv', 'NSV ₹L'], ['tc', 'Calls'], ['pc', 'Order mila']];
-    /* NSO and the day count came off this table; a metric chosen before that has to fall back, and it
-       has to happen BEFORE the waiting / error returns below, or the stale choice survives */
-    if (M.map(function (x) { return x[0]; }).indexOf(Home.metric) < 0) Home.metric = 'nsv';
-    var h = '<div class="card" style="padding:10px"><div class="hint" style="margin-bottom:6px">Number</div>' +
-      '<div class="chips">' + M.map(function (m) {
-        return '<button class="btn ' + (Home.metric === m[0] ? '' : 'ghost') + ' xs" onclick="Home.setMetric(\'' + m[0] + '\')">' +
-          esc(m[1]) + '</button>'; }).join('') + '</div></div>';
-
+    var r = Home.range();
     var T = Team.get(r[0], r[1]);
-    if (T.wait) return h + '<div class="strip b"><span class="g"><span class="spin"></span></span>' +
+    if (T.wait) return '<div class="strip b"><span class="g"><span class="spin"></span></span>' +
       '<div class="m"><b>Team ka data aa raha hai…</b> <i>· sirf totals, kisi ka raw data nahi</i></div></div>';
-    if (T.err) return h + '<div class="card"><div class="banner w"><span>!</span><div><b>Team view abhi ready nahi</b><br>' +
+    if (T.err) return '<div class="card"><div class="banner w"><span>!</span><div><b>Team view abhi ready nahi</b><br>' +
       '<span style="font-weight:500">' + esc(T.err) + '</span>' +
       '<div class="btns"><button class="btn sm" onclick="Team.load(true)">Dobara try karo</button></div></div></div></div>';
 
-    var rows = T.rows || [];
-    if (!rows.length) return h + '<div class="card">' + UI.empty('', 'Is period me team ka koi kaam record nahi hua') + '</div>';
+    var rows = (T.rows || []).slice();
+    if (!rows.length) return '<div class="card">' + UI.empty('', 'Is period me team ka koi data nahi') + '</div>';
 
     var me = String(DB.me.code || '').toUpperCase();
-    var mk = Home.metric, fmt = function (v) { return mk === 'nsv' ? lakh(v) : String(Math.round(v)); };
-    var cell = function (b) { return b ? (b[mk] || 0) : 0; };
-    var tot = function (e) { return Home.BK.reduce(function (a, b) { return a + cell(e.b[b[0]]); }, 0) +
-      cell(e.b.other); };
-    var sorted = rows.slice().sort(function (a, b) { return tot(b) - tot(a); });
-    var myRow = sorted.filter(function (e) { return String(e.code).toUpperCase() === me; })[0];
-    var rank = myRow ? sorted.indexOf(myRow) + 1 : 0;
-    var teamTot = sorted.reduce(function (a, e) { return a + tot(e); }, 0);
-    var avg = sorted.length ? teamTot / sorted.length : 0;
+    var v = function (e, k) { return num(e[k]); };
+    rows.sort(function (a, b) { return v(b, 'nsv') - v(a, 'nsv') ||
+      String(a.name || a.code).localeCompare(String(b.name || b.code)); });
+    var mine = rows.filter(function (e) { return String(e.code).toUpperCase() === me; })[0];
+    var rank = mine ? rows.indexOf(mine) + 1 : 0;
+    var tot = { sc:0, tc:0, pc:0, nsv:0 };
+    rows.forEach(function (e) { ['sc', 'tc', 'pc', 'nsv'].forEach(function (k) { tot[k] += v(e, k); }); });
+    var n = rows.length || 1;
 
-    h += '<div class="kpis k3">' +
-      UI.kpi(myRow ? '#' + rank : '—', 'Team me rank (' + sorted.length + ')', rank && rank <= 3 ? 'g' : 'b') +
-      UI.kpi(myRow ? fmt(tot(myRow)) : '0', 'Mera total', 'b') +
-      UI.kpi(fmt(avg), 'Team average', myRow && tot(myRow) >= avg ? 'g' : 'w') + '</div>';
+    var h = '<div class="kpis k3">' +
+      UI.kpi(mine ? '#' + rank : '—', 'Team me rank (' + rows.length + ')', rank && rank <= 3 ? 'g' : 'b') +
+      UI.kpi(mine ? lakh(v(mine, 'nsv')) : '0', 'Mera NSV ₹L', 'b') +
+      UI.kpi(lakh(tot.nsv / n), 'Team average ₹L', mine && v(mine, 'nsv') >= tot.nsv / n ? 'g' : 'w') +
+      '</div>';
 
-    /* ONE table: every employee as a row, each working-mode as a column, so a rep can compare himself
-       across modes AND against everyone else without changing screens */
-    h += '<div class="sec-title">' + esc((M.filter(function (x) { return x[0] === mk; })[0] || M[0])[1]) +
-      ' — kis ke saath kaam kiya</div><div class="card">' +
+    /* ── ONE table ──
+       The salesman, then the four numbers everyone is judged on, for whatever period is selected —
+       today, the stretch he picked, or the month. Everybody is listed, zero or not; and a day nobody
+       was in the market for shows its letter instead of a row of zeros, because "Leave" and "did
+       nothing" are not the same thing. */
+    var MK = { L:'Leave', O:'Weekly off', M:'Meeting', H:'Holiday' };
+    h += '<div class="sec-title">Team — ' + esc(Home.rangeLbl()) + '</div><div class="card">' +
       '<div class="tw"><table><thead><tr><th>Employee</th>' +
-      Home.BK.map(function (b) { return '<th class="num">' + esc(b[1]) + '</th>'; }).join('') +
-      '<th class="num">Total</th></tr></thead><tbody>' +
-      sorted.map(function (e) {
-        var mine = String(e.code).toUpperCase() === me;
-        return '<tr' + (mine ? ' class="me"' : '') + '><td>' + (mine ? '<b>' + esc(e.name || e.code) + '</b> <span class="pill p-blue">You</span>'
-          : esc(e.name || e.code)) + '</td>' +
-          Home.BK.map(function (b) { return '<td class="num">' + fmt(cell(e.b[b[0]])) + '</td>'; }).join('') +
-          '<td class="num"><b>' + fmt(tot(e)) + '</b></td></tr>';
+      '<th class="num">SC</th><th class="num">TC</th><th class="num">PC</th><th class="num">NSV ₹L</th>' +
+      '</tr></thead><tbody>' +
+      rows.map(function (e) {
+        var mk = String(e.mark || '').toUpperCase().slice(0, 1);
+        var away = mk && MK[mk] && !v(e, 'tc') && !v(e, 'nsv');
+        var isMe = String(e.code).toUpperCase() === me;
+        var cell = function (k, money) {
+          if (away) return '<td class="num"><span class="pill p-grey" title="' + MK[mk] + '">' + mk + '</span></td>';
+          return '<td class="num">' + (money ? lakh(v(e, k)) : String(Math.round(v(e, k)))) + '</td>';
+        };
+        return '<tr' + (isMe ? ' class="me"' : '') + '><td>' +
+          (isMe ? '<b>' + esc(e.name || e.code) + '</b> <span class="pill p-blue">You</span>'
+                : esc(e.name || e.code)) +
+          '<div class="hint">' + esc(e.code) + (e.hq ? ' · ' + esc(e.hq) : '') + '</div></td>' +
+          cell('sc') + cell('tc') + cell('pc') + cell('nsv', true) + '</tr>';
       }).join('') +
       '<tr class="tot"><td><b>TEAM TOTAL</b></td>' +
-      Home.BK.map(function (b) {
-        return '<td class="num"><b>' + fmt(sorted.reduce(function (a, e) { return a + cell(e.b[b[0]]); }, 0)) + '</b></td>'; }).join('') +
-      '<td class="num"><b>' + fmt(teamTot) + '</b></td></tr>' +
+      '<td class="num"><b>' + Math.round(tot.sc) + '</b></td>' +
+      '<td class="num"><b>' + Math.round(tot.tc) + '</b></td>' +
+      '<td class="num"><b>' + Math.round(tot.pc) + '</b></td>' +
+      '<td class="num"><b>' + lakh(tot.nsv) + '</b></td></tr>' +
       '</tbody></table></div>' +
-      '<div class="hint" style="margin-top:8px">Din ka bucket us din ke plan ke Working-With se aata hai. ' +
-      '"Other" (meeting / leave) total me gina jaata hai lekin apna column nahi hai.</div></div>';
-
-    if (myRow) {
-      var mine = Home.BK.map(function (b) { return { l:b[1].split(' ')[0], v:cell(myRow.b[b[0]]) }; });
-      h += '<div class="sec-title">Main akela vs team ke saath</div><div class="card">' +
-        Home.bar(mine, 'var(--blue)') +
-        '<div class="hint">Sirf aapke numbers — kis mode me aap best perform karte ho.</div></div>';
-    }
-    h += '<div class="card"><div class="btns"><button class="btn ghost" onclick="Team.load(true)">Refresh team data</button></div>' +
-      (T.at ? '<div class="hint" style="margin-top:6px">Last refresh: ' + esc(Appr.when(T.at)) + '</div>' : '') + '</div>';
+      '<div class="hint" style="margin-top:8px">SC = scheduled calls (plan), TC = total calls, ' +
+      'PC = productive calls, NSV ₹ lakh. <b>L</b> = leave, <b>O</b> = weekly off, <b>M</b> = meeting — ' +
+      'us din market me nahi the. Sab employee dikhte hain, zero ho ya na ho.</div>' +
+      '</div>';
     return h;
   }
 };
@@ -4637,6 +4758,23 @@ var Home = {
 var Team = {
   cache:{}, busy:'',
   key: function (f, t) { return f + '|' + t; },
+  /* An older deployment of backend.gs returns per-bucket totals only (no flat sc/tc/pc/nsv). The table
+     is flat now, so fill the flat numbers in from the buckets rather than showing a screen of zeros
+     until the sheet's script is re-deployed. SC simply is not there to be had. */
+  flat: function (rows) {
+    (rows || []).forEach(function (e) {
+      if (e.tc !== undefined || !e.b) return;
+      e.tc = 0; e.pc = 0; e.nsv = 0; e.nso = 0;
+      Object.keys(e.b).forEach(function (k) {
+        var b = e.b[k] || {};
+        e.tc += num(b.tc); e.pc += num(b.pc); e.nsv += num(b.nsv); e.nso += num(b.nso);
+      });
+      e.nsv = Math.round(e.nsv * 10000) / 10000;
+      if (e.sc === undefined) e.sc = 0;
+      e.old = true;                                   /* so the screen can say SC is unavailable */
+    });
+    return rows;
+  },
   get: function (f, t) {
     if (Auth.isAdmin()) return { rows:Team.local(f, t), at:DB.pulledAt };
     var k = Team.key(f, t), c = Team.cache[k];
@@ -4655,7 +4793,7 @@ var Team = {
       if (!res || !res.ok) {
         Team.cache[k] = { err:(res && res.error) || 'Server ne mana kar diya — backend.gs dobara deploy karna pad sakta hai' };
       } else {
-        Team.cache[k] = { rows:res.rows || [], at:Date.now() };
+        Team.cache[k] = { rows:Team.flat(res.rows || []), at:Date.now() };
       }
       if (Router.cur === 'home' && Home.view === 'team') render();
     }, function () {
@@ -4664,41 +4802,81 @@ var Team = {
       if (Router.cur === 'home' && Home.view === 'team') render();
     });
   },
-  /* admin / HOD path — same shape, no round trip */
+  /* admin / HOD path — the SAME shape the endpoint returns, computed locally because they already
+     hold every row. Every employee appears, zero or not. */
+  KIND: function (ww) {
+    var w = String(ww || '');
+    if (/sick leave|leave/i.test(w)) return 'L';
+    if (/weekly off|off day|sunday/i.test(w)) return 'O';
+    if (/holiday/i.test(w)) return 'H';
+    if (/meeting|activity/i.test(w)) return 'M';
+    if (Home.FIELD.test(w)) return 'F';
+    return '';
+  },
   local: function (f, t) {
     var inR = function (d) { var x = toISO(d); return !!x && x >= f && x <= t; };
-    var out = {}, bk = {};
-    var ens = function (code, name) {
+    var one = f === t, sc0 = num(DB.cfg('SC_Call_Target', 7)) || 7;
+    var out = {}, bk = {}, kind = {};
+    var ens = function (code, name, hq) {
       var k = String(code || 'UNK').toUpperCase();
-      if (!out[k]) { out[k] = { code:k, name:name || '', b:{} };
+      if (!out[k]) { out[k] = { code:k, name:name || '', hq:hq || '', sc:0, tc:0, pc:0, nsv:0, nso:0,
+          fieldDays:0, leave:0, off:0, meet:0, mark:'', b:{} };
         ['self','team','ba','other'].forEach(function (x) { out[k].b[x] = { days:0, tc:0, pc:0, nsv:0, nso:0 }; }); }
       if (name && !out[k].name) out[k].name = name;
+      if (hq && !out[k].hq) out[k].hq = hq;
       return out[k];
     };
-    (DB.m.Master_Employees || []).forEach(function (e) { ens(e.Code, e.Name); });
+    (DB.m.Master_Employees || []).forEach(function (e) { ens(e.Code, e.Name, e.HQ); });
     DB.rows('DayPlan').forEach(function (p) {
       var d = toISO(p.Date); if (!d) return;
-      bk[String(p.EmpCode).toUpperCase() + '|' + d] = Home.bucket(p.WorkingWith);
+      var c = String(p.EmpCode).toUpperCase();
+      bk[c + '|' + d] = Home.bucket(p.WorkingWith);
+      if (!inR(d)) return;
+      var k = Team.KIND(p.WorkingWith);
+      kind[c + '|' + d] = k;
+      var e = ens(c, p.EmpName, p.Hq);
+      if (k === 'F') { e.fieldDays++; e.sc += num(p.ScTarget) || sc0; }
+      else if (k === 'L') e.leave++;
+      else if (k === 'O' || k === 'H') e.off++;
+      else if (k === 'M') e.meet++;
+    });
+    (DB.m.Master_PJP || []).forEach(function (r) {
+      var d = toISO(r.Date); if (!d || !inR(d)) return;
+      var c = String(r.Code || '').toUpperCase();
+      if (kind[c + '|' + d]) return;
+      var k = Team.KIND(r.Ww || r.Week);
+      kind[c + '|' + d] = k;
+      var e = ens(c, '', r.Hq);
+      if (k === 'F') { e.fieldDays++; e.sc += sc0; }
+      else if (k === 'L') e.leave++;
+      else if (k === 'O' || k === 'H') e.off++;
+      else if (k === 'M') e.meet++;
     });
     var seen = {};
     DB.rows('SecOrders').forEach(function (o) {
       if (!inR(o.Date)) return;
       var code = String(o.EmpCode || '').toUpperCase(), d = toISO(o.Date);
       var e = ens(code, o.EmpName), b = e.b[bk[code + '|' + d] || 'other'];
-      b.tc++;
+      e.tc++; b.tc++;
       if (!seen[code + '|' + d]) { seen[code + '|' + d] = 1; b.days++; }
       if (Home.cancelled(o.Status)) return;
-      if (num(o.TotUnits) > 0) b.pc++;
-      b.nsv += num(o.TotNsvLakh);
+      if (num(o.TotUnits) > 0) { e.pc++; b.pc++; }
+      e.nsv += num(o.TotNsvLakh); b.nsv += num(o.TotNsvLakh);
     });
     DB.rows('NewStores').forEach(function (r) {
       if (!inR(r.Date)) return;
-      var code = String(r.EmpCode || '').toUpperCase();
-      ens(code, r.EmpName).b[bk[code + '|' + toISO(r.Date)] || 'other'].nso++;
+      var code = String(r.EmpCode || '').toUpperCase(), e = ens(code, r.EmpName);
+      e.nso++;
+      e.b[bk[code + '|' + toISO(r.Date)] || 'other'].nso++;
     });
-    return Object.keys(out).map(function (k) { return out[k]; }).filter(function (e) {
-      return ['self','team','ba','other'].some(function (x) {
-        var b = e.b[x]; return b.tc || b.nsv || b.nso; }); });
+    return Object.keys(out).map(function (k) { return out[k]; }).map(function (e) {
+      if (!e.fieldDays) {
+        e.mark = one ? (kind[e.code + '|' + f] || '')
+          : (e.leave ? 'L' : e.off ? 'O' : e.meet ? 'M' : '');
+        if (e.mark === 'F') e.mark = '';
+      }
+      return e;
+    });
   }
 };
 
@@ -5051,12 +5229,43 @@ var Pjp = {
     Object.keys(Pjp.days || {}).forEach(function (k) { out[k] = Pjp.days[k]; });
     return out;
   },
+  /* ── the whole month, always ──
+     What gets published is DaysJson, and DaysJson used to hold only the days that existed as objects —
+     the ones the rep had touched. Every untouched day (a Sunday he never opened, a day left on its
+     default) was simply absent, so it never reached Master_PJP; and a draft thinned by an older build
+     stayed thin for ever. This fills in every planned date of the month from, in order: what is in
+     memory, what the sheet already holds, what the master already holds, and the default a fresh day
+     would show — which is exactly what the rep is looking at on screen. */
+  full: function () {
+    var out = Pjp.merged(), master = {};
+    DB.pjpMonth(DB.me.code, Pjp.month).forEach(function (r) { master[toISO(r.Date)] = r; });
+    Pjp.planDates().forEach(function (d) {
+      if (out[d] && (out[d].ww || out[d].city || out[d].beat)) {
+        out[d].ww = Pjp.ww(out[d].ww || (new Date(d + 'T00:00:00').getDay() === 0 ? 'Weekly Off' : 'Self Working'));
+        out[d].st = Pjp.stn(out[d].st);
+        return;
+      }
+      var m = master[d];
+      if (m) {
+        out[d] = { ww:Pjp.ww(m.Ww || m.Week), state:Plan.stateFor(null, m, m.Town),
+                   city:m.Town || '', beat:m.Beat || '', st:Pjp.stn(m.Station) };
+        return;
+      }
+      /* never touched, never published: store what the screen shows for it */
+      var sun = new Date(d + 'T00:00:00').getDay() === 0;
+      out[d] = { ww:sun ? 'Weekly Off' : 'Self Working', state:'', city:'', beat:'', st:'HQ' };
+    });
+    /* a day before joining is not this rep's to plan, and must never be published */
+    var doj = DB.doj(DB.me.code);
+    if (doj) Object.keys(out).forEach(function (d) { if (d < doj) delete out[d]; });
+    return out;
+  },
   flush: function () {
     if (!Pjp._dirty || !Pjp.days) return null;
     Pjp._dirty = false;
     var c = Pjp.cover(), dr = Pjp.draft();
     return DB.save('PjpDraft', { Key:Pjp.key(), EmpCode:DB.me.code, EmpName:DB.me.name, Month:Pjp.month,
-      Status:dr.Status || 'Draft', DaysJson:JSON.stringify(Pjp.merged()),
+      Status:dr.Status || 'Draft', DaysJson:JSON.stringify(Pjp.full()),
       Coverage:c.done + '/' + c.need, UpdatedAt:Date.now() }, { quiet:true });
   },
   autofill: function () {
@@ -5107,7 +5316,7 @@ var Pjp = {
          review can open on exactly those, highlighted */
       var fixed = part ? Pjp.rejDays() : [];
       return Busy.run('pjp_' + Pjp.key(), el, 'Bhej raha hai…', function () { return DB.save('PjpDraft', { Key:Pjp.key(), EmpCode:DB.me.code, EmpName:DB.me.name, Month:Pjp.month,
-      Status:'Pending', DaysJson:JSON.stringify(Pjp.merged()), Coverage:c.done + '/' + c.need,
+      Status:'Pending', DaysJson:JSON.stringify(Pjp.full()), Coverage:c.done + '/' + c.need,
       Revision:rev, HodAt:'', HodBy:'', HodRole:'', RejectReason:'', RejectedDaysJson:'',
       FixedDaysJson:fixed.length ? JSON.stringify(fixed) : '',
       SubmittedAt:new Date().toISOString(), UpdatedAt:Date.now() }).then(function () {
@@ -7312,6 +7521,174 @@ var Rep = {
   },
 
   /* ─── admin data browser: one sheet, formatted ─── */
+  /* ══ ANY report, for anyone, over any range ══
+     The console's Data tab: pick a report, an employee (or all), a date range, and get a workbook that
+     reads like a report and not like a database dump — a title block saying exactly what was asked for,
+     friendly column names, money and dates as real cell types, a total row where a total means something,
+     and (for orders) the SKU lines on their own tab. */
+  ANY:{
+    SecOrders:{ t:'Orders', cols:[
+      ['Date', 'Date', 'd'], ['PoNumber', 'PO'], ['EmpName', 'Employee'], ['EmpCode', 'Code'],
+      ['StoreName', 'Store'], ['CompanyCode', 'Store code'], ['City', 'City'], ['DbName', 'Distributor'],
+      ['Source', 'Visit type'], ['Status', 'Status'], ['TotSku', 'SKU', 'n'], ['TotUnits', 'Units', 'n'],
+      ['TotValue', 'Value', 'm'], ['TotNsvLakh', 'NSV ₹L', 'n'], ['Reason', 'Reason'],
+      ['Remarks', 'Remarks'], ['DeliveredAt', 'Billed at'], ['Ts', 'Punched at']],
+      tot:['TotSku', 'TotUnits', 'TotValue', 'TotNsvLakh'] },
+    SecOrderLines:{ t:'Order lines', cols:[
+      ['Date', 'Date', 'd'], ['PoNumber', 'PO'], ['EmpName', 'Employee'], ['StoreName', 'Store'],
+      ['Sku', 'SKU code'], ['SkuName', 'Product'], ['Brand', 'Brand'], ['Category', 'Category'],
+      ['SubCategory', 'Sub-category'], ['MslStatus', 'MSL'], ['Mrp', 'MRP', 'm'],
+      ['Units', 'Units', 'n'], ['Value', 'Value', 'm'], ['NsvLakh', 'NSV ₹L', 'n'], ['Status', 'Status']],
+      tot:['Units', 'Value', 'NsvLakh'] },
+    Eod:{ t:'EOD', cols:[
+      ['Date', 'Date', 'd'], ['EmpName', 'Employee'], ['EmpCode', 'Code'], ['Sc', 'SC', 'n'],
+      ['Tc', 'TC', 'n'], ['Pc', 'PC', 'n'], ['Nso', 'NSO', 'n'], ['PosmCount', 'POSM', 'n'],
+      ['MslCount', 'MSL', 'n'], ['OrderValue', 'Order value', 'm'], ['NsvLakh', 'NSV ₹L', 'n'],
+      ['Remarks', 'Remarks'], ['ClosedAt', 'Closed at']],
+      tot:['Sc', 'Tc', 'Pc', 'Nso', 'PosmCount', 'OrderValue', 'NsvLakh'] },
+    DayPlan:{ t:'Day plans', cols:[
+      ['Date', 'Date', 'd'], ['EmpName', 'Employee'], ['EmpCode', 'Code'], ['WorkingWith', 'Working with'],
+      ['Station', 'Station'], ['State', 'State'], ['Town', 'Town'], ['Beat', 'Beat'],
+      ['ScTarget', 'SC target', 'n'], ['NsoTarget', 'NSO target', 'n'], ['PosmTarget', 'POSM target', 'n'],
+      ['OffPjp', 'Off PJP'], ['Approval', 'Approval'], ['PjpStatus', 'Adherence'],
+      ['PlanAt', 'Saved at'], ['NotifiedAt', 'Notified at']],
+      tot:['ScTarget', 'NsoTarget', 'PosmTarget'] },
+    NewStores:{ t:'New outlets', cols:[
+      ['Date', 'Date', 'd'], ['StoreId', 'Id'], ['EmpName', 'Employee'], ['StoreName', 'Store'],
+      ['StoreType', 'Type'], ['Town', 'Town'], ['Beat', 'Beat'], ['DbName', 'Distributor'],
+      ['OwnerName', 'Owner'], ['OwnerMobile', 'Mobile'], ['Address', 'Address'], ['Pincode', 'Pincode'],
+      ['DaySales', 'Day sale', 'm'], ['MonthlyTurnover', 'Monthly turnover', 'm'],
+      ['Status', 'Status'], ['StatusReason', 'Status note']],
+      tot:['DaySales', 'MonthlyTurnover'] },
+    PosmAudit:{ t:'POSM audit', cols:[
+      ['Date', 'Date', 'd'], ['EmpName', 'Employee'], ['StoreName', 'Store'], ['City', 'City'],
+      ['PosmStatus', 'POSM there'], ['Element', 'Element'], ['PosmType', 'Type'], ['Location', 'Location'],
+      ['Brand', 'Brand'], ['Condition', 'Condition'], ['Visibility', 'Visibility'], ['Action', 'Action'],
+      ['Remarks', 'Remarks']] },
+    PosmRequirement:{ t:'POSM requirement', cols:[
+      ['Date', 'Date', 'd'], ['EmpName', 'Employee'], ['StoreName', 'Store'], ['City', 'City'],
+      ['Requirement', 'Needed'], ['Element', 'Element'], ['PosmType', 'Type'], ['Brand', 'Brand'],
+      ['Qty', 'Qty', 'n'], ['MonthlyIncome', 'Store income', 'm'], ['DaySale', 'Day sale', 'm'],
+      ['NeededBy', 'Needed by'], ['Status', 'Status'], ['Remarks', 'Remarks']],
+      tot:['Qty'] },
+    TaDa:{ t:'TA DA', cols:[
+      ['Month', 'Month'], ['EmpName', 'Employee'], ['EmpCode', 'Code'], ['Designation', 'Designation'],
+      ['DaAmount', 'DA ₹', 'm'], ['TravelAmount', 'TA ₹', 'm'], ['LodgeAmount', 'Lodge ₹', 'm'],
+      ['MeetAmount', 'Meeting ₹', 'm'], ['Nights', 'Nights', 'n'], ['Total', 'Claim ₹', 'm'],
+      ['DeductTotal', 'Deduction ₹', 'm'], ['NetTotal', 'Net ₹', 'm'], ['Status', 'Status'],
+      ['HodBy', 'Decided by'], ['HodRemarks', 'HOD message'], ['Remarks', 'Rep remark']],
+      tot:['DaAmount', 'TravelAmount', 'LodgeAmount', 'MeetAmount', 'Total', 'DeductTotal', 'NetTotal'] },
+    Deviation:{ t:'Plan changes', cols:[
+      ['Date', 'Date', 'd'], ['EmpName', 'Employee'], ['PlannedTown', 'Planned town'],
+      ['PlannedBeat', 'Planned beat'], ['NewTown', 'Asked town'], ['NewBeat', 'Asked beat'],
+      ['NewWw', 'Working with'], ['NewStation', 'Station'], ['Reason', 'Reason'], ['Status', 'Status'],
+      ['HodBy', 'Decided by'], ['HodRemarks', 'HOD remark'], ['TryCount', 'Try', 'n']] },
+    PjpDraft:{ t:'PJP drafts', cols:[
+      ['Month', 'Month'], ['EmpName', 'Employee'], ['EmpCode', 'Code'], ['Status', 'Status'],
+      ['Coverage', 'Coverage'], ['Revision', 'Revision', 'n'], ['SubmittedAt', 'Sent at'],
+      ['HodBy', 'Decided by'], ['HodAt', 'Decided at'], ['RejectReason', 'Reject reason'],
+      ['PublishedRows', 'Published days', 'n'], ['PublishedAt', 'Published at']] },
+    Dfr:{ t:'Daily field report', cols:[
+      ['Date', 'Date', 'd'], ['EmpName', 'Employee'], ['StoreCount', 'Stores', 'n'],
+      ['OrderCount', 'Orders', 'n'], ['Ts', 'At']], tot:['StoreCount', 'OrderCount'] },
+    StockRemark:{ t:'Stock remarks', cols:[
+      ['Date', 'Date', 'd'], ['EmpName', 'Employee'], ['Kind', 'Kind'], ['Code', 'Code'],
+      ['Name', 'Name'], ['Remark', 'Remark']] },
+    Photos:{ t:'Photos', cols:[
+      ['Date', 'Date', 'd'], ['Employee', 'Employee'], ['Module', 'Module'], ['StoreName', 'Store'],
+      ['Slot', 'Slot'], ['FileName', 'File'], ['DriveUrl', 'Link'], ['Ts', 'At']] },
+    ActivityLog:{ t:'Activity log', cols:[
+      ['Ts', 'At'], ['EmpName', 'Employee'], ['Role', 'Role'], ['Kind', 'Kind'], ['Action', 'Action'],
+      ['Ref', 'Reference'], ['Detail', 'Detail']] }
+  },
+  /* the rows a (report, employee, range) choice describes */
+  anyRows: function (kind, code, from, to) {
+    return DB.rows(kind).filter(function (x) {
+      if (code && String(x.EmpCode || '').toUpperCase() !== String(code).toUpperCase()) return false;
+      var d = toISO(x.Date);
+      if (!d) return true;                               /* TaDa / PjpDraft are keyed by Month */
+      return d >= from && d <= to;
+    }).sort(function (a, b) {
+      return String(toISO(a.Date) || a.Month || '').localeCompare(String(toISO(b.Date) || b.Month || ''));
+    });
+  },
+  /* one sheet definition, shared by the single download and the everything download */
+  anySheet: function (kind, rows) {
+    var def = Rep.ANY[kind] || { t:kind, cols:[] };
+    var cols = def.cols.length ? def.cols
+      : (rows.length ? Object.keys(rows[0]).filter(function (c) { return c !== 'LastSync'; })
+          .map(function (c) { return [c, c]; }) : [['—', '—']]);
+    var out = [cols.map(function (c) { return Xl.h(c[1]); })];
+    rows.forEach(function (r) {
+      out.push(cols.map(function (c) {
+        var v = r[c[0]], k = c[2];
+        if (k === 'd') return Xl.dt(toISO(v) || v);
+        if (k === 'm') return Xl.m(num(v));
+        if (k === 'n') return Xl.n(num(v));
+        return Xl.t(v == null ? '' : String(v), /remark|reason|detail|address|note|message/i.test(c[1]) ? Xl.S.wrap : null);
+      }));
+    });
+    if ((def.tot || []).length && rows.length) {
+      out.push(cols.map(function (c, i) {
+        if (!i) return Xl.t('TOTAL', Xl.S.tot);
+        if ((def.tot || []).indexOf(c[0]) < 0) return '';
+        var s = rows.reduce(function (a, r) { return a + num(r[c[0]]); }, 0);
+        return c[2] === 'm' ? Xl.m(s, Xl.S.totM) : Xl.n(s, Xl.S.totI);
+      }));
+    }
+    return { name:def.t.slice(0, 31), rows:out, freeze:1,
+      cols:cols.map(function (c) {
+        return /remark|reason|detail|address|note|message|product|store|link/i.test(c[1]) ? 34
+          : Math.min(26, Math.max(10, String(c[1]).length + 4)); }),
+      filter:'A1:' + Xl.col(cols.length - 1) + out.length };
+  },
+  who: function (code) {
+    if (!code) return 'sab employee';
+    var e = DB.emp(code) || {};
+    return (e.Name || code) + ' (' + code + ')';
+  },
+  any: function (kind, code, from, to) {
+    var rows = Rep.anyRows(kind, code, from, to);
+    var def = Rep.ANY[kind] || { t:kind };
+    var ttl = Rep.ttl('GARUDA — ' + def.t, Rep.who(code) + '  ·  ' + dmy(from) + ' – ' + dmy(to) +
+      '  ·  ' + rows.length + ' row', 8);
+    var sheets = [{ name:'About', cols:[26, 30, 18, 18, 14, 14, 14, 14], rows:ttl.rows.concat([
+      ['Report', Xl.t(def.t)], ['Employee', Xl.t(Rep.who(code))],
+      ['From', Xl.dt(from)], ['To', Xl.dt(to)], ['Rows', Xl.n(rows.length)],
+      ['Downloaded', Xl.t(dmy(today()) + ' ' + new Date().toLocaleTimeString('en-IN'))],
+      ['By', Xl.t(DB.me.name + ' (' + DB.me.code + ')')]]), merges:ttl.merges },
+      Rep.anySheet(kind, rows)];
+    /* an order without its lines is half a report */
+    if (kind === 'SecOrders' && rows.length) {
+      var pos = {}; rows.forEach(function (o) { pos[String(o.PoNumber)] = 1; });
+      var lines = DB.rows('SecOrderLines').filter(function (l) { return pos[String(l.PoNumber)]; });
+      sheets.push(Rep.anySheet('SecOrderLines', lines));
+    }
+    return Xl.save('GARUDA_' + def.t.replace(/\W+/g, '') + '_' + (code || 'ALL') + '_' + from + '_' + to,
+      sheets);
+  },
+  /* every report in one workbook — one tab each, the same formatting */
+  everything: function (code, from, to) {
+    var ttl = Rep.ttl('GARUDA — all reports', Rep.who(code) + '  ·  ' + dmy(from) + ' – ' + dmy(to), 8);
+    var about = ttl.rows.concat([['Employee', Xl.t(Rep.who(code))], ['From', Xl.dt(from)],
+      ['To', Xl.dt(to)], ['By', Xl.t(DB.me.name)], []]);
+    var sheets = [], n = 0;
+    Object.keys(Rep.ANY).forEach(function (kind) {
+      if (kind === 'SecOrderLines') return;
+      var rows = Rep.anyRows(kind, code, from, to);
+      about.push([Xl.t(Rep.ANY[kind].t), Xl.n(rows.length)]);
+      if (!rows.length) return;
+      sheets.push(Rep.anySheet(kind, rows)); n++;
+      if (kind === 'SecOrders') {
+        var pos = {}; rows.forEach(function (o) { pos[String(o.PoNumber)] = 1; });
+        var lines = DB.rows('SecOrderLines').filter(function (l) { return pos[String(l.PoNumber)]; });
+        if (lines.length) { sheets.push(Rep.anySheet('SecOrderLines', lines)); n++; }
+      }
+    });
+    sheets.unshift({ name:'About', cols:[26, 30, 18, 18, 14, 14, 14, 14], rows:about, merges:ttl.merges });
+    Xl.save('GARUDA_ALL_' + (code || 'ALL') + '_' + from + '_' + to, sheets);
+    return { sheets:n };
+  },
   tab: function (name, cols, rows) {
     var out = [cols.map(Xl.h)];
     rows.forEach(function (r) {
@@ -8384,7 +8761,7 @@ var Trk = {
 
     /* one count per type — of its OWN open items, not of whichever tab happens to be showing */
     var openBy = Trk.openCounts();
-    h += '<div class="card" style="padding:10px 14px 0"><div class="tnav" id="tk_chips">' +
+    h += '<div class="card" style="padding:10px 14px 0"><div class="tnav fit" id="tk_chips">' +
       Trk.KINDS.map(function (c) {
         var n = openBy[c[0]] || 0;
         return '<button class="' + (Trk.kind === c[0] ? 'on' : '') + '"' +
@@ -9752,144 +10129,476 @@ var Log = {
 
 /* ═══════════════ ADMIN CONSOLE ═══════════════ */
 var Admin = {
-  tab:'kpi',
+  /* ══════════════════ THE CONSOLE ══════════════════
+     Five tabs, and each one answers a different question:
+        Summary    what happened — the total first, then the same numbers per person
+        Approvals  what needs me — the one queue (the rep's Requests screen, with the buttons live)
+        Users      who may do what — bypass, PJP lock, active, for one person or for everyone
+        Data       give me / take out data — a formatted download, and a delete that shows its work
+        Preview    what the rep sees
+     It used to be eight, and the console duplicated the Approvals screen. Whatever an HOD opens, there
+     is exactly one place it lives. */
+  tab:'sum',
+  TABS:[['sum', 'Summary'], ['appr', 'Approvals'], ['users', 'Users'], ['data', 'Data'],
+        ['prev', 'Preview']],
   html: function () {
     var s0 = Auth.session() || {};
-    var h = UI.head('', (s0.rights || 'Admin') + ' console',
-      'Overview aur approvals ke liye. Har employee ka kaam, PJP aur photo yahin se dekho \u2014 ' +
-      'sheet kholne ki zaroorat nahi.');
     var pend = Nav.badge('admin');
-    var tabs = [['kpi',' Overview'], ['appr',' Approvals' + (pend ? ' (' + pend + ')' : '')],
-      ['pjp',' PJP'], ['team',' Team'], ['pics',' Photos'],
-      ['data',' Data'], ['users',' Users'], ['prev',' Preview']];
-    /* One scrolling strip, not three stacked rows — but with a real affordance, because the reason it
-       was widened in the first place was that nobody could tell Users / Preview existed off-screen:
-       a always-visible slim scrollbar, a fade on the right edge, and the ACTIVE chip is scrolled into
-       view after every render. */
-    h += '<div class="card" style="padding:10px"><div class="chips" id="ad_chips">' +
-      tabs.map(function (t) { return '<button class="btn ' + (Admin.tab === t[0] ? '' : 'ghost') + ' sm"' +
-        (Admin.tab === t[0] ? ' data-on="1"' : '') + ' onclick="Admin.go(\'' + t[0] + '\')">' + t[1] + '</button>'; }).join('') +
+    var h = UI.head('', (s0.rights || 'Admin') + ' console',
+      'Summary, approvals, permissions, data — sab kuch yahin se.');
+    h += '<div class="card" style="padding:10px 14px 0"><div class="tnav" id="ad_chips">' +
+      Admin.TABS.map(function (t) {
+        var n = t[0] === 'appr' ? pend : 0;
+        return '<button class="' + (Admin.tab === t[0] ? 'on' : '') + '"' +
+          (Admin.tab === t[0] ? ' data-on="1"' : '') + ' onclick="Admin.go(\'' + t[0] + '\')">' +
+          esc(t[1]) + (n ? '<span class="bdg">' + n + '</span>' : '') + '</button>'; }).join('') +
       '</div></div>';
     return h + (Admin[Admin.tab] ? Admin[Admin.tab]() : '');
   },
   after: function () { Admin.chips(); },
-  go: function (t) { Admin.tab = t; render(); Admin.chips(); },
-  /* keep the selected chip visible, and drop the edge fade when the strip does not actually scroll */
+  go: function (t) { Admin.tab = t; Admin.emp = ''; render(); Admin.chips(); },
   chips: function () {
     var s = $('ad_chips'); if (!s) return;
-    s.classList.toggle('fit', s.scrollWidth <= s.clientWidth + 2);
-    /* centre the active chip HORIZONTALLY only. scrollIntoView moves the nearest scrollable
-       ancestor on BOTH axes, which meant the page jumped to the chip row on every re-render. */
     var on = s.querySelector('[data-on="1"]');
     if (on) s.scrollLeft = Math.max(0, on.offsetLeft - (s.clientWidth - on.offsetWidth) / 2);
   },
 
-  kpi: function () {
-    var t = today(), m = t.slice(0, 7);
-    var ord = DB.rows('SecOrders'), md = ord.filter(function (o) { return toISO(o.Date).slice(0, 7) === m; });
-    var tdy = ord.filter(function (o) { return toISO(o.Date) === t; });
-    var emps = DB.m.Master_Employees || [];
-    var plans = DB.rows('DayPlan').filter(function (p) { return toISO(p.Date) === t; });
-    var eods = DB.rows('Eod').filter(function (e) { return toISO(e.Date) === t; });
-    var nsv = md.reduce(function (a, o) { return a + num(o.TotNsvLakh); }, 0);
-    var h = '<div class="kpis">' + UI.kpi(emps.length, 'Employees', 'b') + UI.kpi(plans.length, 'Aaj plan', plans.length ? 'g' : 'r') +
-      UI.kpi(tdy.length, 'Aaj visits', 'b') + UI.kpi(eods.length, 'Aaj EOD', eods.length ? 'g' : 'w') + '</div>';
-    h += '<div class="kpis" style="margin-top:10px">' + UI.kpi(md.length, 'Month visits', 'b') +
-      UI.kpi(lakh(nsv), 'Month NSV ₹L', 'g') + UI.kpi(DB.rows('NewStores').filter(function (n) { return toISO(n.Date).slice(0, 7) === m; }).length, 'Month NSO', 'w') +
-      UI.kpi(DB.rows('SecOrders').filter(function (o) { return o.Status === 'Order in Process'; }).length, 'Pending orders', 'r') + '</div>';
+  /* ── one period definition for the whole console ── */
+  per:'D', from:'', to:'', mon:'',
+  month: function () {
+    var t = today().slice(0, 7);
+    if (!Admin.mon || Admin.mon > t) Admin.mon = t;
+    return Admin.mon;
+  },
+  range: function () {
+    var t = today();
+    if (Admin.per === 'D') return [t, t];
+    if (Admin.per === 'W') {
+      if (Admin.from && Admin.to) {
+        var a = Admin.from < Admin.to ? Admin.from : Admin.to;
+        var b = Admin.from < Admin.to ? Admin.to : Admin.from;
+        return [a, b > t ? t : b];
+      }
+      var d = new Date(t + 'T00:00:00'); d.setDate(d.getDate() - 6);
+      return [iso(d), t];
+    }
+    var m = Admin.month(), last = new Date(+m.slice(0, 4), +m.slice(5, 7), 0);
+    return [m + '-01', m === t.slice(0, 7) ? t : iso(last)];
+  },
+  rangeLbl: function () {
+    var r = Admin.range();
+    return Admin.per === 'D' ? dmy(r[0])
+      : r[0] === r[1] ? dmy(r[0]) : dmy(r[0]) + ' – ' + dmy(r[1]);
+  },
+  months: function () {
+    var out = [], m = String(DB.cfg('Go_Live_Month', '2026-07')).slice(0, 7), t = today().slice(0, 7), g = 0;
+    while (m <= t && g++ < 60) {
+      out.push(m);
+      var y = +m.slice(0, 4), n = +m.slice(5, 7) + 1;
+      if (n > 12) { n = 1; y++; }
+      m = y + '-' + p2(n);
+    }
+    return out.reverse();
+  },
+  monLbl: function (m) { return monthName(m).split(' ')[0].slice(0, 3) + ' ' + String(m).slice(2, 4); },
+  setPer: function (p) { Admin.per = p; render(); },
+  setRange: function (k, v) { Admin[k] = v; Admin.per = 'W'; render(); },
+  setMon: function (m) { Admin.mon = m; Admin.per = 'M'; render(); },
+  /* the period strip, shared by Summary and Data */
+  periodCard: function () {
+    return '<div class="card" style="padding:10px">' +
+      '<div class="seg">' + [['D', 'Today'], ['W', 'Days'], ['M', 'Month']].map(function (p) {
+        return '<button class="' + (Admin.per === p[0] ? 'on' : '') + '" onclick="Admin.setPer(\'' +
+          p[0] + '\')">' + esc(p[1]) + '</button>'; }).join('') + '</div>' +
+      (Admin.per === 'W' ? '<div class="pair" style="margin-top:8px">' +
+        '<div><label class="f">From</label><input class="in" type="date" max="' + today() +
+          '" value="' + esc(Admin.from || Admin.range()[0]) +
+          '" onchange="Admin.setRange(\'from\',this.value)"></div>' +
+        '<div><label class="f">To</label><input class="in" type="date" max="' + today() +
+          '" value="' + esc(Admin.to || Admin.range()[1]) +
+          '" onchange="Admin.setRange(\'to\',this.value)"></div></div>' : '') +
+      (Admin.per === 'M' ? '<div style="margin-top:8px"><label class="f">Month</label>' +
+        '<select class="in" onchange="Admin.setMon(this.value)">' + Admin.months().map(function (m) {
+          return '<option value="' + m + '"' + (Admin.month() === m ? ' selected' : '') + '>' +
+            esc(Admin.monLbl(m)) + '</option>'; }).join('') + '</select></div>' : '') +
+      '<div class="hint" style="margin-top:8px">' + esc(Admin.rangeLbl()) + '</div></div>';
+  },
 
-    h += '<div class="sec-title">Aaj kaun kaam par hai</div><div class="card"><div class="tw"><table>' +
-      '<thead><tr><th>Employee</th><th>Plan</th><th>Beat</th><th class="num">Visits</th><th class="num">NSV L</th><th>EOD</th></tr></thead><tbody>' +
-      emps.map(function (e) {
-        var p = plans.filter(function (x) { return String(x.EmpCode) === String(e.Code); })[0];
-        var o = tdy.filter(function (x) { return String(x.EmpCode) === String(e.Code); });
-        var ed = eods.filter(function (x) { return String(x.EmpCode) === String(e.Code); })[0];
-        return '<tr><td>' + esc(e.Name) + '</td>' +
-          '<td>' + (p ? (p.NotifiedAt ? '<span class="pill p-ok">Notified</span>' : '<span class="pill p-warn">Saved</span>') : '<span class="pill p-bad">—</span>') + '</td>' +
-          '<td>' + esc(p ? (p.Town || '') + '/' + (p.Beat || '') : '—') + '</td>' +
-          '<td class="num">' + o.length + '</td>' +
-          '<td class="num">' + lakh(o.reduce(function (a, x) { return a + num(x.TotNsvLakh); }, 0)) + '</td>' +
-          '<td>' + (ed ? '<span class="pill p-ok"></span>' : '<span class="pill p-grey">—</span>') + '</td></tr>'; }).join('') +
-      '</tbody></table></div></div>';
+  /* ══ 1. SUMMARY — the total, then the same numbers per person ══ */
+  emp:'',
+  sum: function () {
+    var r = Admin.range();
+    if (Admin.emp) return Admin.periodCard() + Admin.one(Admin.emp, r);
+    var rows = Team.local(r[0], r[1]);
+    var plans = DB.rows('DayPlan').filter(function (p) { var d = toISO(p.Date); return d >= r[0] && d <= r[1]; });
+    var eods = DB.rows('Eod').filter(function (e) { var d = toISO(e.Date); return d >= r[0] && d <= r[1]; });
+    var t = { sc:0, tc:0, pc:0, nsv:0, nso:0 };
+    rows.forEach(function (e) { ['sc', 'tc', 'pc', 'nsv', 'nso'].forEach(function (k) { t[k] += num(e[k]); }); });
+    var working = rows.filter(function (e) { return e.fieldDays > 0; }).length;
+    var notified = plans.filter(function (p) { return p.NotifiedAt; }).length;
+
+    var h = Admin.periodCard();
+    h += '<div class="kpis">' +
+      UI.kpi(lakh(t.nsv), 'NSV ₹L', 'g') +
+      UI.kpi(t.tc + ' / ' + t.sc, 'TC / SC', t.sc && t.tc >= t.sc ? 'g' : 'b') +
+      UI.kpi(t.pc, 'PC (order mila)', 'b') +
+      UI.kpi(t.nso, 'Naye outlet', '') + '</div>';
+    h += '<div class="kpis k3">' +
+      UI.kpi(working + ' / ' + rows.length, 'Field par the', working ? 'g' : 'r') +
+      UI.kpi(notified + ' / ' + plans.length, 'Plan notified', notified ? 'g' : 'w') +
+      UI.kpi(eods.length, 'EOD filed', eods.length ? 'g' : 'w') + '</div>';
+
+    /* the split — one row per person, tap to open them */
+    var MK = { L:'Leave', O:'Weekly off', M:'Meeting', H:'Holiday' };
+    rows.sort(function (a, b) { return num(b.nsv) - num(a.nsv) ||
+      String(a.name || a.code).localeCompare(String(b.name || b.code)); });
+    h += '<div class="sec-title">Employee-wise — ' + esc(Admin.rangeLbl()) + '</div><div class="card">' +
+      '<div class="tw"><table><thead><tr><th>Employee</th><th class="num">SC</th><th class="num">TC</th>' +
+      '<th class="num">PC</th><th class="num">NSV ₹L</th><th class="num">NSO</th></tr></thead><tbody>' +
+      rows.map(function (e) {
+        var mk = String(e.mark || '').toUpperCase().slice(0, 1);
+        var away = mk && MK[mk] && !num(e.tc) && !num(e.nsv);
+        var cell = function (k, money) {
+          if (away) return '<td class="num"><span class="pill p-grey" title="' + MK[mk] + '">' + mk + '</span></td>';
+          return '<td class="num">' + (money ? lakh(num(e[k])) : String(Math.round(num(e[k])))) + '</td>';
+        };
+        return '<tr style="cursor:pointer" onclick="Admin.open(\'' + Appr.q(e.code) + '\')"><td>' +
+          esc(e.name || e.code) + '<div class="hint">' + esc(e.code) +
+          (e.hq ? ' · ' + esc(e.hq) : '') + ' ›</div></td>' +
+          cell('sc') + cell('tc') + cell('pc') + cell('nsv', true) + cell('nso') + '</tr>';
+      }).join('') +
+      '<tr class="tot"><td><b>TOTAL</b></td><td class="num"><b>' + Math.round(t.sc) + '</b></td>' +
+      '<td class="num"><b>' + Math.round(t.tc) + '</b></td><td class="num"><b>' + Math.round(t.pc) +
+      '</b></td><td class="num"><b>' + lakh(t.nsv) + '</b></td><td class="num"><b>' +
+      Math.round(t.nso) + '</b></td></tr></tbody></table></div>' +
+      '<div class="hint" style="margin-top:8px">Kisi bhi row par tap karo — us employee ka poora din, ' +
+      'PJP aur photo dikhega.</div>' +
+      '<div class="hint">L = leave, O = weekly off, M = meeting.</div>' +
+      '<div class="btns"><button class="btn ghost sm" onclick="Admin.go(\'data\')">Excel chahiye? Data tab</button></div>' +
+      '</div>';
+    return h;
+  },
+  open: function (code) { Admin.emp = code; render(); window.scrollTo(0, 0); },
+  /* one employee, everything about them for the chosen period */
+  one: function (code, r) {
+    var e = DB.emp(code) || { Code:code, Name:code };
+    var rows = Team.local(r[0], r[1]).filter(function (x) { return String(x.code).toUpperCase() === String(code).toUpperCase(); });
+    var me = rows[0] || { sc:0, tc:0, pc:0, nsv:0, nso:0, fieldDays:0, leave:0, off:0, meet:0 };
+    var mine = function (tab) { return DB.rows(tab).filter(function (x) {
+      var d = toISO(x.Date);
+      return String(x.EmpCode || '').toUpperCase() === String(code).toUpperCase() && d >= r[0] && d <= r[1]; }); };
+    var ord = mine('SecOrders');
+
+    var h = '<div class="card"><div class="lrow" style="padding-top:0">' +
+      '<button class="btn ghost sm" style="flex:0 0 auto" onclick="Admin.emp=\'\';render()">‹ Sab employee</button>' +
+      '<div class="m" style="text-align:right"><div class="t">' + esc(e.Name || code) + '</div>' +
+      '<div class="s">' + esc(code) + ' · ' + esc(e.Designation || '') + ' · ' + esc(e.HQ || '') + '</div></div></div>' +
+      '<div class="hint">HOD ' + esc(e.HodName || '—') + ' · ASM ' + esc(e.AsmName || '—') +
+      ' · joining ' + esc(dmy(DB.doj(code)) || '—') + '</div></div>';
+
+    h += '<div class="kpis k3">' + UI.kpi(lakh(num(me.nsv)), 'NSV ₹L', 'g') +
+      UI.kpi(num(me.tc) + ' / ' + num(me.sc), 'TC / SC', 'b') +
+      UI.kpi(num(me.pc), 'PC', 'b') + '</div>';
+    h += '<div class="kpis k3">' + UI.kpi(num(me.fieldDays), 'Field din', 'b') +
+      UI.kpi(num(me.leave) + num(me.off), 'Off / leave', '') +
+      UI.kpi(mine('Eod').length, 'EOD', mine('Eod').length ? 'g' : 'w') + '</div>';
+
+    /* the day-by-day of the period */
+    h += '<div class="sec-title">Din-wise</div><div class="card"><div class="pane" style="max-height:320px">' +
+      '<table><thead><tr><th>Date</th><th>Plan</th><th>Beat</th><th class="num">Calls</th>' +
+      '<th class="num">NSV L</th><th>EOD</th></tr></thead><tbody>';
+    var d0 = new Date(r[0] + 'T00:00:00'), seen = 0;
+    for (var g = 0; g < 62; g++) {
+      var k = iso(d0); if (k > r[1]) break;
+      d0.setDate(d0.getDate() + 1);
+      var pl = DB.find('DayPlan', code + '_' + k) || DB.pjpFor(code, k) || null;
+      var oo = ord.filter(function (x) { return toISO(x.Date) === k; });
+      var ed = DB.rows('Eod').filter(function (x) { return toISO(x.Date) === k &&
+        String(x.EmpCode || '').toUpperCase() === String(code).toUpperCase(); })[0];
+      if (!pl && !oo.length && !ed) continue;
+      seen++;
+      var ww = (pl && (pl.WorkingWith || pl.Ww || pl.Week)) || '—';
+      h += '<tr><td>' + dmy(k) + '</td><td>' + esc(String(ww).slice(0, 18)) + '</td>' +
+        '<td>' + esc(((pl && (pl.Town || '')) + ' / ' + (pl && (pl.Beat || ''))).slice(0, 24)) + '</td>' +
+        '<td class="num">' + oo.length + '</td>' +
+        '<td class="num">' + lakh(oo.reduce(function (a, x) { return a + num(x.TotNsvLakh); }, 0)) + '</td>' +
+        '<td>' + (ed ? '<span class="pill p-ok">yes</span>' : '<span class="pill p-grey">—</span>') + '</td></tr>';
+    }
+    h += '</tbody></table></div>' + (seen ? '' : UI.empty('', 'Is period me kuch record nahi')) + '</div>';
+
+    /* their PJP month, with the adherence marking */
+    h += Admin.pjpOne(code, Admin.per === 'M' ? Admin.month() : r[0].slice(0, 7));
+    h += Admin.adh(code, Admin.per === 'M' ? Admin.month() : r[0].slice(0, 7));
+    /* and their photos for the period */
+    h += Admin.pics(code, r);
     return h;
   },
 
-  team: function () {
-    var m = today().slice(0, 7), emps = DB.m.Master_Employees || [];
-    var h = '<div class="sec-title">' + monthName(m) + ' — employee wise</div><div class="card"><div class="tw"><table>' +
-      '<thead><tr><th>Employee</th><th>HQ</th><th class="num">Visits</th><th class="num">Orders</th><th class="num">Value</th><th class="num">NSV L</th><th class="num">NSO</th><th class="num">POSM</th><th class="num">EOD</th></tr></thead><tbody>';
-    emps.forEach(function (e) {
-      var f = function (tab) { return DB.rows(tab).filter(function (r) {
-        return String(r.EmpCode) === String(e.Code) && toISO(r.Date).slice(0, 7) === m; }); };
-      var o = f('SecOrders');
-      h += '<tr><td>' + esc(e.Name) + '</td><td>' + esc(e.HQ || '') + '</td><td class="num">' + o.length + '</td>' +
-        '<td class="num">' + o.filter(function (x) { return num(x.TotUnits) > 0; }).length + '</td>' +
-        '<td class="num">' + inr(o.reduce(function (a, x) { return a + num(x.TotValue); }, 0)) + '</td>' +
-        '<td class="num">' + lakh(o.reduce(function (a, x) { return a + num(x.TotNsvLakh); }, 0)) + '</td>' +
-        '<td class="num">' + f('NewStores').length + '</td><td class="num">' + f('PosmAudit').length + '</td>' +
-        '<td class="num">' + f('Eod').length + '</td></tr>';
-    });
-    h += '</tbody></table></div><div class="btns"><button class="btn ghost sm" onclick="Admin.exportTeam()"> Download</button></div></div>';
-    return h;
-  },
-  exportTeam: function () { return Rep.team(today().slice(0, 7)); },
-
-  /* the console's Approvals tab IS the Requests screen — one engine, so the two can never diverge */
+  /* ══ 2. APPROVALS — the same screen the rep sees, with the buttons live ══ */
   appr: function () { return Appr.html(); },
 
-  /* PJP from the boss's side: who has submitted, what is pending, and the full month on one click.
-     The employee-facing builder is NOT what an HOD needs — they need to review, not to fill. */
-  pjpEmp:'', pjpMon:'',
-  pjp: function () {
-    var emps = (DB.m.Master_Employees || []).slice();
-    var mon = Admin.pjpMon || today().slice(0, 7);
-    var months = {}; months[today().slice(0, 7)] = 1;
-    var nx = new Date(); nx.setMonth(nx.getMonth() + 1); months[iso(nx).slice(0, 7)] = 1;
-    DB.rows('PjpDraft').forEach(function (d) { if (d.Month) months[String(d.Month)] = 1; });
-    var h = '<div class="card" style="padding:10px"><label class="f">Month</label>' +
-      '<select class="in" onchange="Admin.pjpMon=this.value;Admin.pjpEmp=&quot;&quot;;render()">' +
-      Object.keys(months).sort().reverse().map(function (m) {
-        return '<option value="' + m + '"' + (m === mon ? ' selected' : '') + '>' + (monthName(m) || m) + '</option>'; }).join('') +
-      '</select></div>';
+  /* ══ 3. USERS — who may do what ══ */
+  uq:'',
+  users: function () {
+    var u = (DB.m.LoginConfig || []).slice();
+    var gB = /^(yes|true|1)$/i.test(String(DB.cfg('Global_Bypass', '') || ''));
+    var gP = String(DB.cfg('Global_PjpOpen', '') || '');
+    var on = u.filter(Admin.isBypass);
 
-    /* one employee opened -> show their whole month, and let the HOD settle its adherence */
-    if (Admin.pjpEmp) return h + Admin.pjpOne(Admin.pjpEmp, mon) + Admin.adh(Admin.pjpEmp, mon);
+    /* everyone at once */
+    var h = '<div class="sec-title">Sab ke liye</div><div class="card">' +
+      '<div class="lrow" style="padding-top:0"><div class="m"><div class="t">Bypass — poori team</div>' +
+      '<div class="s">Photo, sequence aur poora-month PJP ki majboori sab ke liye hat jayegi. ' +
+      'Sirf tab jab kuch tut gaya ho.</div></div>' +
+      '<button class="btn ' + (gB ? 'bad' : 'ghost') + ' sm" style="flex:0 0 auto" onclick="Admin.cfg(\'Global_Bypass\',\'' +
+        (gB ? 'No' : 'Yes') + '\',this)">' + (gB ? 'OFF karo' : 'ON karo') + '</button></div>' +
+      (gB ? '<div class="strip w" style="margin-bottom:0"><span class="g">!</span><div class="m">' +
+        '<b>Poori team par bypass ON hai</b> <i>· kaam hote hi OFF karo</i></div></div>' : '') +
+      '<div class="lrow"><div class="m"><div class="t">PJP tab — poori team</div>' +
+      '<div class="s">Normal niyam: 27 se 1 tarikh tak khula, HOD approve karne ke baad band. ' +
+      'Yahan se force kar sakte ho.</div></div>' +
+      '<select class="in" style="width:auto;flex:0 0 auto" onchange="Admin.cfg(\'Global_PjpOpen\',this.value,this)">' +
+        [['', 'Normal niyam'], ['Yes', 'Sab ke liye khula'], ['No', 'Sab ke liye band']].map(function (o) {
+          return '<option value="' + o[0] + '"' + (gP === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') +
+      '</select></div>' +
+      '<div class="lrow"><div class="m"><div class="t">Password reset</div>' +
+      '<div class="s">Sab logins Honasa@123 ho jayenge, aur pehli login par change maangega.</div></div>' +
+      '<button class="btn ghost sm" style="flex:0 0 auto" onclick="Admin.resetPwd()">Reset all</button></div>' +
+      '<div class="hint" style="margin-top:8px">Bypass me kya-kya hat jata hai: ' + Bypass.WAIVES.join(' · ') +
+      '. Data phir bhi zaroori hai.</div></div>';
 
-    h += '<div class="sec-title">' + (monthName(mon) || mon) + ' \u2014 ' + emps.length + ' employee</div><div class="card">';
-    h += emps.map(function (e) {
-      var d = DB.find('PjpDraft', e.Code + '__' + mon);
-      var pub = DB.m.Master_PJP ? DB.pjpMonth(e.Code, mon).length : 0;
-      var pst = Admin.pjpState(d, pub), lbl = pst.lbl;
-      var cv = d ? Appr.cover(d.Coverage) : '';
-      return '<div class="lrow" style="cursor:pointer" onclick="Admin.pjpEmp=&quot;' + esc(e.Code) + '&quot;;render()">' +
-        '<span class="ap-ic"></span>' +
-        '<div class="m"><div class="t">' + esc(e.Name) + '</div>' +
-        '<div class="s">' + esc(pst.note) + ' \u00b7 ' + esc(e.Code) + ' \u00b7 ' + esc(e.HQ || '') +
-          (cv ? ' \u00b7 ' + cv + ' field din' : '') +
-          (pst.k === 'live' ? '' : ' \u00b7 master me ' + pub + ' din') +
-          (d && d.HodBy ? ' \u00b7 ' + (String(d.Status).toLowerCase() === 'approved' ? 'approved' : 'decided') +
-            ' by ' + esc(d.HodBy) + (d.HodRole ? ' (' + esc(d.HodRole) + ')' : '') : '') + '</div></div>' +
-        '<span class="pill ' + lbl[1] + '">' + lbl[0] + '</span>' +
-        '<span class="ap-x">\u203a</span></div>';
-    }).join('') + '</div>';
-    return h;
+    /* one person at a time */
+    var q = String(Admin.uq || '').toUpperCase();
+    var show = q ? u.filter(function (x) {
+      return (String(x.Name || '') + ' ' + x.Code + ' ' + (x.Email || '') + ' ' + (x.HQ || ''))
+        .toUpperCase().indexOf(q) >= 0; }) : u;
+    h += '<div class="sec-title">' + u.length + ' login' + (on.length ? ' · ' + on.length + ' par bypass ON' : '') +
+      '</div><div class="card">' +
+      (u.length > 10 ? '<input class="in" placeholder="Naam, code ya HQ se dhoondo" value="' + esc(Admin.uq || '') +
+        '" oninput="Admin.uq=this.value;clearTimeout(Admin._u);Admin._u=setTimeout(render,350)">' +
+        '<div class="hint" style="margin:6px 0 2px">' + show.length + ' / ' + u.length + '</div>' : '');
+    if (!show.length) h += UI.empty('', 'Is search me koi user nahi');
+    h += show.slice(0, 60).map(function (x) {
+      var b = Admin.isBypass(x), pj = String(x.PjpOpen || '');
+      var act = !/inactive/i.test(String(x.Status || 'Active'));
+      return '<div class="drow' + (b ? ' bad inset' : '') + '">' +
+        '<div class="dr-h"><div class="m"><div class="t">' + esc(x.Name || x.Code) +
+          ' <span class="pill ' + (/admin|hod/i.test(x.Rights || '') ? 'p-blue' : 'p-grey') + '">' +
+          esc(x.Rights || 'Employee') + '</span>' +
+          (b ? ' <span class="pill p-warn">Bypass ON</span>' : '') +
+          (pj === 'Yes' ? ' <span class="pill p-ok">PJP khula</span>' : '') +
+          (pj === 'No' ? ' <span class="pill p-bad">PJP band</span>' : '') +
+          (act ? '' : ' <span class="pill p-bad">Inactive</span>') + '</div>' +
+        '<div class="s">' + esc(x.Code) + ' · ' + esc(x.Email || '') + ' · ' + esc(x.HQ || '') +
+          ' · joining ' + esc(dmy(x.DateofJoining) || '—') +
+          (b && x.BypassBy ? ' · bypass by ' + esc(x.BypassBy) : '') +
+          (b && x.BypassNote ? ' — ' + esc(x.BypassNote) : '') + '</div></div></div>' +
+        '<div class="dsave" style="border-top:0;flex-wrap:wrap;gap:6px">' +
+          '<button class="btn ' + (b ? 'bad' : 'ghost') + ' sm" onclick="Admin.bypass(\'' +
+            Appr.q(x.Code) + '\',' + (b ? 'false' : 'true') + ',this)">' +
+            (b ? 'Bypass OFF' : 'Bypass ON') + '</button>' +
+          '<select class="in" style="width:auto;flex:0 0 auto;font-size:12.5px;padding:7px 26px 7px 9px"' +
+            ' onchange="Admin.flag(\'' + Appr.q(x.Code) + '\',\'PjpOpen\',this.value,this)">' +
+            [['', 'PJP: normal'], ['Yes', 'PJP: khula rakho'], ['No', 'PJP: band rakho']].map(function (o) {
+              return '<option value="' + o[0] + '"' + (pj === o[0] ? ' selected' : '') + '>' + o[1] +
+                '</option>'; }).join('') + '</select>' +
+          '<button class="btn ghost sm" onclick="Admin.flag(\'' + Appr.q(x.Code) + '\',\'Status\',\'' +
+            (act ? 'Inactive' : 'Active') + '\',this)">' + (act ? 'Login band karo' : 'Login chalu karo') +
+          '</button>' +
+        '</div></div>'; }).join('');
+    if (show.length > 60) h += '<div class="hint">Sirf pehle 60 — search karo.</div>';
+    return h + '</div>';
+  },
+  flag: function (code, name, v, el) {
+    return Busy.run('flag_' + code + name, el, '…', function () {
+      return Api.post({ action:'admin', op:'setFlag', email:Auth.session().email,
+        code:code, flag:name, value:v }).then(function (r) {
+        if (!r || !r.ok) return toast('! ' + ((r && r.error) || 'Nahi hua'), 4000);
+        /* keep the screen honest until the next pull brings the row back */
+        (DB.m.LoginConfig || []).forEach(function (x) {
+          if (String(x.Code).toUpperCase() === String(code).toUpperCase()) x[name] = v; });
+        DB.cache(); Log.add('User', name + '=' + (v || 'normal'), code, Admin.role());
+        render();
+        toast(code + ' — ' + name + ' ' + (v || 'normal'));
+      });
+    });
+  },
+  /* a whole-team switch (Master_Config, allow-listed on the server) */
+  cfg: function (key, v, el) {
+    var lbl = key === 'Global_Bypass' ? 'Poori team ka bypass' : 'Poori team ka PJP tab';
+    return UI.confirm({ icon:'', title:lbl + ' badalna hai?', danger:key === 'Global_Bypass' && v === 'Yes',
+      msg:'<b>' + lbl + '</b> → <b>' + (v || 'normal niyam') + '</b>. Ye sab employee par lagu hoga.',
+      ok:'Haan, badlo', cancel:'Abhi nahi' }).then(function (go) {
+      if (!go) { render(); return; }
+      return Busy.run('cfg_' + key, el, '…', function () {
+        return Api.post({ action:'admin', op:'setCfg', email:Auth.session().email,
+          key:key, value:v }).then(function (r) {
+          if (!r || !r.ok) return toast('! ' + ((r && r.error) || 'Nahi hua'), 4000);
+          var a = DB.m.Master_Config || (DB.m.Master_Config = []);
+          var row = a.filter(function (x) { return String(x.Key) === key; })[0];
+          if (row) row.Value = v; else a.push({ Key:key, Value:v });
+          DB.cache(); Log.add('Config', key + '=' + (v || 'normal'), key, Admin.role());
+          render(); toast(lbl + ' → ' + (v || 'normal niyam'));
+        });
+      });
+    });
   },
 
-  /* ONE resolver for "what is this employee's month actually at", used by the list AND the detail
-     view so they can never disagree.
-       Master_PJP has days  → the plan is LIVE. Nothing reaches that tab except through
-                              publishPjp_ after an HOD approval, so days in the master ARE approval.
-                              (July's plans were loaded straight into the sheet and have no draft row
-                              at all — those used to read "Bheja nahi", which was simply wrong.)
-       pending              → it is sitting with the HOD right now. This BEATS the master days: if the
-                              rep edited an approved month and re-sent it, the live question is the
-                              new submission.
-       rejected             → stays rejected until they fix it and send it again (which makes it
-                              pending, i.e. "Approval ke liye bheja").
-       draft / nothing      → genuinely not sent yet.
-     A pill is a chip, not a sentence — the long version of each state goes in `note`, which the row's
-     sub-line and the detail header show. (A 30-character pill is `nowrap`, so on a 320px phone it
-     squeezed the employee name down to one letter per line.) */
+  /* ══ 4. DATA — a formatted download, and a delete that shows its work ══ */
+  dkind:'SecOrders', dcode:'', ddel:null,
+  KINDS:[['SecOrders', 'Orders (with lines)'], ['Eod', 'EOD'], ['DayPlan', 'Day plans'],
+         ['NewStores', 'New outlets'], ['PosmAudit', 'POSM audit'],
+         ['PosmRequirement', 'POSM requirement'], ['TaDa', 'TA / DA claims'],
+         ['Deviation', 'Plan changes'], ['PjpDraft', 'PJP drafts'], ['Dfr', 'Daily field report'],
+         ['StockRemark', 'Stock remarks'], ['Photos', 'Photos'], ['ActivityLog', 'Activity log']],
+  kindLbl: function (k) {
+    var x = Admin.KINDS.filter(function (y) { return y[0] === k; })[0];
+    return x ? x[1] : k;
+  },
+  /* every employee, for the pickers — searchable once there are more than ten */
+  emps: function () {
+    var seen = {}, out = [];
+    (DB.m.Master_Employees || []).forEach(function (e) {
+      var c = String(e.Code || '').toUpperCase(); if (!c || seen[c]) return;
+      seen[c] = 1; out.push({ code:c, name:e.Name || c, hq:e.HQ || '' });
+    });
+    (DB.m.LoginConfig || []).forEach(function (e) {
+      var c = String(e.Code || '').toUpperCase();
+      if (!c || seen[c] || /admin/i.test(String(e.Rights || ''))) return;
+      seen[c] = 1; out.push({ code:c, name:e.Name || c, hq:e.HQ || '' });
+    });
+    return out.sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+  },
+  /* a picker that is a plain select when short, and a searchable one when it is not */
+  empPick: function (id, cur, handler) {
+    var e = Admin.emps();
+    if (e.length <= 10) {
+      return '<select class="in" id="' + id + '" onchange="' + handler + '">' +
+        '<option value="">Sab employee</option>' +
+        e.map(function (x) { return '<option value="' + esc(x.code) + '"' +
+          (String(cur).toUpperCase() === x.code ? ' selected' : '') + '>' + esc(x.name) + ' (' +
+          esc(x.code) + ')</option>'; }).join('') + '</select>';
+    }
+    /* a datalist gives the phone's own search over the same list */
+    var pick = e.filter(function (x) { return x.code === String(cur).toUpperCase(); })[0];
+    return '<input class="in" id="' + id + '" list="' + id + '_l" placeholder="Sab employee — ya naam / code likho"' +
+      ' value="' + esc(pick ? pick.name + ' (' + pick.code + ')' : '') + '" onchange="' + handler + '">' +
+      '<datalist id="' + id + '_l">' + e.map(function (x) {
+        return '<option value="' + esc(x.name) + ' (' + esc(x.code) + ')"></option>'; }).join('') + '</datalist>' +
+      '<div class="hint" style="margin-top:4px">' + e.length + ' employee · khali chhodo to sab</div>';
+  },
+  /* "NAME (CODE)" or a bare code back to a code */
+  codeOf: function (v) {
+    var s = String(v || '').trim();
+    if (!s) return '';
+    var m = /\(([^)]+)\)\s*$/.exec(s);
+    if (m) return m[1].toUpperCase().trim();
+    var up = s.toUpperCase();
+    var hit = Admin.emps().filter(function (x) { return x.code === up || String(x.name).toUpperCase() === up; })[0];
+    return hit ? hit.code : up;
+  },
+  setCode: function (v) { Admin.dcode = Admin.codeOf(v); Admin.ddel = null; render(); },
+
+  data: function () {
+    var r = Admin.range(), code = Admin.dcode;
+    var who = code ? (function () { var e = DB.emp(code) || {}; return (e.Name || code) + ' (' + code + ')'; })()
+                   : 'sab employee';
+    var rows = Admin.pick(Admin.dkind, code, r);
+
+    var h = Admin.periodCard();
+    h += '<div class="sec-title">Report download</div><div class="card">' +
+      '<label class="f">Report</label><select class="in" onchange="Admin.dkind=this.value;Admin.ddel=null;render()">' +
+      Admin.KINDS.map(function (k) { return '<option value="' + k[0] + '"' +
+        (Admin.dkind === k[0] ? ' selected' : '') + '>' + esc(k[1]) + '</option>'; }).join('') + '</select>' +
+      '<label class="f" style="margin-top:8px">Employee</label>' +
+      Admin.empPick('ad_emp', code, 'Admin.setCode(this.value)') +
+      '<div class="hint" style="margin-top:8px">' + rows.length + ' row milenge — ' +
+      esc(Admin.kindLbl(Admin.dkind)) + ' · ' + esc(who) + ' · ' + esc(Admin.rangeLbl()) + '</div>' +
+      '<div class="btns"><button class="btn" onclick="Admin.dl(this)"' + (rows.length ? '' : ' disabled') +
+      '>Excel download</button>' +
+      '<button class="btn ghost" onclick="Admin.dlAll(this)">Sab reports (ek file)</button></div></div>';
+
+    /* ── delete ── */
+    var d = Admin.ddel;
+    h += '<div class="sec-title">Data delete</div><div class="card">' +
+      '<div class="sub">Jo report, jo employee aur jo date range upar chuna hai — wahi delete hoga.</div>' +
+      '<div class="sub">Pehle count dekho, phir confirm karo. Master tab kabhi nahi chhutte.</div>' +
+      '<div class="btns"><button class="btn ghost" onclick="Admin.count(this)">Kitna delete hoga? (count)</button>' +
+      '<button class="btn bad" onclick="Admin.purge(this)"' + (d && d.matched ? '' : ' disabled') +
+      '>Delete karo' + (d && d.matched ? ' (' + d.matched + ')' : '') + '</button></div>' +
+      (d ? '<div class="strip ' + (d.matched ? 'w' : 'b') + '" style="margin-bottom:0"><span class="g">' +
+        (d.matched ? '!' : 'i') + '</span><div class="m"><b>' + d.matched + ' row delete honge</b> <i>· ' +
+        esc(Object.keys(d.tabs || {}).filter(function (k) { return d.tabs[k]; })
+          .map(function (k) { return k + ' ' + d.tabs[k]; }).join(', ') || 'kuch nahi') + '</i></div></div>' +
+        ((d.sample || []).length ? '<div class="hint" style="margin-top:6px">' +
+          esc(d.sample.join(' · ')) + (d.matched > d.sample.length ? ' …' : '') + '</div>' : '') : '') +
+      '<div class="hint" style="margin-top:8px">Order delete karne par uski SecOrderLines bhi jaati hain.</div>' +
+      '<div class="hint">Delete sirf Admin kar sakta hai, HOD nahi.</div></div>';
+
+    h += Admin.master();
+    return h;
+  },
+  /* the rows a choice describes, on this device — the same filter the server will apply */
+  pick: function (kind, code, r) {
+    return DB.rows(kind).filter(function (x) {
+      if (code && String(x.EmpCode || '').toUpperCase() !== String(code).toUpperCase()) return false;
+      var d = toISO(x.Date);
+      if (!d) return !r;                                  /* undated rows only when no range is asked */
+      return d >= r[0] && d <= r[1];
+    });
+  },
+  dl: function (el) {
+    var r = Admin.range();
+    return Busy.run('dl', el, 'Ban raha hai…', function () {
+      var f = Rep.any(Admin.dkind, Admin.dcode, r[0], r[1]);
+      toast('Download shuru — ' + Admin.kindLbl(Admin.dkind));
+      return Promise.resolve(f);
+    });
+  },
+  dlAll: function (el) {
+    var r = Admin.range();
+    return Busy.run('dlall', el, 'Ban raha hai…', function () {
+      var f = Rep.everything(Admin.dcode, r[0], r[1]);
+      toast('Download shuru — ' + f.sheets + ' tab');
+      return Promise.resolve(f);
+    });
+  },
+  count: function (el) {
+    var r = Admin.range();
+    return Busy.run('cnt', el, 'Gin raha hai…', function () {
+      return Api.post({ action:'purge', email:Auth.session().email, dry:1,
+        sheet:Admin.dkind, code:Admin.dcode || 'ALL', from:r[0], to:r[1] }).then(function (res) {
+        if (!res || !res.ok) { Admin.ddel = null; render();
+          return toast('! ' + ((res && res.error) || 'Count nahi hua'), 4000); }
+        Admin.ddel = res; render();
+        toast(res.matched + ' row delete honge');
+      });
+    });
+  },
+  purge: function (el) {
+    var r = Admin.range(), d = Admin.ddel;
+    if (!d || !d.matched) return toast('Pehle count dekho');
+    var who = Admin.dcode || 'SAB employee';
+    return UI.prompt({ icon:'', title:d.matched + ' row delete karne hain?', danger:true,
+      msg:'<b>' + esc(Admin.kindLbl(Admin.dkind)) + '</b> · ' + esc(who) + ' · ' + esc(Admin.rangeLbl()) +
+        '<br>Ye wapas nahi aayega. Confirm karne ke liye niche DELETE likho.',
+      label:'DELETE likho', placeholder:'DELETE', required:true, requiredMsg:'DELETE likhna zaroori hai',
+      ok:'Haan, delete karo', cancel:'Abhi nahi' }).then(function (v) {
+      if (!v) return;
+      if (String(v).trim().toUpperCase() !== 'DELETE') return toast('DELETE likhna zaroori hai');
+      return Busy.run('purge', el, 'Delete ho raha hai…', function () {
+        return Api.post({ action:'purge', email:Auth.session().email,
+          sheet:Admin.dkind, code:Admin.dcode || 'ALL', from:r[0], to:r[1] }).then(function (res) {
+          if (!res || !res.ok) return toast('! ' + ((res && res.error) || 'Delete nahi hua'), 5000);
+          Log.add('Data', 'Deleted ' + res.deleted + ' rows from ' + Admin.dkind,
+            Admin.dcode || 'ALL', r[0] + '..' + r[1]);
+          Admin.ddel = null;
+          toast(res.deleted + ' row delete ho gaye — sync kar raha hai', 4000);
+          return Sync.now(false).then(function () { render(); });
+        });
+      });
+    });
+  },
   pjpState: function (d, pubDays) {
     var st = d ? Appr.norm(d.Status) : '';
     if (st === 'pending')  return { k:'pending',  lbl:['HOD ko bheja', 'p-warn'],
@@ -9980,10 +10689,20 @@ var Admin = {
     return h;
   },
 
-  pics: function () {
-    var all = Pics.rows();
-    var h = UI.head('', 'Field photos', 'Employee date shop. Har photo Drive me isi tarah rakha hai.');
-    if (!all.length) return h + UI.empty('', 'Abhi koi photo upload nahi hui');
+  /* the photos of one employee (or everybody) for the chosen period — it used to be its own tab */
+  picsDay:'', picsEmp:'',
+  pics: function (code, r) {
+    var nm = String((DB.emp(code) || {}).Name || '').toUpperCase();
+    var all = Pics.rows().filter(function (p) {
+      if (code && String(p.EmpCode || '').toUpperCase() !== String(code).toUpperCase() &&
+          String(p.Employee || '').toUpperCase() !== nm) return false;
+      if (!r) return true;
+      var d = toISO(p.Date);
+      return !d || (d >= r[0] && d <= r[1]);
+    });
+    var h = '<div class="sec-title">Photos</div>';
+    if (!all.length) return h + '<div class="card">' +
+      UI.empty('', 'Is period me koi photo nahi') + '</div>';
 
     var days = [], emps = [], seenD = {}, seenE = {};
     all.forEach(function (p) {
@@ -10334,6 +11053,19 @@ var Admin = {
     return fixN ? 'fix' : 'all';                    /* a re-send opens on the changed days */
   },
   setView: function (key, v) { Admin.pjpView[key] = v; render(); },
+  /* the days the rep just fixed and re-sent — written by Pjp.submit on a partial re-send */
+  fixDays: function (d) {
+    var a = []; try { a = JSON.parse((d && d.FixedDaysJson) || '[]') || []; } catch (e) {}
+    return a.map(function (x) { return toISO(x.date || x) || String(x); }).filter(Boolean);
+  },
+  /* 'fix' = only what changed, 'all' = the whole month. Per draft key, so opening a second employee
+     does not inherit the first one's view. */
+  pjpView:{},
+  view: function (key, fixN) {
+    if (Admin.pjpView[key]) return Admin.pjpView[key];
+    return fixN ? 'fix' : 'all';                    /* a re-send opens on the changed days */
+  },
+  setView: function (key, v) { Admin.pjpView[key] = v; render(); },
   /* PARTIAL REJECT — only the ticked days come back to the rep. The rest of the month stands, so he
      edits three days instead of rebuilding a month. */
   pjpPart: function (key) {
@@ -10372,8 +11104,18 @@ var Admin = {
       /* repaint NOW: the decision bar has to disappear the moment the month is approved, not when the
          sync round-trip returns */
       Admin.pjpSel[key] = {}; Nav._c = null; render();
-      if (r && r.ok) toast('Approve + publish — Master_PJP me' + r.written + ' din (' + dmy(r.from) + '' + dmy(r.to) + ')', 4200);
-      else toast('! Approve ho gaya par publish fail:' + ((r && r.error) || 'unknown'), 5000);
+      if (r && r.ok) {
+        /* say how much of the month landed. A month that publishes two days out of thirty-one is the
+           bug that sent us looking here — it must never be silent again. */
+        var short = r.monthDays && r.written < r.monthDays;
+        toast((short ? '! Sirf ' : 'Approve + publish — ') + r.written +
+          (r.monthDays ? ' / ' + r.monthDays : '') + ' din Master_PJP me' +
+          (r.from ? ' (' + dmy(r.from) + ' – ' + dmy(r.to) + ')' : '') +
+          ((r.skippedBeforeJoining || []).length ?
+            ' · ' + r.skippedBeforeJoining.length + ' din joining se pehle ke the' : ''),
+          short ? 6000 : 4200);
+        if (short) Log.add('PJP', 'Published SHORT', key, r.written + ' of ' + r.monthDays);
+      } else toast('! Approve ho gaya par publish fail:' + ((r && r.error) || 'unknown'), 5000);
       return Sync.now(false);
     }).catch(function () { toast('! Publish nahi hua — dobara approve dabao'); });
   },
@@ -10420,70 +11162,6 @@ var Admin = {
     });
   },
 
-  data: function () {
-    var h0 = Admin.master();
-    var tabs = DB.TXN;
-    var cur = Admin.dtab || 'SecOrders';
-    var rows = DB.rows(cur);
-    var q = (Admin.dq || '').toUpperCase();
-    if (q) rows = rows.filter(function (r) { return JSON.stringify(r).toUpperCase().indexOf(q) >= 0; });
-    var cols = rows.length ? Object.keys(rows[0]).filter(function (c) { return c !== 'LastSync'; }).slice(0, 9) : [];
-    var h = '<div class="card"><label class="f">Tab</label><select class="in" onchange="Admin.dtab=this.value;render()">' +
-      tabs.map(function (t) { return '<option value="' + t + '"' + (t === cur ? ' selected' : '') + '>' + t + '</option>'; }).join('') + '</select>' +
-      '<input class="in" style="margin-top:8px" placeholder=" Kuch bhi search karo" value="' + esc(Admin.dq || '') +
-      '" oninput="Admin.dq=this.value;clearTimeout(Admin._t);Admin._t=setTimeout(render,400)">' +
-      '<div class="hint" style="margin-top:6px">' + rows.length + ' rows</div>' +
-      '<div class="btns"><button class="btn ghost sm" onclick="Admin.exportTab()"> Download' + cur + '</button></div></div>';
-    h += '<div class="card"><div class="tw"><table><thead><tr>' + cols.map(function (c) { return '<th>' + esc(c) + '</th>'; }).join('') +
-      '</tr></thead><tbody>' + rows.slice(0, 120).map(function (r) {
-        return '<tr>' + cols.map(function (c) { return '<td>' + esc(String(r[c] == null ? '' : r[c]).slice(0, 42)) + '</td>'; }).join('') + '</tr>'; }).join('') +
-      '</tbody></table></div>' + (rows.length > 120 ? '<div class="hint">…first 120 shown, download for all</div>' : '') + '</div>';
-    return h0 + h;
-  },
-  exportTab: function () {
-    var cur = Admin.dtab || 'SecOrders', rows = DB.rows(cur);
-    if (!rows.length) return toast('Koi data nahi');
-    return Rep.tab(cur, Object.keys(rows[0]), rows);
-  },
-
-  /* ── Users: rights, joining date, and the per-user BYPASS switch ──
-     Rendered as rows, not a table, because each user needs an action — and a row wraps on a phone
-     while a 7th table column would just push the switch off-screen. */
-  users: function () {
-    var u = (DB.m.LoginConfig || []).slice();
-    var on = u.filter(Admin.isBypass);
-    var h = '<div class="banner b"><span></span><div>Password reset karne se sab logins <b>Honasa@123</b> ho jayenge aur pehli login par change maangega.' +
-      '<div class="btns"><button class="btn sm" onclick="Admin.resetPwd()">Reset all passwords</button></div></div></div>';
-
-    h += '<div class="card"><h3><span class="ic"></span>Bypass — per user</h3>' +
-      '<div class="sub">Kisi ek user ke liye app ki <b>restrictions hata do</b> — sirf zaroori cheezein bharni padengi. ' +
-      'Ye per user hai: X aur Y par ON, Z par OFF. Kya hatta hai:</div>' +
-      '<div class="hint" style="margin-top:6px">• ' + Bypass.WAIVES.join('<br>• ') + '</div>' +
-      '<div class="hint" style="margin-top:6px">Data phir bhi zaroori hai — store, distributor, town/beat, ' +
-      'order status, remarks. Master tabs read-only rehte hain.</div>' +
-      (on.length ? '<div class="strip w" style="margin-bottom:0"><span class="g"></span><div class="m"><b>' +
-        on.length + ' user par bypass ON hai</b> <i>· ' + on.map(function (x) { return esc(x.Name || x.Code); }).join(', ') +
-        '</i></div></div>' : '<div class="hint" style="margin-top:8px">Abhi kisi par bypass ON nahi hai.</div>') +
-      '</div>';
-
-    h += '<div class="sec-title">' + u.length + ' login</div><div class="card">' +
-      u.map(function (x) {
-        var b = Admin.isBypass(x);
-        return '<div class="lrow">' +
-          '<div class="m"><div class="t">' + esc(x.Name || x.Code) + '</div>' +
-          '<div class="s">' + esc(x.Code) + ' · ' + esc(x.Email || '') + ' · ' + esc(x.Rights || 'Employee') +
-            ' · ' + esc(x.Status || '') + ' · joining ' + dmy(x.DateofJoining) +
-            (b && x.BypassBy ? ' · bypass ' + esc(x.BypassBy) + (x.BypassAt ? ' ' + Appr.when(x.BypassAt) : '') : '') +
-            (b && x.BypassNote ? ' · ' + esc(x.BypassNote) : '') + '</div></div>' +
-          '<span class="pill ' + (/admin|hod/i.test(x.Rights || '') ? 'p-blue' : 'p-grey') + '">' +
-            esc(x.Rights || 'Employee') + '</span>' +
-          (b ? '<span class="pill p-warn"> Bypass ON</span>' : '') +
-          '<button class="btn ' + (b ? 'bad' : 'ghost') + ' sm" onclick="Admin.bypass(\'' +
-            Appr.q(x.Code) + '\',' + (b ? 'false' : 'true') + ',this)">' +
-            (b ? 'Bypass OFF karo' : 'Bypass ON karo') + '</button>' +
-          '</div>'; }).join('') + '</div>';
-    return h;
-  },
   isBypass: function (x) { return /^(yes|true|1)$/i.test(String((x && x.Bypass) || '')); },
 
   /* Turning it ON asks for a reason (it lands in the sheet next to who granted it, so a relaxed rule
