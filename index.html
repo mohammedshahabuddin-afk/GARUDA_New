@@ -4355,12 +4355,20 @@ var Card = {
       }
       y = ry + 16;
     } else {
-      var bh = 46;
-      fill(C.warnBg, P, y, iw, bh, 9);
+      /* d.ww can carry the meeting type + duration + a hand-typed remark, which easily runs past
+         one line — wrap it (and size the box to fit) instead of letting it run off the card. */
+      var pad = 13, availW = iw - pad * 2, lh = 16;
       Card.fnt(g, '700', 13);
-      put('Aaj field day nahi — ' + d.ww, P + 13, y + 20, C.warnInk);
+      var wLines = Card.wrap(g, 'Aaj field day nahi — ' + d.ww, availW);
       Card.fnt(g, '600', 11.5);
-      put('Order target 0. SC / NSO / MSL bhi 0.', P + 13, y + 36, C.warnInk);
+      var oLines = Card.wrap(g, 'Order target 0. SC / NSO / MSL bhi 0.', availW);
+      var bh = 20 + (wLines.length + oLines.length - 1) * lh + 10;
+      fill(C.warnBg, P, y, iw, bh, 9);
+      var ty = y + 20;
+      Card.fnt(g, '700', 13);
+      wLines.forEach(function (ln) { put(ln, P + pad, ty, C.warnInk); ty += lh; });
+      Card.fnt(g, '600', 11.5);
+      oLines.forEach(function (ln) { put(ln, P + pad, ty, C.warnInk); ty += lh; });
       y += bh + 16;
     }
 
@@ -6232,16 +6240,12 @@ var Plan = {
 
     var shTown = (r.OffPjp && r.Town) || (pjp ? pjp.Town : '') || '';
     var shBeat = (r.OffPjp && r.Beat) || (pjp ? pjp.Beat : '') || '';
-    if (pjp || r.OffPjp) h += '<div style="margin-top:10px"><label class="f">State</label>' +
-        '<input class="in lk" readonly value="' + esc(Plan.stateFor(r, pjp, shTown) || '—') + '"></div>' +
-        '<div class="row two"><div><label class="f">Town / City</label>' +
-        '<input class="in lk" id="pl_town" readonly value="' + esc(shTown || '—') + '"></div>' +
-        '<div><label class="f">Beat / Market</label>' +
-        '<input class="in lk" id="pl_beat" readonly value="' + esc(shBeat || '—') + '"></div></div>' +
-        (pjp ? '<div class="fbox">' + esc(pjp.Week || '') +
-          (field ? (pjp.Focus ? ' · Focus: ' + esc(pjp.Focus) :
-            ' · <i>No focus brand for today, make the most of whatever you can</i>') : '') + '</div>' : '');
-    else {
+    /* Town / State / Beat only mean anything on a FIELD day — a Meeting / Leave / Off / Holiday day
+       has no beat, so showing these (with whatever the master happens to hold in those columns for a
+       non-field day, which is sometimes garbage left over from an old row) only confused the screen
+       into looking like two different plans at once. A non-field day shows nothing here at all — the
+       Working With line and its own bracket below (Meeting type, Duration, Remark…) is the whole story. */
+    if (!pjp && !r.OffPjp) {
       /* short, and it says what the master actually holds — a rep who sees "no plan" on a day the
          sheet clearly has needs the fact, not a paragraph */
       var near = DB.pjpNear(DB.me.code, t);
@@ -6249,6 +6253,16 @@ var Plan = {
         'Is month ka PJP update nahi hai. Kuch galat lage to admin se baat karo.' +
         (near.has ? '<br><span style="font-weight:500">Master me is month ke ' + near.has +
           ' din hain — aaj ka nahi.</span>' : '') + '</div></div>';
+    } else if (field) {
+      h += '<div style="margin-top:10px"><label class="f">State</label>' +
+        '<input class="in lk" readonly value="' + esc(Plan.stateFor(r, pjp, shTown) || '—') + '"></div>' +
+        '<div class="row two"><div><label class="f">Town / City</label>' +
+        '<input class="in lk" id="pl_town" readonly value="' + esc(shTown || '—') + '"></div>' +
+        '<div><label class="f">Beat / Market</label>' +
+        '<input class="in lk" id="pl_beat" readonly value="' + esc(shBeat || '—') + '"></div></div>' +
+        (pjp ? '<div class="fbox">' + esc(pjp.Week || '') +
+          (pjp.Focus ? ' · Focus: ' + esc(pjp.Focus) :
+            ' · <i>No focus brand for today, make the most of whatever you can</i>') + '</div>' : '');
     }
 
     /* Working With is part of the approved plan, so it is displayed, not offered as a dropdown. The
@@ -6456,9 +6470,13 @@ var Plan = {
     if (ww === 'ME Sales Team' || ww === 'BA Supervisor') d.name = val('pl_wwname');
     if (ww === 'Meeting / Activity') { d.act = val('pl_act'); d.dur = val('pl_dur'); d.rmk = val('pl_rmk'); }
     if (ww === 'Leave' || ww === 'Sick Leave') { d.reason = val('pl_reason'); d.rmk = val('pl_rmk'); }
-    /* off-PJP = a different beat OR a different Working-With than the approved plan */
+    /* off-PJP = a different Working-With than the approved plan, or (on a field day only) a
+       different beat. Town/Beat mean nothing on a non-field day, so comparing them there — against
+       whatever the master happens to hold in those columns for a Meeting/Leave/Off day — used to
+       flag a plan as "off-PJP" purely because an HOD had switched the day's type from the console.
+       If the Working-With itself already matches what the master says, the day IS on-PJP. */
     var same = function (a, b) { return String(a || '').toUpperCase().trim() === String(b || '').toUpperCase().trim(); };
-    var off = !pjp || !same(town, pjp.Town) || !same(beat, pjp.Beat) || !same(ww, Pjp.ww(pjp.Ww));
+    var off = !pjp || !same(ww, Pjp.ww(pjp.Ww)) || (field && (!same(town, pjp.Town) || !same(beat, pjp.Beat)));
     var r = Plan.row();
     return DB.save('DayPlan', { Id:Plan.id(), Date:t, Zone:e.Zone || '', Hq:e.HQ || '',
       WorkingWith:ww, WwDetail:JSON.stringify(d), Town:town, Beat:beat, State:state,
@@ -11642,22 +11660,14 @@ var Appr = {
 
   html: function () {
     var all = Appr.list();
-    var oc = { open:0, closed:0 };
-    all.forEach(function (o) { oc[o.oc]++; });
     /* For a rep this screen is deliberately READ-ONLY for a request: it is the record of what he
        asked for and what came back. A notification is his to dismiss, nothing else here is. */
     var h = UI.head('', Auth.isAdmin() ? 'Notifications — poori team' : 'Meri notifications',
       Auth.isAdmin() ? 'Jo bhi aaya hai — request ho ya sirf ek update — sab ek jagah, type se colour hai. Kisi bhi card par tap karo.'
         : 'Jo bheja hai aur jo HOD ne update kiya, sab ek jagah. Kisi bhi card par tap karke detail dekho.');
 
-    h += '<div class="kpis k3">' + UI.kpi(all.length, 'Total', 'b') + UI.kpi(oc.open, 'Open', 'w') +
-      UI.kpi(oc.closed, 'Closed', '') + '</div>';
-
-    /* TYPE first, then open/closed — an HOD thinks "PJP" before "is this done".
-       The number on a chip is what still NEEDS THIS PERSON, not how many rows exist: once a PJP is
-       approved or rejected (or a notification is dismissed) the chip goes back to plain "PJP". */
-    /* a count means "this needs somebody", so it is only ever on what is still open — and it looks
-       like WhatsApp: a red circle on the chip, never "(3)" inside the label */
+    /* TYPE and STATUS — two plain dropdowns, not a row of chips. The count against an option is what
+       still NEEDS THIS PERSON (open, undecided), never a total: a finished item is not a to-do. */
     var todo = all.filter(Appr.todo).length;
     var kinds = [['all', 'Sab', todo]];
     Appr.KINDS.forEach(function (k) {
@@ -11665,24 +11675,21 @@ var Appr = {
       if (!g.length) return;
       kinds.push([k[0], k[1], g.filter(Appr.todo).length]);
     });
-    h += '<div class="card" style="padding:10px"><div class="hint" style="margin-bottom:6px">Type</div>' +
-      '<div style="display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px">' + kinds.map(function (c) {
-        var on = Appr.kindF === c[0];
-        return '<button class="btn ' + (on ? (c[0] === 'all' ? '' : Appr.kcls(c[0])) : 'ghost') +
-          ' sm" style="flex:0 0 auto;position:relative"' +
-          ' onclick="Appr.setKind(&quot;' + esc(c[0]) + '&quot;)">' + esc(c[1]) +
-          (c[2] ? '<span class="bdg">' + (c[2] > 99 ? '99+' : c[2]) + '</span>' : '') + '</button>'; }).join('') + '</div>';
-
     var byKind = all.filter(function (o) { return Appr.kindF === 'all' || o.kind === Appr.kindF; });
     var oc2 = { open:0, closed:0 };
     byKind.forEach(function (o) { oc2[o.oc]++; });
-    /* only what is still OPEN gets a number — a finished item is not something to chase */
     var chips = [['all', 'Sab', 0], ['open', 'Open', oc2.open], ['closed', 'Closed', 0]];
-    h += '<div class="hint" style="margin:10px 0 6px">Status</div>' +
-      '<div style="display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px">' + chips.map(function (c) {
-        return '<button class="btn ' + (Appr.filter === c[0] ? '' : 'ghost') + ' sm" style="flex:0 0 auto;position:relative"' +
-          ' onclick="Appr.set(&quot;' + c[0] + '&quot;)">' + esc(c[1]) +
-          (c[2] ? '<span class="bdg">' + (c[2] > 99 ? '99+' : c[2]) + '</span>' : '') + '</button>'; }).join('') + '</div></div>';
+    h += '<div class="card" style="padding:10px"><div class="row two">' +
+      '<div><label class="f">Type</label><select class="in" onchange="Appr.setKind(this.value)">' +
+        kinds.map(function (c) {
+          return '<option value="' + esc(c[0]) + '"' + (Appr.kindF === c[0] ? ' selected' : '') + '>' +
+            esc(c[1]) + (c[2] ? ' (' + (c[2] > 99 ? '99+' : c[2]) + ')' : '') + '</option>'; }).join('') +
+      '</select></div>' +
+      '<div><label class="f">Status</label><select class="in" onchange="Appr.set(this.value)">' +
+        chips.map(function (c) {
+          return '<option value="' + esc(c[0]) + '"' + (Appr.filter === c[0] ? ' selected' : '') + '>' +
+            esc(c[1]) + (c[2] ? ' (' + (c[2] > 99 ? '99+' : c[2]) + ')' : '') + '</option>'; }).join('') +
+      '</select></div></div></div>';
 
     var show = byKind.filter(function (o) { return Appr.filter === 'all' || o.oc === Appr.filter; });
     if (!show.length) {
@@ -11716,7 +11723,7 @@ var Appr = {
           esc(o.by ? o.by + ' ne update kiya' : 'Update') + '</b><span>' +
           (o.sentT ? esc(Appr.when(o.sentT)) : 'Time record nahi hua') + '</span></div></div>';
         if (o.note) h += '<div class="banner b" style="margin-top:10px"><span></span><div><b>Kya badla</b><br>' +
-          '<span style="font-weight:500">' + esc(o.note) + '</span></div></div>';
+          '<span style="font-weight:500;white-space:pre-line;display:block">' + esc(o.note) + '</span></div></div>';
         h += '<div class="btns"><button class="btn ' + (o.status === 'closed' ? 'ghost' : 'ok') + ' sm" ' +
           'onclick="event.stopPropagation();Appr.closeNotify(\'' + o.id + '\')">' +
           (o.status === 'closed' ? 'Dekh liya' : 'Dekh liya \u2014 band karo') + '</button></div>';
@@ -13502,25 +13509,45 @@ var Admin = {
      draft (idempotent — Code+Date), so this is the exact same call pjpOk makes; the only new part is
      working out which days actually moved (against the snapshot taken when editing opened) and
      telling the rep about it. */
+  /* ── field-level diff, in plain words ──
+     "X din badle" said nothing about WHAT changed. Every field that moved, on every changed day, is
+     spelled out as old value → new value, so the notification IS the record of the edit — not a
+     hint that one happened. */
+  FLD_LBL:{ ww:'Working with', state:'State', city:'Town', beat:'Beat', st:'Station', rmk:'Remarks' },
+  PJP_FLD:['ww', 'state', 'city', 'beat', 'st', 'rmk'],
+  pjpDiffText: function (before, days, changed) {
+    return changed.map(function (k) {
+      var a = before[k] || {}, b = days[k] || {}, diffs = [];
+      Admin.PJP_FLD.forEach(function (f) {
+        var av = a[f] || '', bv = b[f] || '';
+        if (f === 'ww') { av = av ? Pjp.ww(av) : ''; bv = bv ? Pjp.ww(bv) : ''; }
+        if (f === 'st') { av = av ? Pjp.stn(av) : ''; bv = bv ? Pjp.stn(bv) : ''; }
+        if (av === bv) return;
+        diffs.push(Admin.FLD_LBL[f] + ': ' + (av || '—') + ' → ' + (bv || '—'));
+      });
+      return dmy(k) + ' — ' + (diffs.length ? diffs.join(', ') : 'update');
+    }).join('\n');
+  },
   pjpRepublish: function (key) {
     var d = DB.find('PjpDraft', key); if (!d || Busy.busy('pjprep_' + key)) return;
     Busy.on['pjprep_' + key] = true; setTimeout(function () { delete Busy.on['pjprep_' + key]; }, 4000);
     var days = {}; try { days = JSON.parse(d.DaysJson || '{}') || {}; } catch (e) {}
     var before = Admin.pjpEditSnap || {};
-    var FLD = ['ww', 'state', 'city', 'beat', 'st', 'rmk'];
     var changed = Object.keys(days).filter(function (k) {
       var a = before[k] || {}, b = days[k] || {};
-      return FLD.some(function (f) { return (a[f] || '') !== (b[f] || ''); });
+      return Admin.PJP_FLD.some(function (f) { return (a[f] || '') !== (b[f] || ''); });
     }).sort();
     if (!changed.length) { toast('Kuch change nahi hua'); Admin.pjpEditCancel(); return; }
+    var detail = Admin.pjpDiffText(before, days, changed);
     toast('Master_PJP me publish ho raha hai…');
     Api.post({ action:'publishPjp', email:Auth.session().email, key:key }).then(function (r) {
       if (!r || !r.ok) { toast('! Publish fail: ' + ((r && r.error) || 'unknown'), 5000); return; }
-      Log.add('PJP', 'Republished after approval by ' + Admin.role(), key, changed.length + ' din badle');
+      Log.add('PJP', 'Republished after approval by ' + Admin.role(), key, detail);
       return DB.save('Notify', { Id:uid('NT'), Ts:new Date().toISOString(),
         EmpCode:d.EmpCode, EmpName:d.EmpName, Kind:'PJP',
-        Title:'PJP update \u2014 ' + (monthName(d.Month) || d.Month || ''),
-        Detail:changed.length + ' din badle: ' + changed.map(function (k) { return dmy(k); }).join(', '),
+        Title:'PJP update \u2014 ' + (monthName(d.Month) || d.Month || '') + ' \u00b7 ' +
+          changed.length + ' din badle',
+        Detail:detail,
         Ref:key, Status:'Open', By:DB.me.name }, { quiet:true }).then(function () {
         toast(changed.length + ' din update ho gaye \u2014 rep ko notification mil jayega');
         Admin.pjpEditCancel();
