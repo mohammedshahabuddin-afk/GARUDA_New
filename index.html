@@ -141,6 +141,7 @@ select.in{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xml
 .ap-h .m{flex:1;min-width:0}
 .ap-h .t{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ap-h .s{font-size:11.5px;color:var(--ink-3);font-weight:600;margin-top:1px}
+.ap-h .sum{font-size:12px;color:var(--ink-2);font-weight:500;margin-top:3px;line-height:1.4}
 .ap-ic{width:32px;height:32px;flex:0 0 32px;border-radius:9px;background:var(--blue-l);display:grid;place-items:center;font-size:15px}
 .ap-x{color:var(--ink-3);font-size:12px;flex:0 0 auto}
 .tl{margin:12px 0 0;padding:12px 0 2px 6px;border-top:1px dashed var(--line)}
@@ -4398,8 +4399,13 @@ var Card = {
       units += num(l.Units); mrp += num(l.Units) * num(l.Mrp);
       if (/^msl$/i.test(String(l.MslStatus || ''))) msl += num(l.NsvLakh); else nonMsl += num(l.NsvLakh);
     });
-    var brands = Object.keys(a.brand).sort(function (x, y) { return a.brand[y] - a.brand[x]; })
-      .slice(0, 7).map(function (b) { return [b, a.brand[b]]; });
+    /* every brand the master knows about, not just the ones with a line punched today — a brand with
+       zero NSV is exactly the fact the report has to carry, not a row that quietly disappears */
+    var brandSet = {};
+    Field.uniq('Brand').forEach(function (b) { brandSet[b] = 1; });
+    Object.keys(a.brand).forEach(function (b) { brandSet[b] = 1; });
+    var brands = Object.keys(brandSet).map(function (b) { return [b, num(a.brand[b])]; })
+      .sort(function (x, y) { return y[1] - x[1]; });
     var saved = DB.find('Eod', DB.me.code + '_' + a.t) || {}, br = Eod.brandRows(a);
     return {
       date:a.t, time:saved.ClosedAt || new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }),
@@ -5263,11 +5269,13 @@ var Home = {
         '<div class="btns"><button class="btn ghost sm" onclick="Router.go(\'trk\')">Tracker kholo</button></div>'
         : UI.empty('', 'Ek bhi order pending nahi — sab billed')) + '</div>';
 
+    /* zero on either side is a real number, not an absence of data — a rep with no Non-MSL sale
+       still needs to see "0.00 L", not a card that quietly disappears. Home.share already guards
+       the % of total against a zero denominator, so this never divides by zero either. */
     var mt = A.msl.v + A.non.v;
     h += '<div class="sec-title">MSL vs Non-MSL</div><div class="card">' +
-      (mt > 0 ? Home.share('MSL', A.msl.v, mt, Math.round(A.msl.u) + ' u') +
-        Home.share('Non-MSL', A.non.v, mt, Math.round(A.non.u) + ' u')
-        : UI.empty('', 'MSL data nahi hai')) + '</div>';
+      Home.share('MSL', A.msl.v, mt, Math.round(A.msl.u) + ' u') +
+      Home.share('Non-MSL', A.non.v, mt, Math.round(A.non.u) + ' u') + '</div>';
 
     var cat = Object.keys(A.byCat).sort(function (a, b) { return A.byCat[b].v - A.byCat[a].v; });
     h += '<div class="sec-title">Category-wise</div><div class="card">' +
@@ -6668,7 +6676,7 @@ var Field = {
     if (Field.none()) {
       if (Cam.has('entry')) h += '<div class="banner g"><span></span><div><b>Shop ka photo ho gaya</b>' +
         '<br><span style="font-weight:500">Visit ka proof save hai. Ab sirf reason bharo.</span></div></div>';
-      h += '<div class="card"><h3><span class="ic">' + (++sN) + '</span>Order cancel kyun karna pada?</h3>' +
+      h += '<div class="card"><h3><span class="ic">' + (++sN) + '</span>Order kyun nahi bana?</h3>' +
         '<div class="sub">Reason select karo — product aur photo ki zaroorat nahi. Save karte hi POSM khul jayega.</div>' +
         '<label class="f">Reason <span class="req">*</span></label>' +
         '<select class="in" id="f_norsn" onchange="Field.noRsn(this.value)">' +
@@ -6693,7 +6701,7 @@ var Field = {
         '<div class="ph-g" style="margin-top:10px">' +
           Cam.tile('entry', 'Shop ka photo', true, { live:true, sendJs:'Field.photoMeta()', cbJs:'Field.entryDone' }) + '</div>' +
         (done ? '<div class="btns two"><button class="btn" onclick="Field.toOrder()">Punch order</button>' +
-                '<button class="btn warn" onclick="Field.setSrc(\'Cancel Order\')">Cancel order</button></div>'
+                '<button class="btn warn" onclick="Field.setSrc(\'Cancel Order\')">No order</button></div>'
               : '<div class="hint" style="margin-top:8px">Photo lete hi order page khul jayega.</div>') +
         '</div>';
       if (!done) return h;
@@ -7424,6 +7432,11 @@ var Stk = {
     if (!(Field.lines || []).length) return toast('Pehle koi product add karo');
     Router.go('field');
     toast('Order check karo, phir submit', 3200);
+    setTimeout(function () {
+      var box = $('f_lines');
+      var card = box && box.closest ? box.closest('.card') : box;
+      if (card && card.scrollIntoView) card.scrollIntoView({ behavior:'smooth', block:'start' });
+    }, 80);
   }
 };
 
@@ -9945,18 +9958,24 @@ var Eod = {
 
     /* ── the EOD image ──
        Same card as the morning one, with the day's real numbers. It is the report a manager actually
-       reads on WhatsApp, so it carries the detail the Excel carries, and it cannot be edited. */
-    h += '<div class="card"><h3>Din ka report — WhatsApp image</h3>' +
+       reads on WhatsApp, so it carries the detail the Excel carries, and it cannot be edited.
+       Gated behind an actual close: the image is only drawn — and WhatsApp / mail / Excel only become
+       tappable — once EOD is saved. Before that the numbers can still change with the next tap, and a
+       report sent off a live draft is worse than no report at all. */
+    h += Gate.locked() ?
+      '<div class="card"><h3>Din ka report — WhatsApp image</h3>' +
       '<div class="sub">Subah wali card ki tarah, lekin aaj ke poore numbers ke saath. Text nahi, image jaati hai.</div>' +
       '<div id="eod_card" style="margin-top:12px"><div class="skel" style="height:180px;border-radius:12px"></div></div>' +
       '<div class="btns two"><button class="btn ok two" onclick="Card.sendEod(this)">WhatsApp par image bhejo' +
         '<span class="who">HOD · ZM · RSM · ASM</span></button>' +
       '<button class="btn ghost" onclick="Card.zoom(\'eod\')">Review</button></div>' +
       '<div class="btns"><button class="btn ghost sm" onclick="Eod.mail()">Send on mail</button>' +
-      '<button class="btn ghost sm" onclick="Eod.excel()">Excel</button></div></div>';
+      '<button class="btn ghost sm" onclick="Eod.excel()">Excel</button></div></div>'
+      : '<div class="card"><h3>Din ka report — WhatsApp image</h3>' +
+      '<div class="hint">EOD save karke din close karo — tabhi report ki image aur WhatsApp / mail / Excel access milega.</div></div>';
     return h;
   },
-  after: function () { Card.preview('eod'); },
+  after: function () { if (Gate.locked()) Card.preview('eod'); },
   /* ONE brand-wise builder for the screen, the image and the workbook, so the three can never
      disagree about a brand's target or its achievement. */
   brandRows: function (a) {
@@ -11577,6 +11596,11 @@ var Appr = {
               ['Field din bhare', cv || '—'],
               ['Publish', d.PublishedAt ? (Appr.when(d.PublishedAt) +
                 (d.PublishedRows ? ' · ' + d.PublishedRows + ' din Master_PJP me' : '')) : '—']],
+        sum:st === 'draft' ? 'HOD ko abhi bheja nahi gaya hai'
+          : st === 'partial' ? (Admin.rejDays(d).length || 0) + ' din reject hue hain — theek karke dobara bhejo'
+          : st === 'approved' ? (cv ? cv + ' din bhare · ' : '') + 'Approved — Master_PJP me chala gaya'
+          : st === 'rejected' ? 'HOD ne reject kiya' + (d.RejectReason ? ': ' + d.RejectReason : '')
+          : 'HOD ke approval ka wait hai',
         tip:st === 'draft' ? 'Ye abhi draft hai — PJP tab se HOD ko bhejo.'
           : st === 'partial' ? 'PJP tab me sirf reject wale din khule hain — theek karke dobara bhejo.'
           : st === 'approved' ? 'Approved plan Master_PJP me chala gaya — Plan tab me roz dikhega.' : '' });
@@ -11595,6 +11619,8 @@ var Appr = {
               ['Aap ne maanga', (d.NewTown || '—') + ' / ' + (d.NewBeat || '—')],
               ['Station', Pjp.stn(d.NewStation)],
               ['Aapka reason', d.Reason || '—']],
+        sum:'Chaha: ' + (d.NewTown || '—') + ' / ' + (d.NewBeat || '—') +
+          (d.Reason ? ' — ' + d.Reason : ''),
         tip:st === 'rejected' ? 'Ye beat dobara request nahi kar sakte — koi dusra beat chuno.' : '' });
     });
 
@@ -11617,6 +11643,8 @@ var Appr = {
               ['SKU / Units', num(o.TotSku) + ' / ' + num(o.TotUnits)],
               ['MRP value', inr(o.TotValue)],
               ['NSV', lakh(o.TotNsvLakh) + ' L']],
+        sum:(s2 || 'Pending') + ' · ' + num(o.TotSku) + ' SKU / ' + num(o.TotUnits) +
+          ' units · ' + inr(o.TotValue),
         tip:'' });
     });
 
@@ -11632,6 +11660,7 @@ var Appr = {
              ['Net payable', inr(r.NetTotal || (num(r.Total) - num(r.DeductTotal)))]]
           : [['Claim total', inr(r.Total)]].concat(num(r.Nights)
               ? [['Outstation nights', String(num(r.Nights))]] : []),
+        sum:'Claim ' + inr(r.Total) + (num(r.DeductTotal) ? ' · deduction ' + inr(r.DeductTotal) : ''),
         tip:'' });
     });
 
@@ -11646,6 +11675,7 @@ var Appr = {
         sent:n.Ts || '', sentAlt:n.LastSync || '',
         done:'', by:n.By || '', role:'', note:n.Detail || '',
         rows:[['Detail', n.Detail || '—'], ['By', n.By || '—']],
+        sum:String(n.Detail || '').split('\n')[0] || '',
         tip:'' });
     });
 
@@ -11711,7 +11741,8 @@ var Appr = {
       '<div class="ap-h"><span class="ap-ic">' + o.icon + '</span>' +
         '<div class="m"><div class="t">' + esc(o.title) + '</div>' +
         '<div class="s"><span class="pill k-pill ' + Appr.kcls(o.kind) + '">' + esc(o.kind) + '</span> · bheja: ' + esc(sentTxt) +
-          (Auth.isAdmin() && o.emp ? ' · ' + esc(o.emp) : '') + '</div></div>' +
+          (Auth.isAdmin() && o.emp ? ' · ' + esc(o.emp) : '') + '</div>' +
+          (o.sum ? '<div class="sum">' + esc(o.sum) + '</div>' : '') + '</div>' +
         '<span class="pill ' + lbl[1] + '">' + lbl[0] + '</span>' + Appr.btns(o, false) +
         '<span class="ap-x">' + (op ? '' : '') + '</span></div>';
 
