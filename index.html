@@ -6239,7 +6239,8 @@ var Plan = {
         '<div><label class="f">Beat / Market</label>' +
         '<input class="in lk" id="pl_beat" readonly value="' + esc(shBeat || '—') + '"></div></div>' +
         (pjp ? '<div class="fbox">' + esc(pjp.Week || '') +
-          (field && pjp.Focus ? ' · Focus: ' + esc(pjp.Focus) : '') + '</div>' : '');
+          (field ? (pjp.Focus ? ' · Focus: ' + esc(pjp.Focus) :
+            ' · <i>No focus brand for today, make the most of whatever you can</i>') : '') + '</div>' : '');
     else {
       /* short, and it says what the master actually holds — a rep who sees "no plan" on a day the
          sheet clearly has needs the fact, not a paragraph */
