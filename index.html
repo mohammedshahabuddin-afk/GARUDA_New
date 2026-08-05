@@ -508,6 +508,28 @@ td.num,th.num{text-align:right}
 .pane td .hint{font-size:11px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pane::-webkit-scrollbar{width:6px;height:6px}
 .pane::-webkit-scrollbar-thumb{background:#c9d2e3;border-radius:3px}
+/* ── the stock picker's table ──
+   Product name + Shop + DB + Proj + Add in the width of a phone. The three number columns are pinned
+   narrow and never wrap (a wrapped "Proj" header pushed the Add button off the right edge), the header
+   text is a size smaller, and the name column takes whatever is left instead of sharing equally. */
+.stkt{table-layout:fixed;width:100%}
+.stkt th,.stkt td{font-size:12px}
+.stkt thead th{font-size:10.5px;letter-spacing:.01em;white-space:nowrap;padding-left:4px;padding-right:4px}
+.stkt th:first-child,.stkt td:first-child{width:auto}
+.stkt th:nth-child(2),.stkt td:nth-child(2),
+.stkt th:nth-child(3),.stkt td:nth-child(3),
+.stkt th:nth-child(4),.stkt td:nth-child(4){width:44px;padding-left:2px;padding-right:2px;white-space:nowrap}
+.stkt th:last-child,.stkt td:last-child{width:76px;padding-left:2px;white-space:nowrap}
+.stkt td .pill{padding:1px 5px;font-size:10.5px}
+.stkt td .btn.xs{padding:4px 7px;font-size:10.5px}
+.stkt td .nm{font-size:12.5px}
+.stkt td .hint{font-size:10.5px}
+@media(max-width:400px){
+  .stkt th:nth-child(2),.stkt td:nth-child(2),
+  .stkt th:nth-child(3),.stkt td:nth-child(3),
+  .stkt th:nth-child(4),.stkt td:nth-child(4){width:38px}
+  .stkt th:last-child,.stkt td:last-child{width:64px}
+}
 /* a header you can tap to sort */
 #app th.sortable{cursor:pointer;-webkit-user-select:none;user-select:none;white-space:nowrap}
 #app th.sortable.on{color:var(--blue)}
@@ -2909,17 +2931,66 @@ var DB = {
       return a && (a === me || a === code); });
     return mine.length ? mine : all;
   },
+  /* one distributor, by code, from Master_Distributors — the authority on what a distributor IS */
+  distByCode: function (code) {
+    var q = String(code == null ? '' : code).trim().toUpperCase();
+    if (!q) return null;
+    var all = DB.m.Master_Distributors || [];
+    for (var i = 0; i < all.length; i++)
+      if (String(all[i].Code == null ? '' : all[i].Code).trim().toUpperCase() === q) return all[i];
+    return null;
+  },
+  /* ── the rep's distributors, ALWAYS resolved to a Master_Distributors row ──
+     Three ways a rep's distributors are identified, tried in order — and every one of them ends at a
+     real row in the distributor master, never at a record assembled from another tab:
+       1. the distributor master's own mapping column (EmAsm = this rep);
+       2. the distributors his mapped stores point at, looked UP in the master by code;
+       3. the whole distributor master.
+     Step 2 used to RETURN { Code, Name } built straight out of Master_Stores' DbCode / DbName columns.
+     Those two are a denormalised copy of the distributor master: they go stale the moment a distributor
+     is renamed there, they carry no City / State / Zone / ASM at all, and a distributor the rep has no
+     store with YET could never appear — which is exactly the case when he is opening a new outlet under
+     one. So a store's DbCode is now only ever a POINTER used to find the master row. */
   myDistributors: function () {
     var me = (DB.me.name || '').toUpperCase().replace(/\s+/g, ' ').trim(), code = (DB.me.code || '').toUpperCase();
     var all = DB.m.Master_Distributors || [];
-    var mine = all.filter(function (d) { var a = String(d.EmAsm || '').toUpperCase().replace(/\s+/g, ' ').trim();
+    var mapped = all.filter(function (d) { var a = String(d.EmAsm || '').toUpperCase().replace(/\s+/g, ' ').trim();
       return a && (a === me || a === code); });
-    if (mine.length) return mine;
-    /* fallback: distributors of my stores */
-    var seen = {}, out = [];
-    DB.myStores().forEach(function (s) { var c = String(s.DbCode || '').trim();
-      if (c && !seen[c]) { seen[c] = 1; out.push({ Code:c, Name:s.DbName || c }); } });
-    return out.length ? out : all;
+    /* the admin has said whose distributors these are — that mapping IS the answer */
+    if (mapped.length) return mapped;
+    /* ── nothing mapped: offer the WHOLE master, likely ones first ──
+       Narrowing to just the distributors he already has stores with would hide the very distributor a
+       NEW outlet is most often opened under: one he has no store with YET. So every distributor in the
+       master is offerable, and the ones he already deals with are simply lifted to the top. */
+    var near = {};
+    DB.myStores().forEach(function (s) {
+      var c = String(s.DbCode || '').trim(); if (c) near[c.toUpperCase()] = 1;
+    });
+    var mine = [], rest = [];
+    all.forEach(function (d) {
+      (near[String(d.Code == null ? '' : d.Code).trim().toUpperCase()] ? mine : rest).push(d);
+    });
+    return mine.concat(rest);
+  },
+  /* does the rep already have a store with this distributor? Only used to GROUP the list — never to
+     decide what is offerable. */
+  distIsMine: function (code) {
+    var q = String(code == null ? '' : code).trim().toUpperCase();
+    if (!q) return false;
+    return DB.myStores().some(function (s) {
+      return String(s.DbCode == null ? '' : s.DbCode).trim().toUpperCase() === q; });
+  },
+  /* codes the rep's stores point at that the distributor master does not have. Not an error the rep can
+     fix — it is a gap in the masters — but he has to be told, or a distributor he expects to see in the
+     new-outlet list is simply absent and he has no idea why. */
+  distGaps: function () {
+    var seen = {}, gaps = [];
+    DB.myStores().forEach(function (s) {
+      var c = String(s.DbCode || '').trim(); if (!c || seen[c.toUpperCase()]) return;
+      seen[c.toUpperCase()] = 1;
+      if (!DB.distByCode(c)) gaps.push(c + (s.DbName ? ' (' + s.DbName + ')' : ''));
+    });
+    return gaps;
   },
   products: function () { return DB.m.Master_Products || []; },
   /* ── one comparison for every code in the app ──
@@ -3306,16 +3377,21 @@ var Gate = {
     var l = Gate.level();
     if (v === 'plan')  return l >= 1;
     /* same exception as the shelf below: an order that exists can always be adjusted */
-    if (v === 'field') return l >= 2 || !!Field.editPo;
+    if (v === 'field') return !!Field.editPo || (Gate.fieldDay() && l >= 2);
     /* the shelf is part of the visit — except when Sec order sent the rep back to add a product to an
        order that ALREADY exists: that day's sequence is history, and refusing him there would leave the
        adjustment impossible */
-    if (v === 'stk') return l >= 2 || !!Field.editPo;
+    if (v === 'stk') return !!Field.editPo || (Gate.fieldDay() && l >= 2);
     /* a travel claim is about days ALREADY worked, so it is never gated on today's plan */
     if (v === 'tada') return true;
     /* nor is downloading what he has already done */
     if (v === 'mydata') return true;
-    if (v === 'sec' || v === 'posm' || v === 'eod') return l >= 3;
+    if (v === 'sec' || v === 'posm') return Gate.fieldDay() && l >= 3;
+    /* ── closing a day that never had a beat in it ──
+       Level 3 means "a store was saved today", which a Meeting / Leave / Weekly Off / Holiday day can
+       never reach — so gating EOD on it used to lock those days out of being closed at all. On a
+       non-field day the saved-and-notified plan IS the whole day, so EOD opens straight off it. */
+    if (v === 'eod') return Gate.fieldDay() ? l >= 3 : l >= 2;
     /* adjusting an order that already exists is not part of today's sequence — a rep gets that call
        whether or not he has punched anything since */
     if (v === 'fin') return true;
@@ -3344,8 +3420,22 @@ var Gate = {
     }
     return true;
   },
+  /* ── is today a day spent on a beat? ──
+     Self Working / ME Sales Team / BA Supervisor are; Meeting / Activity, Leave, Sick Leave, Weekly
+     Off and HO Holiday are not. The day's own saved plan decides it, falling back to what the approved
+     master says before a plan exists. */
+  fieldDay: function () {
+    var r = DB.find('DayPlan', (DB.me.code || '') + '_' + today()) || {};
+    var pjp = DB.pjpFor(DB.me.code, today());
+    return Pjp.isField(Pjp.ww(r.WorkingWith || (pjp ? pjp.Ww : '') || 'Self Working'));
+  },
   why: function (v) {
     var l = Gate.level();
+    /* the day itself has no store visit in it — say so, and say the one way to change that, instead of
+       repeating a sequence message the rep can never satisfy today */
+    if (!Gate.fieldDay() && ['field', 'stk', 'sec', 'posm'].indexOf(v) >= 0 && !Field.editPo)
+      return 'Aaj field day nahi hai (' + Pjp.ww(Plan.ww()) + ') — Field band hai. Kaam karna ho to ' +
+             'Plan tab me Change PJP karo; warna sidha EOD save karke din close kar do.';
     if (v === 'plan' && l < 1) {
       var ps = Gate.pjpState();
       if (ps.s === 'pending') return 'PJP HOD ke paas hai (' + (monthName(ps.month) || ps.month) +
@@ -3394,7 +3484,9 @@ var TABS = [
   { v:'plan',  g:'', t:'Plan' },
   { v:'field', g:'', t:'Field' },
   { v:'stk',   g:'', t:'Stock' },
-  { v:'sec',   g:'', t:'Orders' },
+  /* 'sec' (the old "Orders" tab) is gone: the same orders are adjusted in Sec order and chased in
+     Tracker, and its one unique table — the distributor's primary-order shortfall — is now a
+     "Primary Order" tab in the EOD workbook. The route and module stay so old links still land. */
   { v:'fin',   g:'', t:'Sec order' },
   { v:'posm',  g:'', t:'POSM' },
   { v:'eod',   g:'', t:'EOD' },
@@ -4199,6 +4291,7 @@ var Card = {
   data: function () {
     var t = today(), r = Plan.row(), pjp = DB.pjpFor(DB.me.code, t), e = DB.emp(DB.me.code) || {};
     var s = Auth.session() || {};
+    var dev0 = Plan.dev();          /* the day's own Change-PJP request, when there is one */
     var ww = r.WorkingWith || (pjp ? Pjp.ww(pjp.Ww) : 'Self Working');
     var fld = Pjp.isField(ww);
     var tg = Plan.tgt();
@@ -4216,9 +4309,22 @@ var Card = {
       /* an off day has no beat: showing the PJP's town next to "Leave" would be a lie */
       town:fld ? (r.Town || (pjp ? pjp.Town : '') || '—') : '—',
       beat:fld ? (r.Beat || (pjp ? pjp.Beat : '') || '—') : '—',
+      state:fld ? (Plan.stateFor(r, pjp, r.Town || (pjp ? pjp.Town : '')) || '—') : '—',
       /* a sales focus means nothing on a day nobody is selling — shown only on a field day */
       focus:fld ? (r.Focus || (pjp ? pjp.Focus : '') || '') : '',
       offPjp:r.OffPjp ? (r.Approval || 'Pending') : '',
+      /* ── an off-PJP day, spelled out ──
+         "Off-PJP: Approved" on its own says a deviation happened but not what it was, so a manager
+         reading the card on WhatsApp still had to ring up and ask. These are the same rows the Plan
+         screen shows for the visit — where he actually is, and where the plan had said he would be. */
+      offDet:r.OffPjp ? [
+        ['State', Plan.stateFor(r, pjp, r.Town) || '—'],
+        ['Town / City', r.Town || '—'],
+        ['Beat / Market', r.Beat || '—'],
+        ['Station', Pjp.stn(r.Station || (dev0 ? dev0.NewStation : ''))],
+        ['PJP me tha', ((dev0 && dev0.PlannedTown) || (pjp ? pjp.Town : '') || '—') + ' / ' +
+                       ((dev0 && dev0.PlannedBeat) || (pjp ? pjp.Beat : '') || '—')]
+      ].concat(dev0 && dev0.Reason ? [['Reason', dev0.Reason]] : []) : [],
       /* an off day carries no counters — showing "7 SC Call" next to "aaj field day nahi" is the
          card contradicting itself */
       sc:fld ? (num(r.ScTarget) || num(DB.cfg('SC_Call_Target', 7)) || 7) : 0,
@@ -4285,7 +4391,8 @@ var Card = {
     put([dmy(d.date), d.week, (d.zone ? d.zone + ' / ' + d.hq : d.hq)].filter(Boolean).join(' · '), P, y, C.meta);
     y += 20;
 
-    [['Working With: ', d.ww], ['Town/City: ', d.town], ['Beat/Market: ', d.beat]]
+    [['Working With: ', d.ww]]
+      .concat(d.field ? [['State: ', d.state], ['Town/City: ', d.town], ['Beat/Market: ', d.beat]] : [])
       .concat(d.focus ? [['Focus: ', d.focus]] : [])
       .forEach(function (pair) {
         Card.fnt(g, '800', 13);
@@ -4298,8 +4405,30 @@ var Card = {
         y += 22;
       });
     if (d.offPjp) {
-      Card.fnt(g, '700', 12);
-      put('Off-PJP: ' + d.offPjp, P, y, '#b4432f'); y += 20;
+      /* the heading, then the deviation itself line by line — a tinted box so a reader scanning the
+         card sees at a glance that today is NOT the planned beat, and reads exactly where he is */
+      var opad = 12, oaw = iw - opad * 2, olh = 17;
+      /* measure every row first (a beat name or a reason can need two lines), then size the box to the
+         total — the same measure-then-paint order the rest of this routine uses */
+      var owrap = d.offDet.map(function (pr) {
+        Card.fnt(g, '400', 12);
+        var lw2 = g.measureText(pr[0] + ': ').width;
+        return { lbl:pr[0] + ': ', lw:lw2, lines:Card.wrap(g, String(pr[1] == null ? '' : pr[1]), oaw - lw2) };
+      });
+      var oh = 23 + owrap.reduce(function (a, x) { return a + x.lines.length * olh; }, 0);
+      fill(C.warnBg, P, y, iw, oh, 9);
+      Card.fnt(g, '700', 12.5);
+      put('Off-PJP: ' + d.offPjp, P + opad, y + 15, '#b4432f');
+      var oy = y + 15;
+      owrap.forEach(function (x) {
+        oy += olh;
+        Card.fnt(g, '700', 12);
+        put(x.lbl, P + opad, oy, C.warnInk);
+        Card.fnt(g, '400', 12);
+        put(x.lines[0], P + opad + x.lw, oy, C.warnInk);
+        for (var j = 1; j < x.lines.length; j++) { oy += olh; put(x.lines[j], P + opad, oy, C.warnInk); }
+      });
+      y += oh + 14;
     }
 
     /* ── the three counters ── */
@@ -4400,12 +4529,18 @@ var Card = {
       if (/^msl$/i.test(String(l.MslStatus || ''))) msl += num(l.NsvLakh); else nonMsl += num(l.NsvLakh);
     });
     /* every brand the master knows about, not just the ones with a line punched today — a brand with
-       zero NSV is exactly the fact the report has to carry, not a row that quietly disappears */
+       zero NSV is exactly the fact the report has to carry, not a row that quietly disappears.
+       Mamaearth is pinned to the BOTTOM whatever it sold: this is the Emerging Brands report, and
+       Mamaearth heading the list on a good day buried the brands the report is actually about. */
     var brandSet = {};
     Field.uniq('Brand').forEach(function (b) { brandSet[b] = 1; });
     Object.keys(a.brand).forEach(function (b) { brandSet[b] = 1; });
+    var isME = function (b) { return /mamaearth/i.test(String(b || '')); };
     var brands = Object.keys(brandSet).map(function (b) { return [b, num(a.brand[b])]; })
-      .sort(function (x, y) { return y[1] - x[1]; });
+      .sort(function (x, y) {
+        if (isME(x[0]) !== isME(y[0])) return isME(x[0]) ? 1 : -1;
+        return y[1] - x[1];
+      });
     var saved = DB.find('Eod', DB.me.code + '_' + a.t) || {}, br = Eod.brandRows(a);
     return {
       date:a.t, time:saved.ClosedAt || new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }),
@@ -5543,11 +5678,20 @@ var Pjp = {
         var r = Pjp.days[d]; if (!r) return;
         r.ww = Pjp.ww(r.ww || (new Date(d + 'T00:00:00').getDay() === 0 ? 'Weekly Off' : 'Self Working'));
       });
-      /* seed any day the draft doesn't cover from the published Master_PJP */
+      /* ── Master_PJP flows in on its own ──
+         Whatever the admin has already published for this rep and month IS the approved plan for those
+         days, so it is loaded without anybody pressing anything (there used to be a "PJP se auto-fill"
+         button for this, which meant a rep who never found it saw an empty month next to a master full
+         of days). The master WINS over the draft on a published day — those days are read-only, so the
+         draft cannot be the truth for them — except a day an HOD has explicitly sent back to be fixed,
+         which is the one case the rep's own edit is the point. */
+      var sentBack0 = {};
+      Pjp.rejDays().forEach(function (k) { sentBack0[k] = 1; });
       DB.pjpMonth(DB.me.code, Pjp.month).forEach(function (r) {
-        var d = toISO(r.Date);
-        if (!Pjp.days[d]) Pjp.days[d] = { ww:Pjp.ww(r.Ww), state:Plan.stateFor(null, r, r.Town),
-          city:r.Town || '', beat:r.Beat || '', st:'HQ' };
+        var d = toISO(r.Date); if (!d || sentBack0[d]) return;
+        Pjp.days[d] = { ww:Pjp.ww(r.Ww), state:Plan.stateFor(null, r, r.Town),
+          city:r.Town || '', beat:r.Beat || '', st:Pjp.stn(r.Station),
+          rmk:r.Remarks || (Pjp.days[d] || {}).rmk || '' };
       });
       /* A day before this rep JOINED is not theirs to plan: the day list already refuses to render an
          input for it, but a day could still arrive here from an older draft or from Master_PJP — and
@@ -5572,14 +5716,15 @@ var Pjp = {
     return 'Self Working'; },
   isField: function (w) { return ['Self Working','ME Sales Team','BA Supervisor'].indexOf(w) >= 0; },
   isMeet: function (w) { return /meeting|activity/i.test(String(w || '')); },
-  /* what "done" means for a day, whatever kind it is — a field day needs Town + Beat, a meeting day
-     needs its Remarks, everything else needs nothing. One rule, used by the month coverage check and
-     by the partial re-send table, so a returned meeting day is held to the same standard as a returned
-     field day instead of being waved through with just its label. */
+  /* what "done" means for a day, whatever kind it is — a FIELD day needs Town + Beat, and nothing
+     else needs anything. One rule, used by the month coverage check and by the partial re-send table.
+     A Meeting / Activity day used to also demand its Remarks here: a month away, nobody yet knows what
+     the meeting will be about, and being unable to say so blocked the whole plan from being sent. The
+     remark is asked on the DAY instead — Plan.check() makes it compulsory there, where the rep
+     actually knows the answer. */
   incomplete: function (r) {
     var ww = Pjp.ww((r && r.ww) || 'Self Working');
     if (Pjp.isField(ww)) return !((r.city || '').trim() && (r.beat || '').trim());
-    if (Pjp.isMeet(ww)) return !((r.rmk || '').trim());
     return false;
   },
   /* ── where the day is worked, in the policy's words ──
@@ -5601,11 +5746,26 @@ var Pjp = {
     if (!Pjp.partial()) return [];
     return Admin.rejDays(Pjp.draft());
   },
-  /* may the rep touch THIS day? */
-  editable: function (d) {
+  /* ── the days Master_PJP already holds ──
+     A published day is a decided day. The admin may publish one day, a week, or the whole month, and
+     whatever is in there is the approved truth — the rep fills the REST and must not be able to type
+     over what is already settled. Keyed by ISO date, read straight from the master every time so a
+     sync that brings a new day locks it on the very next render. */
+  masterDays: function () {
+    var out = {};
+    DB.pjpMonth(DB.me.code, Pjp.month).forEach(function (r) {
+      var d = toISO(r.Date); if (d) out[d] = r;
+    });
+    return out;
+  },
+  /* may the rep touch THIS day?  `md` is masterDays(), passed in so a 31-day list reads the master
+     once instead of thirty-one times. */
+  editable: function (d, md) {
     var dr = Pjp.draft(), st = String(dr.Status || '');
     if (/approved|accepted/i.test(st)) return false;
     if (Pjp.partial()) return Pjp.rejDays().indexOf(d) >= 0;
+    /* published in the master, and not one of the days an HOD has explicitly sent back */
+    if ((md || Pjp.masterDays())[d]) return false;
     return true;
   },
 
@@ -5618,8 +5778,8 @@ var Pjp = {
   /* the Meeting/Activity twin of geo() — one required box instead of State/Town/Beat */
   rmk: function (d, r) {
     var q = "'" + d + "'";
-    return '<label class="f">Remarks <span class="req">*</span></label>' +
-      '<textarea class="in" rows="2" id="pj_rmk_' + d + '" placeholder="Meeting ya activity ka reason likho" ' +
+    return '<label class="f">Remarks <span class="hint">(optional — din par poochha jayega)</span></label>' +
+      '<textarea class="in" rows="2" id="pj_rmk_' + d + '" placeholder="Abhi pata ho to likho, warna chhod do" ' +
       'oninput="Pjp.set(' + q + ',\'rmk\',this.value)" onchange="Pjp.touch()">' + esc(r.rmk || '') + '</textarea>';
   },
   geo: function (d, r) {
@@ -5744,26 +5904,17 @@ var Pjp = {
         (dr.UpdatedAt ? ' <span class="hint">(last save: ' + esc(new Date(+dr.UpdatedAt).toLocaleString('en-IN')) + ')</span>' : '') + '</div></div>';
     if (c.miss.length && !locked && !part)
       h += '<div class="banner w"><span>!</span><div>' + c.miss.length + ' din pending hai (' + monthName(Pjp.month).split(' ')[0] + ' ' + c.miss.join(', ') + '). Har working day me City + Beat bharo ya Off karo.</div></div>';
-    if (Pjp.meetGaps().length && !locked && !part)
-      h += '<div class="banner w"><span>!</span><div>' + Pjp.meetGaps().length +
-        ' Meeting / Activity din me Remarks likhna baaki hai (' +
-        Pjp.meetGaps().map(function (d) { return +d.slice(8, 10); }).join(', ') + ').</div></div>';
-    if (c.miss.length === 0 && !Pjp.meetGaps().length && !locked && !part)
+    if (c.miss.length === 0 && !locked && !part)
       h += '<div class="banner g"><span></span><div>Poora month plan ho gaya — ab HOD ko bhej sakte ho.</div></div>';
     if (locked)
       h += '<div class="banner b"><span></span><div>Ye PJP <b>' + esc(dr.Status) + '</b> hai' + (dr.RejectReason ? ' — ' + esc(dr.RejectReason) : '') + '. Change karna ho to HOD se baat karo.</div></div>';
 
-    /* In the partial flow BOTH of these are wrong: auto-fill would rewrite the whole month from the
-       master, wiping the days the HOD already accepted (and the fixes just typed), and a second Send
-       button up here competes with the save-and-send card under the returned days. */
-    if (!part) h += '<div class="card"><div class="btns">' +
-      (locked ? '' : '<button class="btn ghost" onclick="Pjp.autofill()"> PJP se auto-fill</button>' +
-        '<button class="btn" id="pjp_sub" onclick="Pjp.submit(this)" ' +
-          (((c.miss.length || Pjp.meetGaps().length) && !Bypass.on()) || !c.need || !Pjp.windowOpen() ?
-            'disabled' : '') + '>' +
-          (pend ? 'Dobara bhejo (' + (num(dr.Revision) + 1) + ')' :
-           (c.miss.length && Bypass.on()) ? 'Adhoora hi bhej do (bypass)' : 'HOD ko bhejo') + '</button>') +
-      '</div></div>';
+    /* the master's days are loaded on their own now (see Pjp.load) — read once for the whole list */
+    var md = Pjp.masterDays(), mdN = Object.keys(md).length;
+    if (mdN && !locked)
+      h += '<div class="banner b"><span></span><div><b>' + mdN + ' din PJP me pehle se approve hain</b>' +
+        '<br><span style="font-weight:500">Wo din apne aap aa gaye hain aur <b>lock</b> hain — change ' +
+        'nahi honge. Baaki din aap bharo.</span></div></div>';
 
     h += '<div class="sec-title">Din-wise plan</div>';
     var dn = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -5776,9 +5927,13 @@ var Pjp = {
         return;
       }
       var r = Pjp.days[d] || { ww:sun ? 'Weekly Off' : 'Self Working', state:'', city:'', beat:'', st:'HQ' };
-      /* A partially rejected month is locked EXCEPT on the days that came back. */
-      var locked = lockAll || !Pjp.editable(d);
+      /* A partially rejected month is locked EXCEPT on the days that came back; and a day already
+         published in Master_PJP is locked whatever the draft says. */
+      var locked = lockAll || !Pjp.editable(d, md);
       var sentBack = rejD.indexOf(d) >= 0;
+      /* locked by the MASTER specifically (not merely by a whole-month approval) — worth naming on the
+         row, because this is the one lock a rep meets on a month he is otherwise still filling */
+      var fromMaster = !lockAll && !sentBack && !!md[d];
       /* Whether Town/Beat are needed depends ONLY on the Working-With value, never on the weekday.
          It used to be `isField(ww) && !sun`, so a Sunday switched to Self Working showed no inputs. */
       var f = Pjp.isField(r.ww), meet = Pjp.isMeet(r.ww);
@@ -5790,14 +5945,17 @@ var Pjp = {
         : /sick/i.test(r.ww) ? 'SICK' : /leave/i.test(r.ww) ? 'LEAVE'
         : /holiday/i.test(r.ww) ? 'HOLIDAY' : 'OTHER';
       h += '<div class="card" style="padding:12px 14px;background:' +
-        (sentBack ? '#fff6f5' : (f ? '#fff' : (off ? '#fbfaf5' : '#fffaf8'))) +
+        (sentBack ? '#fff6f5' : fromMaster ? '#f6f8fc' : (f ? '#fff' : (off ? '#fbfaf5' : '#fffaf8'))) +
         (sentBack ? ';border-color:var(--bad)' : '') + '">' +
         (sentBack ? '<div class="hint" style="color:var(--bad);font-weight:700;margin-bottom:6px">' +
           'Ye din reject hua tha — theek karo</div>' : '') +
+        (fromMaster ? '<div class="hint" style="font-weight:700;margin-bottom:6px">' +
+          'Ye din PJP me approve ho chuka hai — lock hai, change nahi hoga</div>' : '') +
         '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
           '<div style="font-weight:700;font-size:13.5px;min-width:74px">' + p2(dd) + ' ' + monthName(Pjp.month).split(' ')[0] +
           ' <span class="hint" style="font-weight:500">' + dn[dow] + '</span></div>' +
           '<span class="pill ' + (f ? 'p-blue' : off ? 'p-grey' : 'p-warn') + '">' + tag + '</span>' +
+          (fromMaster ? '<span class="pill p-ok">Approved</span>' : '') +
           (locked ? '<span class="pill p-blue">' + esc(r.ww) + '</span>'
             : '<select class="in" style="width:auto;flex:1;min-width:150px;padding:7px 30px 7px 10px;font-size:12.5px" onchange="Pjp.set(\'' + d + '\',\'ww\',this.value)">' +
               ['Self Working','ME Sales Team','BA Supervisor','Meeting / Activity','Weekly Off','Leave','Sick Leave','HO Holiday']
@@ -5809,9 +5967,7 @@ var Pjp = {
         (f ? (locked ? '<div class="sub">' + esc(r.state ? r.state + ' · ' : '') + esc(r.city || '—') + ' · ' + esc(r.beat || '—') + '</div>'
           : Pjp.geo(d, r) +
             ((r.city || '').trim() && (r.beat || '').trim() ? '' : '<div class="hint" style="margin-top:5px;color:#b7791f">! Town aur Beat dono bharo — tabhi ye din complete hoga.</div>')) : '') +
-        (meet ? (locked ? '<div class="sub">' + esc(r.rmk || '—') + '</div>'
-          : Pjp.rmk(d, r) +
-            ((r.rmk || '').trim() ? '' : '<div class="hint" style="margin-top:5px;color:#b7791f">! Remark likho — tabhi ye din complete hoga.</div>')) : '') +
+        (meet ? (locked ? '<div class="sub">' + esc(r.rmk || '—') + '</div>' : Pjp.rmk(d, r)) : '') +
         /* a day the HOD sent back gets its own Save, so the rep can store one day at a time and see it */
         /* the save row: the state on the left, the button on the right, and a rule above it so it
            does not sit flush against the Beat field */
@@ -5841,8 +5997,35 @@ var Pjp = {
         '<div class="btns"><button class="btn" onclick="Pjp.submit(this)"' +
           (ready.length === rejD.length ? '' : ' disabled') + '>HOD ko dobara bhejo</button></div>' +
         (ready.length === rejD.length ? '' :
-          '<div class="hint" style="margin-top:6px;color:#b7791f">! Pehle har reject wale din ka Town/Beat ' +
-          'ya (meeting ho to) Remarks bharo — tabhi dobara bhej paoge.</div>') + '</div>';
+          '<div class="hint" style="margin-top:6px;color:#b7791f">! Pehle har reject wale din ka Town aur ' +
+          'Beat bharo — tabhi dobara bhej paoge.</div>') + '</div>';
+    }
+
+    /* ── the end of the month list: SAVE, then SEND ──
+       Both used to sit in a card ABOVE thirty-one day rows, which is the one place a rep is not looking
+       when he finishes typing the last day. They belong here, in the order the work happens: save what
+       is on screen, then hand the month to the HOD. Autosave still runs on its own 1.2s debounce —
+       Save is the button that says so out loud. */
+    if (!part && !locked) {
+      var blocked = (c.miss.length && !Bypass.on()) || !c.need || !Pjp.windowOpen();
+      h += '<div class="card"><h3>PJP save karke HOD ko bhejo</h3>' +
+        '<div class="sub">' + c.done + '/' + c.need + ' field din bhare hain' +
+          (c.off ? ' · ' + c.off + ' din off / leave / meeting' : '') +
+          (mdN ? ' · ' + mdN + ' din pehle se approved' : '') + '.</div>' +
+        '<div class="btns"><button class="btn ok" onclick="Pjp.saveNow(this)">Save karo</button></div>' +
+        '<div class="btns"><button class="btn" id="pjp_sub" onclick="Pjp.submit(this)"' +
+          (blocked ? ' disabled' : '') + '>' +
+          (pend ? 'Dobara bhejo (' + (num(dr.Revision) + 1) + ')' :
+           (c.miss.length && Bypass.on()) ? 'Adhoora hi bhej do (bypass)' : 'HOD ko bhejo') + '</button></div>' +
+        (Pjp.savedNow ? '<div class="hint" style="margin-top:6px">Save ho gaya · ' + esc(Pjp.savedNow) + '</div>'
+          : (dr.UpdatedAt ? '<div class="hint" style="margin-top:6px">Last save: ' +
+              esc(new Date(+dr.UpdatedAt).toLocaleString('en-IN')) + '</div>' : '')) +
+        (c.miss.length && !Bypass.on() ?
+          '<div class="hint" style="margin-top:6px;color:#b7791f">! ' + c.miss.length +
+          ' field din ka Town aur Beat baaki hai (' + monthName(Pjp.month).split(' ')[0] + ' ' +
+          c.miss.join(', ') + ') — tabhi bhej paoge.</div>' : '') +
+        (!Pjp.windowOpen() ? '<div class="hint" style="margin-top:6px;color:#b7791f">! ' +
+          'Ye month approve ho chuka hai — bhejna band hai.</div>' : '') + '</div>';
     }
     return h;
   },
@@ -5850,6 +6033,9 @@ var Pjp = {
   setMonth: function (m) { Pjp.flush(); Pjp.month = m; Pjp.days = null; Pjp.loadedKey = ''; Pjp.hydratedAt = 0; render(); },
   set: function (d, k, v) {
     if (!Pjp.days) Pjp.load();
+    /* a day the master has already decided is not the rep's to change — the row renders read-only, and
+       this is the second lock, so a stale render or a hand-typed console call cannot get past it */
+    if (!Pjp.editable(d)) return toast('Ye din PJP me approve ho chuka hai — change nahi hoga');
     if (!Pjp.days[d]) Pjp.days[d] = { ww:(new Date(d + 'T00:00:00').getDay() === 0 ? 'Weekly Off' : 'Self Working'), state:'', city:'', beat:'', st:'HQ' };
     Pjp.days[d][k] = k === 'ww' ? Pjp.ww(v) : v;
     Pjp._dirty = true;
@@ -5880,6 +6066,18 @@ var Pjp = {
     Pjp.rejDays().forEach(function (d) { Pjp.savedAt[d] = now; });
     return Busy.run('pjpsaveall', el, 'Save\u2026', function () {
       return (p || Promise.resolve()).then(function () { render(); toast('Sab din save ho gaye'); });
+    });
+  },
+  /* the whole month, on demand. Autosave has almost certainly already written it; this is the button
+     that lets a rep SEE that before he hands the month over, which is the one thing the debounce
+     cannot say for itself. */
+  savedNow:'',
+  saveNow: function (el) {
+    Pjp._dirty = true;
+    var p = Pjp.flush();
+    Pjp.savedNow = new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+    return Busy.run('pjpsavenow', el, 'Save\u2026', function () {
+      return (p || Promise.resolve()).then(function () { render(); toast('Poora month save ho gaya'); });
     });
   },
   /* Merge over what the sheet already holds. Pjp.days only ever contains the days this device has
@@ -5929,28 +6127,11 @@ var Pjp = {
       Status:dr.Status || 'Draft', DaysJson:JSON.stringify(Pjp.full()),
       Coverage:c.done + '/' + c.need, UpdatedAt:Date.now() }, { quiet:true });
   },
-  autofill: function () {
-    var doj = DB.doj(DB.me.code);
-    /* joining date wins over whatever the master holds — those days are not this rep's to plan */
-    var mp = DB.pjpMonth(DB.me.code, Pjp.month).filter(function (r) { return !doj || toISO(r.Date) >= doj; });
-    if (!mp.length) return toast('Master_PJP me is month ka (joining ke baad ka) data nahi hai');
-    mp.forEach(function (r) { var d = toISO(r.Date);
-      Pjp.days[d] = { ww:Pjp.ww(r.Ww), state:Plan.stateFor(null, r, r.Town),
-        city:r.Town || '', beat:r.Beat || '', st:(Pjp.days[d] && Pjp.days[d].st) || 'HQ' }; });
-    Pjp._dirty = true; Pjp.flush(); render();
-    toast('' + mp.length + ' din Master PJP se fill ho gaye' + (doj ? ' (joining ke baad ke)' : ''));
-  },
+  /* Pjp.autofill() is gone: Pjp.load() reads Master_PJP into the month on its own, so there is nothing
+     left for a button to do. What the master holds also LOCKS those days — see Pjp.editable. */
   /* which returned days are still short of a Town or a Beat */
   partialGaps: function () {
     return Pjp.rejDays().filter(function (d) { return Pjp.incomplete((Pjp.days || {})[d] || {}); });
-  },
-  /* which days of the WHOLE month are Meeting/Activity with no Remarks yet — the full-month twin of
-     partialGaps(), checked before Send the same way a missing Town/Beat already is */
-  meetGaps: function () {
-    return Pjp.planDates().filter(function (d) {
-      var r = (Pjp.days || {})[d]; if (!r) return false;
-      return Pjp.isMeet(Pjp.ww(r.ww)) && !((r.rmk || '').trim());
-    });
   },
   submit: function (el) {
     var c = Pjp.cover(), dr0 = Pjp.draft(), part = Pjp.partial();
@@ -5966,12 +6147,6 @@ var Pjp = {
         return toast(gaps.map(function (d) { return dmy(d); }).join(', ') +
           ' — in dino ka Town/Beat ya Remarks bharo', 4200);
     } else if (c.miss.length && !Bypass.on()) return toast('Pehle poora month plan karo');
-    else {
-      var mgaps = Pjp.meetGaps();
-      if (mgaps.length && !Bypass.on())
-        return toast(mgaps.map(function (d) { return dmy(d); }).join(', ') +
-          ' — Meeting / Activity ka Remarks likho', 4200);
-    }
     /* Re-sending is allowed while the request is only PENDING — the rep fixes what HOD objected to
        and sends again; the new copy REPLACES the old one, which is why the HOD stamp and the reject
        reason are wiped and the revision is bumped. */
@@ -6288,10 +6463,21 @@ var Plan = {
       h += '<div class="banner r"><span></span><div>HOD ne change reject kiya' +
         (dev.HodRemarks ? ': ' + esc(dev.HodRemarks) : '') + '. Dobara bhejo ya PJP wala beat karo.</div></div>';
 
-    /* the target belongs to a FIELD day only — Self Working / ME Sales Team / BA Supervisor */
+    /* ── a day with no beat in it, spelled out ──
+       The target belongs to a FIELD day only, and so do the Field / Stock / POSM tabs. Saying "no
+       target" was not enough: a rep then tapped Field, found it locked, and had no idea whether
+       something was broken or whether that was the point. So this says all three things — what today
+       is, which tabs are shut, and the two ways forward (close the day from EOD, or Change PJP and
+       actually go out). Gate.allowed / Gate.why enforce exactly the same rule. */
     if (!field)
-      h += '<div class="banner w"><span></span><div><b>Aaj field day nahi — ' + esc(ww) + '</b><br>' +
-        '<span style="font-weight:500">Koi order / SC / NSO target nahi. Plan save karke HOD ko bhej do.</span></div></div>';
+      h += '<div class="banner w"><span>!</span><div><b>Aaj field day nahi — ' + esc(ww) + '</b><br>' +
+        '<span style="font-weight:500">Koi order / SC / NSO target nahi, aur <b>Field · Stock · POSM ' +
+        'band</b> hain.<br>Plan save karke HOD ko bhejo — uske baad sidha <b>EOD</b> se din close ' +
+        'kar do.<br>Aaj kaam karna hai? Upar <b>Change PJP</b> dabao aur din ko field day banao — ' +
+        'tabhi Field khulega.</span>' +
+        '<div class="btns"><button class="btn sm" onclick="Router.go(\'eod\')">EOD kholo</button>' +
+        '<button class="btn ghost sm" onclick="Plan.changeOpen()"' + (left ? '' : ' disabled') + '>' +
+        (left ? 'Change PJP' : 'Change limit over') + '</button></div></div></div>';
 
     if (field) {
       var sc = num(r.ScTarget) || num(DB.cfg('SC_Call_Target', 7)) || 7;
@@ -6616,12 +6802,30 @@ var Field = {
   },
   html: function () {
     if (Gate.locked()) return Field.lockedHtml();
+    /* the day is a Meeting / Leave / Off / Holiday — there is no store visit in it. Router.go already
+       refuses the tab, but an admin previewing, or a link from somewhere else, can still land here. */
+    if (!Gate.fieldDay() && !Field.editPo && !Auth.isAdmin()) return Field.noFieldHtml();
     var h = UI.head('', 'Field — store visit', 'Store select karo product add karo submit. Ek store ke baad POSM.');
     h += '<div class="card"><div class="btns" style="margin:0">' +
       '<button class="btn ' + (Field.mode === 'order' ? '' : 'ghost') + '" onclick="Field.setMode(\'order\')">Order</button>' +
       '<button class="btn ' + (Field.mode === 'new' ? '' : 'ghost') + '" onclick="Field.setMode(\'new\')"> Naya outlet</button>' +
       '</div></div>';
     return h + (Field.mode === 'order' ? Field.orderHtml() : Field.newHtml());
+  },
+  /* ── Field on a day that has no beat ──
+     The twin of the Plan screen's banner, worded from this side: why this screen is empty, and the two
+     ways on. Nothing here saves anything — a non-field day has nothing to punch by definition. */
+  noFieldHtml: function () {
+    var r = Plan.row(), ww = Pjp.ww(r.WorkingWith || Plan.ww());
+    return UI.head('', 'Field band hai', dmy(today()) + ' · aaj field day nahi hai.') +
+      '<div class="banner w"><span>!</span><div><b>Aaj ' + esc(Plan.wwFull(r) || ww) + ' hai</b><br>' +
+      '<span style="font-weight:500">Is din koi store visit nahi hai, isliye Field, Stock aur POSM ' +
+      'band hain. Din close karna ho to sidha <b>EOD</b> me jao.<br>Agar aaj market jaana hai to ' +
+      'pehle <b>Plan tab me Change PJP</b> karke din ko field day banao — approve hone par Field ' +
+      'apne aap khul jayega.</span></div></div>' +
+      '<div class="card"><div class="btns" style="margin-top:0">' +
+      '<button class="btn" onclick="Router.go(\'eod\')">EOD — din close karo</button>' +
+      '<button class="btn ghost" onclick="Router.go(\'plan\')">Plan / Change PJP</button></div></div>';
   },
   lockedHtml: function () {
     var l = Store.get(K.lock, {});
@@ -6802,7 +7006,8 @@ var Field = {
     if (!reason) return toast('Reason select karo');
     if (reason === 'Other' && !String(rem || '').trim())
       return toast('Other chuna hai — Remarks me reason likho', 4000);
-    var t = today(), po = Field.po(s);
+    /* no PO for a visit that produced no order — see Field.novId */
+    var t = today(), po = Field.novId(s);
     var order = { PoNumber:po, Date:t, Source:'Store Visit', StoreType:s.StoreType || '',
       ClientId:String(s.ClientId || ''), CompanyCode:String(s.CompanyCode || ''), StoreName:s.StoreName,
       City:s.City || '', State:s.State || '', DbCode:String(s.DbCode || ''), DbName:s.DbName || '',
@@ -7013,6 +7218,19 @@ var Field = {
     for (var i = 1; i < 999; i++) { var c = base + p2(i); if (!used[c]) return c; }
     return base + Date.now().toString().slice(-4);
   },
+  /* ── the id for a visit that produced NO order ──
+     A no-order visit is still one SecOrders row, and that table is keyed on PoNumber, so the row needs
+     a value there. What it must NOT do is burn a real PO number: 'EMPO…' reads as a purchase order
+     everywhere it is seen, and a shop that ordered nothing has no purchase order. 'NOV…' says exactly
+     what it is, and the next genuine order at this shop still gets EMPO…01. */
+  novId: function (s) {
+    var base = 'NOV' + String(s.ClientId || s.CompanyCode || 'NA').replace(/\W/g, '') + '-' +
+               today().replace(/-/g, '');
+    var used = {}; DB.rows('SecOrders').forEach(function (o) { used[String(o.PoNumber)] = 1; });
+    if (!used[base]) return base;
+    for (var i = 2; i < 99; i++) { var c = base + '-' + i; if (!used[c]) return c; }
+    return base + '-' + Date.now().toString().slice(-4);
+  },
 
   /* ---------- new outlet ---------- */
   nsState:'', nsTownAdd:false,
@@ -7032,10 +7250,37 @@ var Field = {
        never a silent guess. */
     if (!Field.nsState && states.length === 1) Field.nsState = states[0];
     var stt = Field.nsState, towns = Plan.towns(stt);
+    /* the distributor list comes from Master_Distributors — see DB.myDistributors. The city is shown
+       beside each name because that is the master's own column, and it is what tells two similarly
+       named distributors apart. */
+    var gaps = DB.distGaps();
+    /* two groups, one list: the distributors he already deals with sit on top, and EVERY other
+       distributor in the master is right below them — a new outlet is very often the first store under
+       a distributor, so that one must be reachable, not filtered out. */
+    var opt = function (x) {
+      return '<option value="' + esc(x.Code) + '">' + esc(x.Name) +
+        ' (' + esc(x.Code) + ')' + (x.City ? ' · ' + esc(x.City) : '') + '</option>';
+    };
+    var mineD = d.filter(function (x) { return DB.distIsMine(x.Code); });
+    var restD = d.filter(function (x) { return !DB.distIsMine(x.Code); });
     return '<div class="card"><h3><span class="ic"></span>Naya outlet</h3>' +
       '<label class="f">Distributor <span class="req">*</span></label><select class="in" id="n_db">' +
         '<option value="">Select distributor…</option>' +
-        d.map(function (x) { return '<option value="' + esc(x.Code) + '">' + esc(x.Name) + ' (' + esc(x.Code) + ')</option>'; }).join('') + '</select>' +
+        (mineD.length && restD.length
+          ? '<optgroup label="Aapke distributor">' + mineD.map(opt).join('</optgroup>') +
+            '</optgroup><optgroup label="Baaki sab (Master_Distributors)">' + restD.map(opt).join('') +
+            '</optgroup>'
+          : d.map(opt).join('')) + '</select>' +
+      (d.length ? '<div class="hint" style="margin-top:5px">' + d.length +
+        ' distributor — <b>Master_Distributors</b> se' +
+        (mineD.length && restD.length ? ' (' + mineD.length + ' aapke, ' + restD.length + ' baaki)' : '') +
+        '.</div>'
+        : '<div class="banner w" style="margin-top:8px"><span>!</span><div><b>Distributor master khali hai</b>' +
+          '<br><span style="font-weight:500">Master_Distributors me koi distributor nahi ' +
+          'hai — admin se add karwao, tab tak naya outlet save nahi hoga.</span></div></div>') +
+      (gaps.length ? '<div class="hint" style="margin-top:5px;color:#b7791f">! ' + gaps.length +
+        ' distributor aapke store me hai par Master_Distributors me nahi (' + esc(gaps.slice(0, 3).join(', ')) +
+        (gaps.length > 3 ? ' …' : '') + ') — isliye list me nahi dikh rahe. Admin ko batao.</div>' : '') +
       '<div class="row two"><div><label class="f">Store name <span class="req">*</span></label><input class="in" id="n_name"></div>' +
         '<div><label class="f">Store type</label><select class="in" id="n_type"><option>BA Store</option><option>MEGA BA</option><option>Chemist</option><option>Cosmetics</option><option>General Trade</option></select></div></div>' +
       '<div class="row two">' +
@@ -7075,10 +7320,15 @@ var Field = {
     if (!state) return toast('State select karo');
     if (!town) return toast('Town select karo');
     if (!reason) return toast('Reason likho');
-    var dbo = DB.myDistributors().filter(function (x) { return String(x.Code) === db; })[0] || {};
+    /* the distributor is read from Master_Distributors by code, not from whatever DbName a store row
+       happened to carry — the master is the authority on the name, and this row is about to become one */
+    var dbo = DB.distByCode(db);
+    if (!dbo) return toast('Ye distributor Master_Distributors me nahi mila — admin se add karwao', 4200);
     var st = String((DB.emp(DB.me.code) || {}).Zone || 'XX').slice(0, 2).toUpperCase();
     var id = 'EM' + st + new Date().getFullYear() + p2(DB.rows('NewStores').length + 1);
-    DB.save('NewStores', { StoreId:id, Date:today(), DbCode:db, DbName:dbo.Name || '', StoreType:val('n_type'),
+    DB.save('NewStores', { StoreId:id, Date:today(),
+      /* both written from the master row, so the code and the name can never disagree */
+      DbCode:String(dbo.Code || db), DbName:dbo.Name || '', StoreType:val('n_type'),
       StoreName:name, State:state, Town:town, Address:val('n_addr'), Pincode:val('n_pin'),
       Beat:val('n_beat'), Category:val('n_cat'), OwnerName:val('n_owner'), OwnerMobile:val('n_mob'),
       DaySales:num(val('n_day')), MonthlyTurnover:num(val('n_turn')), Reason:reason,
@@ -7136,7 +7386,36 @@ var Stock = {
   },
   /* Sku / SkuName / Code all appear across the two uploads; take whichever is filled */
   sku: function (r) { return String(r.Sku || r.SkuName || r.Code || r.Product || '').trim(); },
-  qty: function (r) { return num(r.Qty !== undefined && r.Qty !== '' ? r.Qty : r.Stock); }
+  qty: function (r) { return num(r.Qty !== undefined && r.Qty !== '' ? r.Qty : r.Stock); },
+
+  /* ══════════ HOW OLD IS THIS STOCK? ══════════
+     Stock_Store and Stock_Distributor are re-uploaded by the office and re-indexed by a daily trigger;
+     the index carries the moment it was built, and that is what the app receives as storeAt / dbAt.
+     A salesman standing in a shop has no way to tell a shelf count uploaded this morning from one left
+     over from last Tuesday — and he is about to decide what to order from it. So the age is computed
+     and SAID, in days, with the same three-colour rule the rest of the app uses: today is fine,
+     yesterday is worth knowing, older than that is a warning, and unknown is a warning too (an absent
+     timestamp is not evidence of freshness).
+     `days` counts CALENDAR days back from today, so "kal ka" means yesterday's date, not 24 hours. */
+  STALE:2,
+  age: function (at) {
+    var iso = Rep.dpart(at), t = Appr.ts(at);
+    if (!iso) return { known:false, days:null, iso:'', when:'', txt:'Pata nahi kab update hua', cls:'w' };
+    var d0 = new Date(today() + 'T00:00:00').getTime();
+    var d1 = new Date(iso + 'T00:00:00').getTime();
+    var days = Math.round((d0 - d1) / 864e5);
+    var when = dmy(iso) + (Rep.tpart(at) ? ', ' + Rep.tpart(at) : '');
+    var txt = days <= 0 ? 'Aaj ka stock hai' : days === 1 ? 'Kal update hua tha'
+            : days + ' din purana hai';
+    return { known:true, days:days, iso:iso, when:when, ts:t, txt:txt,
+             cls:days <= 0 ? 'g' : days <= Stock.STALE ? 'b' : 'w' };
+  },
+  /* the worse of the two readings — what the screen's headline has to say */
+  worst: function (storeAt, dbAt) {
+    var a = Stock.age(storeAt), b = Stock.age(dbAt);
+    if (!a.known || !b.known) return a.known ? b : a;
+    return a.days >= b.days ? a : b;
+  }
 };
 
 /* ═══════════════ STOCK — the shelf, and the order built from it ═══════════════
@@ -7171,6 +7450,34 @@ var Stk = {
     else if (Stk.sort.dir === -1) Stk.sort = { col:'', dir:0 };
     else Stk.sort = { col:col, dir:1 };
     render();
+  },
+
+  /* ── the stock-freshness banner ──
+     One strip, coloured by the OLDER of the shop and distributor readings, then a dated line for each.
+     Green = uploaded today, blue = a day or two old (fine, but say so), amber = older than that or no
+     date at all — an absent timestamp is not evidence of freshness, so it reads as a warning too. */
+  freshHtml: function (m, i) {
+    var w = Stock.worst(m.storeAt, m.dbAt), s = Stock.age(m.storeAt), d = Stock.age(m.dbAt);
+    var line = function (lbl, a) {
+      return '<div style="display:flex;gap:6px;justify-content:space-between;font-weight:500">' +
+        '<span>' + esc(lbl) + '</span><span>' + esc(a.known ? a.when + ' · ' + a.txt : a.txt) +
+        '</span></div>';
+    };
+    /* the caveat matches the COLOUR, or the two contradict each other: green says nothing, a day or
+       two states the fact and stops, and only genuinely old (or undated) stock gets the warning */
+    var note = w.cls === 'g' ? ''
+      : w.cls === 'b' ? 'Aaj ka upload nahi hai — thoda dhyan rakho.'
+      : w.known ? 'Numbers purane ho sakte hain — shelf dekh kar hi order karo, aur ' +
+                  '<b>Stock refresh</b> dabao.'
+                : 'Sheet ne update ki date nahi bheji — inhe pakka na maano, shelf dekh kar order karo.';
+    return '<div class="banner ' + w.cls + '" id="stk_fresh" style="margin-top:-2px">' +
+      '<span>' + (w.cls === 'w' ? '!' : '') + '</span><div><b>Stock ' +
+      esc(w.known ? (w.days <= 0 ? 'aaj ka hai' : w.txt) : 'ki date pata nahi') + '</b>' +
+      (note ? '<br><span style="font-weight:500">' + note + '</span>' : '') +
+      '<div style="margin-top:6px;font-size:12px">' +
+        line('Shop stock', s) + line('Distributor stock', d) + '</div>' +
+      '<div class="btns"><button class="btn ghost sm" onclick="Stock.load(\'' +
+        esc(i.st) + '\',\'' + esc(i.db) + '\',1)">Stock refresh</button></div></div></div>';
   },
 
   store: function () { return Field.store; },
@@ -7227,10 +7534,12 @@ var Stk = {
     var h = '<div class="sec-title">' + esc(title) + ' (' + rows.length + ')</div><div class="card">';
     if (!rows.length) return h + UI.empty('', 'Is filter me koi product nahi') + '</div>';
     /* said once per section, right where the tap happens */
-    h += '<div class="hint" style="margin:-2px 0 8px">Shop, DB ya Projection heading par tap karo — ek baar ' +
-      'ascending, dobara descending, teesri baar normal.</div>';
-    h += '<div class="pane"><table><thead><tr><th>Product</th>' +
-      Stk.head('shop', 'Shop') + Stk.head('dist', 'DB') + Stk.head('proj', 'Projection') +
+    h += '<div class="hint" style="margin:-2px 0 8px">Shop, DB ya Proj heading par tap karo — ek baar ' +
+      'ascending, dobara descending, teesri baar normal. <b>Proj</b> = suggested add-on.</div>';
+    /* .stkt keeps the three number columns narrow and un-wrapped so the product name gets every pixel
+       that is left — five columns of default width overflowed the pane sideways on a phone */
+    h += '<div class="pane"><table class="stkt"><thead><tr><th>Product</th>' +
+      Stk.head('shop', 'Shop') + Stk.head('dist', 'DB') + Stk.head('proj', 'Proj') +
       '<th class="num">Add</th></tr></thead><tbody>';
     rows.slice(0, Stk.CAP).forEach(function (r) {
       var op = Stk.open === r.code;
@@ -7405,13 +7714,19 @@ var Stk = {
         : (on ? '<div class="hint" style="margin-top:8px">' + esc(Stk.appliedText()) + '</div>' : '')) +
       /* where the numbers came from, and the way to re-read them — one line, not a card of its own */
       '<div style="display:flex;gap:8px;align-items:center;margin-top:8px">' +
-        '<div class="hint" style="flex:1 1 auto;min-width:0">Shop: Stock_Store' +
-          (m.storeAt ? ' · ' + esc(Appr.when(m.storeAt) || String(m.storeAt).slice(0, 16)) : '') +
-          ' | DB: Stock_Distributor' +
-          (m.dbAt ? ' · ' + esc(Appr.when(m.dbAt) || String(m.dbAt).slice(0, 16)) : '') + '</div>' +
+        '<div class="hint" style="flex:1 1 auto;min-width:0">Shop: Stock_Store · ' +
+          esc(Stock.age(m.storeAt).when || 'date nahi') +
+          ' | DB: Stock_Distributor · ' + esc(Stock.age(m.dbAt).when || 'date nahi') + '</div>' +
         '<button class="btn ghost xs" style="flex:0 0 auto;width:auto" onclick="Stock.load(\'' +
           esc(i.st) + '\',\'' + esc(i.db) + '\',1)">Stock refresh</button></div>' +
       '</div>';
+
+    /* ── HOW OLD IS THIS STOCK? ──
+       Above the products, not below them: the rep is about to decide what to order off these two
+       numbers, and a shelf count from last week is a different decision from one uploaded this morning.
+       The headline takes the WORSE of the two readings, so a fresh shop count cannot make a week-old
+       distributor count look current, and each is then dated on its own line. */
+    h += Stk.freshHtml(m, i);
 
     h += '<div id="stk_list">' + Stk.section('MSL products', true, m) +
       Stk.section('Non-MSL products', false, m) + '</div>';
@@ -7876,6 +8191,16 @@ var Pdf = {
    Every download is a workbook with named tabs, not a flat dump. The first tab always answers the
    question the person opening it actually has — for EOD that is "aaj ka target kya tha aur kitna
    hua" — and the later tabs hold the detail behind those numbers. */
+/* ── the pair of column definitions for ONE timestamp field ──
+   `xlWhen('Ts', 'Punched')` → a "Punched date" column and a "Punched time" column, so a schema never
+   spells the split out twice and every moment in every report is sortable by either half.
+   A hoisted FUNCTION rather than a method on Rep on purpose: the schemas below call it while the Rep
+   object literal is still being constructed, so `Rep` itself does not exist yet. The closures it
+   returns run at render time, when Rep.dpart / Rep.tpart are long since available. */
+function xlWhen(field, label) {
+  return [[function (r) { return Rep.dpart(r[field]); }, label + ' date', 'dOf'],
+          [function (r) { return Rep.tpart(r[field]); }, label + ' time']];
+}
 var Rep = {
   ttl: function (title, sub, wide) {
     /* the title and the section labels are app copy — translate them like everything else.
@@ -7903,6 +8228,9 @@ var Rep = {
     var a = Eod.agg(), me = DB.me, e = DB.emp(me.code) || {}, p = a.plan || {};
     var st = function (s) { return a.ord.filter(function (o) { return String(o.Status) === s; }); };
     var sum = function (g, f) { return g.reduce(function (x, o) { return x + num(o[f]); }, 0); };
+    /* the distributor-wise primary-order need, computed up front because the COVER quotes how old the
+       stock reading behind it is, and the Primary Order tab further down uses the same rows */
+    var pr0 = Sec.primaryRows(a.ord);
 
     /* ── tab 1: the picture of the day ── */
     var t1 = Rep.ttl('GARUDA — Din ka report (EOD)',
@@ -7979,68 +8307,23 @@ var Rep = {
     rows.push(['Mere total store', Xl.n(mine.length)]);
     rows.push(['Aaj visit kiye', Xl.n(a.ord.length)]);
     rows.push(['Order mila', Xl.n(a.pc), 'Strike rate', Xl.p(Rep.pct(a.pc, a.ord.length))]);
-    rows.push(['MSL lines', Xl.n(a.msl), 'POSM requirement', Xl.n(a.pr.length)]);
+    rows.push(['MSL lines', Xl.n(a.msl), 'Non-MSL lines', Xl.n(a.nonMsl)]);
+    rows.push(['POSM requirement', Xl.n(a.pr.length), 'Total order lines', Xl.n(a.lines.length)]);
+    /* the Primary Order tab's shortfall is computed against the distributor stock upload — how old that
+       upload is decides how much the shortfall is worth, so the cover says it out loud */
+    var stAge = Stock.age((pr0[0] && pr0[0].stockAt) || '');
+    rows.push(['Stock sheet last update', Xl.t(stAge.known ? stAge.when : 'pata nahi'),
+      'Stock age', Xl.t(stAge.known ? stAge.txt : '—')]);
 
-    /* ── tab 2: store-by-store ── */
-    var v = [['Date', 'PO', 'Employee code', 'Employee', 'Client id', 'Store code', 'Store',
-              'Store type', 'City', 'State', 'Distributor code', 'Distributor',
-              'Source', 'Status', 'SKU', 'Units', 'MRP value (₹)', 'NSV (₹L)',
-              'Punched at', 'Billed at', 'Delivery status', 'Reason', 'Remarks', 'Photos',
-              'Designation', 'HQ', 'Zone', 'ASM', 'RSM', 'ZSM', 'HOD'].map(Xl.h)];
-    /* MRP value per order, from its own lines — both money readings on the same row */
-    var mrpOf = function (po) {
-      return a.lines.reduce(function (x, z) {
-        return String(z.PoNumber) === String(po) ? x + num(z.Units) * num(z.Mrp) : x; }, 0);
-    };
-    var mrpAll = 0;
-    a.ord.forEach(function (o) {
-      var mv = mrpOf(o.PoNumber); mrpAll += mv;
-      var dlv = Rep.DLV(o.Status);
-      v.push([Xl.dt(o.Date), Xl.t(o.PoNumber), Xl.t(me.code), Xl.t(me.name),
-        Xl.t(o.ClientId), Xl.t(o.CompanyCode), Xl.t(o.StoreName), Xl.t(o.StoreType),
-        Xl.t(o.City), Xl.t(o.State), Xl.t(o.DbCode), Xl.t(o.DbName),
-        Xl.t(o.Source), Xl.t(o.Status, /Billing/.test(o.Status) ? Xl.S.good :
-          /Process/.test(o.Status) ? Xl.S.warn : Xl.S.bad),
-        Xl.n(o.TotSku), Xl.n(o.TotUnits), Xl.m(mv), Xl.d2(o.TotNsvLakh),
-        Xl.dtm(o.Ts), Xl.dtm(o.DeliveredAt), Xl.t(dlv, Rep.dlvFill(dlv)),
-        Xl.t(o.Reason), Xl.t(o.Remarks, Xl.S.wrap),
-        Rep.photo(o.StoreName, o.Date, o.CompanyCode),
-        Xl.t(e.Designation), Xl.t(e.HQ), Xl.t(e.Zone),
-        Xl.t(e.AsmName), Xl.t(e.RsmName), Xl.t(e.ZmName), Xl.t(e.HodName)]);
-    });
-    v.push([Xl.t('TOTAL', Xl.S.tot), '', '', '', '', '', '', '', '', '', '', '', '', '',
-      Xl.n(a.ord.reduce(function (x, o) { return x + num(o.TotSku); }, 0), Xl.S.totI),
-      Xl.n(sum(a.ord, 'TotUnits'), Xl.S.totI), Xl.m(mrpAll, Xl.S.totM),
-      Xl.d2(a.nsv, Xl.S.totD), '', '', '', '', '', '', '', '', '', '', '', '', '']);
-
-    /* ── every SKU line ── the analytical tab, so it carries BOTH money readings (MRP and NSV) and the
-          whole reporting line, which is what makes it pivotable on its own ── */
-    var l = [['Date', 'PO', 'Employee code', 'Employee',
-              'Client id', 'Store code', 'Store', 'City', 'Distributor code', 'Distributor',
-              'SKU code', 'Product', 'Brand', 'Category', 'Sub-category', 'MSL',
-              'MRP (₹)', 'Units', 'MRP value (₹)', 'NSV (₹L)', 'Status', 'Delivery status',
-              'Designation', 'HQ', 'Zone', 'ASM', 'RSM', 'ZSM', 'HOD'].map(Xl.h)];
-    a.lines.forEach(function (x) {
-      var o = a.ord.filter(function (z) { return String(z.PoNumber) === String(x.PoNumber); })[0] || {};
-      var ldlv = Rep.DLV(x.Status || o.Status);
-      l.push([Xl.dt(x.Date || a.t), Xl.t(x.PoNumber), Xl.t(me.code), Xl.t(me.name),
-        Xl.t(o.ClientId), Xl.t(x.CompanyCode || o.CompanyCode), Xl.t(x.StoreName),
-        Xl.t(o.City), Xl.t(o.DbCode), Xl.t(o.DbName),
-        Xl.t(x.Sku), Xl.t(x.SkuName), Xl.t(x.Brand), Xl.t(x.Category), Xl.t(x.SubCategory),
-        Xl.t(Rep.msl(x.MslStatus)),
-        Xl.m(x.Mrp), Xl.n(x.Units), Xl.m(num(x.Units) * num(x.Mrp)),
-        Xl.d2(x.NsvLakh), Xl.t(x.Status || o.Status), Xl.t(ldlv, Rep.dlvFill(ldlv)),
-        Xl.t(e.Designation), Xl.t(e.HQ), Xl.t(e.Zone),
-        Xl.t(e.AsmName), Xl.t(e.RsmName), Xl.t(e.ZmName), Xl.t(e.HodName)]);
-    });
-    if (a.lines.length) {
-      var lu = 0, lm = 0, lv = 0, ln = 0;
-      a.lines.forEach(function (x) { lu += num(x.Units); lm += num(x.Units) * num(x.Mrp);
-        lv += num(x.Value); ln += num(x.NsvLakh); });
-      l.push([Xl.t('TOTAL', Xl.S.tot), '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-        Xl.t('', Xl.S.tot), Xl.t('', Xl.S.tot), Xl.n(lu, Xl.S.totI), Xl.m(lm, Xl.S.totM),
-        Xl.d2(ln, Xl.S.totD), '', '', '', '', '', '', '', '', '']);
-    }
+    /* ── tabs: Store visits · Order lines ──
+       Also through Rep.anySheet now, off the same SecOrders / SecOrderLines registry the Data tab uses.
+       They already carried the reporting line, but their own hand-written column lists had drifted:
+       no beat, no HOD decision fields, no billing remark, and "Punched at" / "Billed at" were single
+       combined date+time cells that could be sorted by neither half. */
+    var vSheet = Rep.anySheet('SecOrders', a.ord, null,
+      me.code + '  ·  ' + dmy(a.t) + '  ·  ' + a.ord.length + ' visit');
+    var lSheet = Rep.anySheet('SecOrderLines', a.lines, null,
+      me.code + '  ·  ' + dmy(a.t) + '  ·  ' + a.lines.length + ' line');
 
     /* ── brand split ── MRP value and NSV side by side, so both readings of the day are visible ── */
     var bl = {}, bu = {}, bv = {}, bm = {};
@@ -8055,53 +8338,91 @@ var Rep = {
         Xl.d2(a.brand[b]), Xl.p(Rep.pct(a.brand[b], a.nsv))]);
     });
 
-    /* ── tab: POSM Audit ── */
-    var pa2 = [['Store', 'City', 'Element', 'Type', 'Brand', 'Condition', 'Visibility', 'Action',
-                'Installed by', 'Verified by', 'Install period', 'Remarks', 'Photos'].map(Xl.h)];
-    a.pa.forEach(function (r) {
-      pa2.push([Xl.t(r.StoreName), Xl.t(r.City), Xl.t(r.Element), Xl.t(r.PosmType), Xl.t(r.Brand),
-        Xl.t(r.Condition), Xl.t(r.Visibility), Xl.t(r.Action), Xl.t(r.InstalledBy), Xl.t(r.VerifiedBy),
-        Xl.dt(r.Period), Xl.t(r.Remarks, Xl.S.wrap), Rep.photo(r.StoreName, r.Date, r.CompanyCode)]);
+    /* ── tab: Primary Order ──
+       What the DISTRIBUTOR has to buy so today's secondary orders can actually be served. The old
+       "Orders" tab in the app carried this table on screen and nowhere else; it belongs in the workbook,
+       where an ASM can act on it. Stock reads "—" when that distributor's upload is not in the cache,
+       and the primary need then falls back to the whole demand rather than a fabricated zero. */
+    var po2 = [['Distributor code', 'Distributor', 'SKU code', 'Product', 'Brand', 'Category', 'MSL',
+                'MRP (₹)', 'Secondary demand (units)', 'Demand value (₹)', 'DB stock (units)',
+                'Stock as of', 'Stock age (days)', 'Primary order needed (units)',
+                'Employee code', 'Employee', 'Designation', 'HQ', 'Zone',
+                'ASM', 'RSM', 'ZSM', 'HOD'].map(Xl.h)];
+    pr0.forEach(function (x) {
+      var ag = Stock.age(x.stockAt);
+      po2.push([Xl.t(x.db), Xl.t(x.dbName), Xl.t(x.sku), Xl.t(x.name || x.sku), Xl.t(x.brand),
+        Xl.t(x.cat || Rep.DASH), Xl.t(Rep.msl(x.msl)), Xl.m(x.mrp), Xl.n(x.ordered), Xl.m(x.value),
+        x.stock === null ? Xl.t(Rep.DASH) : Xl.n(x.stock),
+        ag.known ? Xl.dt(ag.iso) : Xl.t(Rep.DASH),
+        ag.known ? Xl.n(ag.days, ag.days > Stock.STALE ? Xl.S.bad : Xl.S.int) : Xl.t(Rep.DASH),
+        Xl.n(x.short, x.short > 0 ? Xl.S.bad : Xl.S.good),
+        Xl.t(me.code), Xl.t(me.name), Xl.t(e.Designation || Rep.DASH), Xl.t(e.HQ || Rep.DASH),
+        Xl.t(e.Zone || Rep.DASH), Xl.t(e.AsmName || Rep.DASH), Xl.t(e.RsmName || Rep.DASH),
+        Xl.t(e.ZmName || Rep.DASH), Xl.t(e.HodName || Rep.DASH)]);
     });
+    if (pr0.length) {
+      var pu = 0, pv = 0, ps0 = 0;
+      pr0.forEach(function (x) { pu += x.ordered; pv += x.value; ps0 += x.short; });
+      po2.push([Xl.t('TOTAL', Xl.S.tot), '', '', '', '', '', Xl.t('', Xl.S.tot), Xl.t('', Xl.S.tot),
+        Xl.n(pu, Xl.S.totI), Xl.m(pv, Xl.S.totM), Xl.t('', Xl.S.tot), Xl.t('', Xl.S.tot),
+        Xl.t('', Xl.S.tot), Xl.n(ps0, Xl.S.totI),
+        '', '', '', '', '', '', '', '', '']);
+    }
 
-    /* ── tab: POSM requirement ── */
-    var pr2 = [['Store', 'City', 'Chahiye?', 'Element', 'Qty', 'Needed by', 'Remarks', 'Photos'].map(Xl.h)];
-    a.pr.forEach(function (r) {
-      pr2.push([Xl.t(r.StoreName), Xl.t(r.City), Xl.t(r.Requirement), Xl.t(r.Element), Xl.n(r.Qty),
-        Xl.t(r.NeededBy), Xl.t(r.Remarks, Xl.S.wrap), Rep.photo(r.StoreName, r.Date, r.CompanyCode)]);
-    });
-
-    /* ── tab: new outlets — always its own tab now, even with nothing in it today ── */
-    var no = [['Store id', 'Store', 'Town', 'Distributor', 'Beat', 'Owner', 'Mobile',
-        'Day sale (₹)', 'Monthly (₹)', 'Reason', 'Status', 'Photos'].map(Xl.h)];
-    a.ns.forEach(function (r) {
-      no.push([Xl.t(r.StoreId), Xl.t(r.StoreName), Xl.t(r.Town), Xl.t(r.DbName), Xl.t(r.Beat),
-        Xl.t(r.OwnerName), Xl.t(r.OwnerMobile), Xl.m(r.DaySales), Xl.m(r.MonthlyTurnover),
-        Xl.t(r.Reason, Xl.S.wrap), Xl.t(r.Status), Rep.photo(r.StoreName, r.Date, '')]);
-    });
+    /* ── tabs: POSM audit · POSM requirement · New outlets ──
+       Built through Rep.anySheet off the SAME registry the Data-tab downloads use, instead of a second
+       hand-written column list per tab. Those hand-written lists were the reason these tabs were short
+       of the store's own identifiers (Client id, Store code, State, Distributor), short of half the
+       questions the forms ask, and had no reporting line at all — anySheet carries the full schema and
+       appends Designation · HQ · Zone · ASM · RSM · ZSM · HOD to every one of them. One definition, so
+       the day's workbook and the range download can never disagree about a column again. */
+    var sub1 = me.code + '  ·  ' + dmy(a.t);
+    var pmTabs = [['PosmAudit', a.pa], ['PosmRequirement', a.pr], ['NewStores', a.ns]]
+      .map(function (x) {
+        return Rep.anySheet(x[0], x[1], null, sub1 + '  ·  ' + x[1].length + ' row');
+      });
 
     /* ── tab: DFR — one chronological line per thing that happened, morning plan to day close.
        Same activities Dfr.push() already records for the app's own end-to-end view, plus the plan
-       send/notify moments so the timeline genuinely starts at the morning, not the first visit. */
+       send/notify moments so the timeline genuinely starts at the morning, not the first visit.
+       DATE and TIME are separate columns and every row carries both: the app stores some of these
+       moments as a full ISO timestamp (Ts) and some as a bare time-of-day ("08:35 PM" — PlanAt,
+       NotifiedAt, the day-close stamp), so the date for a bare time is filled in from the day this
+       report IS. A single combined cell could be sorted by neither half. */
     var acts = [];
-    if (p.PlanAt) acts.push({ ts:p.PlanAt, type:'Plan saved', store:'', detail:(p.WorkingWith || '—') +
+    if (p.PlanAt) acts.push({ ts:p.PlanAt, type:'Plan saved', store:'', detail:(p.WorkingWith || '') +
       (p.Town ? ' · ' + p.Town + (p.Beat ? ' / ' + p.Beat : '') : '') });
-    if (p.NotifiedAt) acts.push({ ts:p.NotifiedAt, type:'Plan sent to HOD', store:'', detail:'' });
+    if (p.NotifiedAt) acts.push({ ts:p.NotifiedAt, type:'Plan sent to HOD (day start)', store:'', detail:'' });
     a.ord.forEach(function (o) { acts.push({ ts:o.Ts || o.Date, type:'Store visit', store:o.StoreName,
-      detail:o.Status + (num(o.TotUnits) ? ' · ' + num(o.TotUnits) + ' units · ' + inr(o.TotValue) : '') }); });
+      code:o.CompanyCode || o.ClientId || '',
+      detail:o.Status + (num(o.TotUnits) ? ' · ' + num(o.TotUnits) + ' units · ' + inr(o.TotValue) : '') +
+        (o.Reason ? ' · ' + o.Reason : '') }); });
     a.pa.forEach(function (r) { acts.push({ ts:r.Ts || r.Date, type:'POSM audit', store:r.StoreName,
+      code:r.CompanyCode || r.ClientId || '',
       detail:(r.Element || '') + (r.Condition ? ' · ' + r.Condition : '') }); });
     a.pr.forEach(function (r) { acts.push({ ts:r.Ts || r.Date, type:'POSM requirement', store:r.StoreName,
-      detail:'Required: ' + (r.Requirement || '') }); });
+      code:r.CompanyCode || r.ClientId || '',
+      detail:'Required: ' + (r.Requirement || '') + (r.Element ? ' · ' + r.Element : '') }); });
     a.ns.forEach(function (r) { acts.push({ ts:r.Ts || r.Date, type:'New outlet', store:r.StoreName,
-      detail:r.Town || '' }); });
+      code:r.StoreId || '', detail:(r.Town || '') + (r.Beat ? ' / ' + r.Beat : '') }); });
     if (Gate.locked()) { var lk = Store.get(K.lock, {});
-      acts.push({ ts:lk.at || '9999', type:'Day closed (EOD)', store:'', detail:'' }); }
-    acts.sort(function (x, y) { return String(x.ts).localeCompare(String(y.ts)); });
-    var dfr = [['Time', 'Activity', 'Store', 'Detail'].map(Xl.h)];
+      acts.push({ ts:lk.at || '', type:'Day closed (EOD)', store:'', detail:'' }); }
+    /* sort on the real moment, so a bare time and an ISO timestamp interleave correctly */
     acts.forEach(function (x) {
-      dfr.push([Xl.t(Appr.when(x.ts) || String(x.ts || '—')), Xl.t(x.type), Xl.t(x.store || '—'),
-        Xl.t(x.detail, Xl.S.wrap)]);
+      x.d = Rep.dpart(x.ts) || a.t;
+      x.tm = Rep.tpart(x.ts);
+      x.sortKey = x.d + ' ' + (Appr.ts(x.ts) ? String(Appr.ts(x.ts)) : (x.tm || 'zz'));
+    });
+    acts.sort(function (x, y) { return String(x.sortKey).localeCompare(String(y.sortKey)); });
+    var dfr = [['Date', 'Time', 'Activity', 'Store', 'Store code', 'Detail',
+                'Employee code', 'Employee', 'Designation', 'HQ', 'Zone',
+                'ASM', 'RSM', 'ZSM', 'HOD'].map(Xl.h)];
+    acts.forEach(function (x) {
+      dfr.push([Xl.dt(x.d), Xl.t(x.tm || Rep.DASH), Xl.t(x.type), Xl.t(x.store || Rep.DASH),
+        Xl.t(x.code || Rep.DASH), Xl.t(x.detail || Rep.DASH, Xl.S.wrap),
+        Xl.t(me.code), Xl.t(me.name), Xl.t(e.Designation || Rep.DASH), Xl.t(e.HQ || Rep.DASH),
+        Xl.t(e.Zone || Rep.DASH), Xl.t(e.AsmName || Rep.DASH), Xl.t(e.RsmName || Rep.DASH),
+        Xl.t(e.ZmName || Rep.DASH), Xl.t(e.HodName || Rep.DASH)]);
     });
 
     /* The main sheet is the report; a tab holding three rows is just somewhere to get lost. Anything
@@ -8115,22 +8436,14 @@ var Rep = {
     return Xl.save('EOD_' + me.code + '_' + a.t, [
       { name:I18n.s('Din ka Report'), cols:[30, 18, 16, 14, 12, 14, 13, 12, 12, 12, 12, 12],
         rows:rows, merges:t1.merges },
-      { name:I18n.s('Store visits'),
-        cols:[11, 16, 13, 18, 13, 12, 30, 13, 14, 13, 14, 22, 13, 16, 7, 8, 14, 10, 17, 17, 14, 16, 26, 12,
-              16, 12, 12, 16, 16, 16, 16],
-        rows:v, freeze:1, filter:'A1:AE' + v.length },
-      { name:I18n.s('Order lines'),
-        cols:[11, 16, 13, 18, 13, 12, 28, 13, 14, 20, 14, 44, 14, 14, 16, 9, 10, 8, 14, 10, 15, 14,
-              16, 12, 12, 16, 16, 16, 16],
-        rows:l, freeze:1, filter:'A1:AC' + l.length },
-      { name:I18n.s('New store'), cols:[16, 28, 14, 22, 14, 16, 13, 13, 13, 24, 12, 12],
-        rows:no, freeze:1 },
-      { name:I18n.s('POSM Audit'), cols:[28, 13, 14, 13, 13, 12, 12, 14, 14, 14, 14, 26, 12],
-        rows:pa2, freeze:1 },
-      { name:I18n.s('POSM requirement'), cols:[28, 13, 14, 13, 8, 14, 30, 12],
-        rows:pr2, freeze:1 },
-      { name:I18n.s('DFR'), cols:[16, 20, 28, 44], rows:dfr, freeze:1 }
-    ].concat(Rep.dayTabs(me.code, a.t)).concat(extra.map(function (t) {
+      vSheet, lSheet,
+      { name:I18n.s('Primary Order'),
+        cols:[16, 26, 14, 40, 16, 16, 10, 11, 22, 18, 15, 13, 16, 24,
+              14, 20, 16, 12, 12, 16, 16, 16, 16],
+        rows:po2, freeze:1, filter:'A1:W' + po2.length },
+      { name:I18n.s('DFR'), cols:[12, 11, 24, 30, 14, 44, 14, 20, 16, 12, 12, 16, 16, 16, 16],
+        rows:dfr, freeze:1, filter:'A1:O' + dfr.length }
+    ].concat(pmTabs).concat(Rep.dayTabs(me.code, a.t)).concat(extra.map(function (t) {
       t.name = I18n.s(t.name); return t; })), opt);
   },
   /* The derived sheets, built for ONE employee and ONE day, so the day's own workbook carries the
@@ -8433,6 +8746,22 @@ var Rep = {
     }
     return Rep._ord[po] || {};
   },
+  /* the store master row behind a transactional row, by client id or company code. A POSM audit carries
+     the store's name and city but not its state or its distributor — the master has both, and a reader
+     filtering POSM by distributor should not have to join two sheets by hand. Indexed once per pull. */
+  _st:null, _stFor:null,
+  store: function (r) {
+    if (Rep._stFor !== DB.pulledAt || !Rep._st) {
+      Rep._st = {}; Rep._stFor = DB.pulledAt;
+      (DB.m.Master_Stores || []).forEach(function (s) {
+        var a = String(s.ClientId || '').trim().toUpperCase(), b = String(s.CompanyCode || '').trim().toUpperCase();
+        if (a) Rep._st[a] = s;
+        if (b && !Rep._st[b]) Rep._st[b] = s;
+      });
+    }
+    var k1 = String(r.ClientId || '').trim().toUpperCase(), k2 = String(r.CompanyCode || '').trim().toUpperCase();
+    return Rep._st[k1] || Rep._st[k2] || {};
+  },
   /* which beat the rep actually worked on a given day — the join that lets an ORDER (which carries a
      city but no beat) be credited to a beat. The day's own plan wins; the published PJP is the
      fallback for a day the rep never saved a plan for. */
@@ -8457,6 +8786,32 @@ var Rep = {
   ATT:{ F:'Present', L:'Leave', O:'Weekly off', H:'Holiday', M:'Meeting' },
   inR: function (d, from, to) { var x = toISO(d); return !x || (x >= from && x <= to); },
   wants: function (want, code) { return !want || !!want[String(code || '').trim().toUpperCase()]; },
+  /* ── never an empty cell ──
+     A blank reads as "this column was never filled in", which is a different claim from "there is no
+     value here". Every text / date / time column in every report says the second one out loud. */
+  DASH:'—',
+  /* ── one timestamp, TWO columns ──
+     A single "05-08-2026, 10:39 AM" cell cannot be sorted by date, filtered by day, or pivoted by hour;
+     splitting it gives a real date cell and a real time cell, and every row carries both. Handles the
+     three shapes the app stores: a full ISO timestamp, a bare date, and a bare time-of-day string
+     ("08:35 PM" — PlanAt / NotifiedAt / ClosedAt), which has a value for one column and not the other. */
+  dpart: function (v) {
+    if (v == null || v === '') return '';
+    var s = String(v).trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    if (/^\d{1,2}:\d{2}/.test(s)) return '';                 /* a bare time has no date of its own */
+    var d = (v instanceof Date) ? v : new Date(s);
+    return isNaN(d.getTime()) ? '' : toISO(d);
+  },
+  tpart: function (v) {
+    if (v == null || v === '') return '';
+    var s = String(v).trim();
+    if (/^\d{1,2}:\d{2}(:\d{2})?\s*([AaPp]\.?[Mm]\.?)?$/.test(s)) return s.toUpperCase().replace(/\s+/g, ' ');
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return '';            /* a bare date has no time of its own */
+    var d = (v instanceof Date) ? v : new Date(s);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+  },
 
   ANY:{
     SecOrders:{ t:'Orders', cols:[
@@ -8469,9 +8824,14 @@ var Rep = {
       ['TotSku', 'SKU', 'n'], ['TotUnits', 'Units', 'n'],
       ['TotValue', 'MRP value', 'm'], ['TotNsvLakh', 'NSV ₹L', 'n'],
       ['BillingType', 'Billing'], ['BilledUnits', 'Invoiced units', 'n'],
-      ['Ts', 'Punched at', 'dtm'], ['DeliveredAt', 'Billed at', 'dtm'],
       [function (r) { return Rep.DLV(r.Status); }, 'Delivery status', 'st'],
-      ['Reason', 'Reason'], ['BillingRemark', 'Billing remark'], ['Remarks', 'Remarks']],
+      [function (r) { return Rep.beatOn(r.EmpCode, r.Date).beat || ''; }, 'Beat'],
+      ['Reason', 'Reason'], ['BillingRemark', 'Billing remark'], ['Remarks', 'Remarks'],
+      [function (r) { return Rep.photo(r.StoreName, r.Date, r.CompanyCode); }, 'Photos', 'raw']]
+      .concat(xlWhen('Ts', 'Punched'))
+      .concat(xlWhen('DeliveredAt', 'Billed'))
+      .concat([['HodBy', 'Decided by'], ['HodRole', 'Decided by role']])
+      .concat(xlWhen('HodAt', 'Decided')),
       tot:['TotSku', 'TotUnits', 'TotValue', 'TotNsvLakh', 'BilledUnits'] },
     SecOrderLines:{ t:'Order lines', cols:[
       ['Date', 'Date', 'd'], ['PoNumber', 'PO'],
@@ -8481,19 +8841,24 @@ var Rep = {
       [function (r) { return Rep.ord(r).City || ''; }, 'City'],
       [function (r) { return Rep.ord(r).DbCode || ''; }, 'Distributor code'],
       [function (r) { return Rep.ord(r).DbName || ''; }, 'Distributor'],
+      [function (r) { return Rep.ord(r).StoreType || ''; }, 'Store type'],
+      [function (r) { return Rep.ord(r).State || ''; }, 'State'],
       ['Sku', 'SKU code'], ['SkuName', 'Product'], ['Brand', 'Brand'],
       ['Category', 'Category'], ['SubCategory', 'Sub-category'],
       [function (r) { return Rep.msl(r.MslStatus); }, 'MSL'],
       ['Mrp', 'MRP', 'm'], ['Units', 'Units', 'n'], ['Value', 'MRP value', 'm'],
       ['NsvLakh', 'NSV ₹L', 'n'], ['Status', 'Status'],
-      [function (r) { return Rep.DLV(r.Status); }, 'Delivery status', 'st']],
+      [function (r) { return Rep.DLV(r.Status); }, 'Delivery status', 'st'],
+      [function (r) { return Rep.ord(r).Source || ''; }, 'Visit type'],
+      ['LineId', 'Line id']],
       tot:['Units', 'Value', 'NsvLakh'] },
     Eod:{ t:'EOD', cols:[
       ['Date', 'Date', 'd'], ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
       ['Sc', 'SC', 'n'], ['Tc', 'TC', 'n'], ['Pc', 'PC', 'n'], ['Nso', 'NSO', 'n'],
       ['PosmCount', 'POSM audit', 'n'], ['MslCount', 'MSL lines', 'n'],
       ['OrderValue', 'MRP value', 'm'], ['NsvLakh', 'NSV ₹L', 'n'],
-      ['ClosedAt', 'Day end'], ['Remarks', 'Remarks']],
+      ['ClosedAt', 'Day end time'], ['Remarks', 'Remarks']]
+      .concat(xlWhen('Ts', 'Punched')),
       tot:['Sc', 'Tc', 'Pc', 'Nso', 'PosmCount', 'MslCount', 'OrderValue', 'NsvLakh'] },
     DayPlan:{ t:'Day plans', cols:[
       ['Date', 'Date', 'd'], ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
@@ -8503,43 +8868,73 @@ var Rep = {
       ['ScTarget', 'SC target', 'n'], ['NsoTarget', 'NSO target', 'n'],
       ['PosmTarget', 'POSM target', 'n'],
       ['OffPjp', 'Off PJP'], ['Approval', 'Approval'], ['PjpStatus', 'Adherence'],
+      ['PjpStatusBy', 'Adherence by'],
+      ['WwDetail', 'Working-with detail'],
       /* TWO moments, not three: when the plan was saved (that is when the morning image exists) and
          when it went out on WhatsApp, which IS the start of the day. StartAt is the full timestamp;
          the old separate "Notified at" said the same thing in a weaker format. */
-      ['PlanAt', 'Login time'], ['StartAt', 'Day start', 'dtm']],
+      ['PlanAt', 'Login time'], ['NotifiedAt', 'Notified time']]
+      .concat(xlWhen('StartAt', 'Day start'))
+      .concat(xlWhen('PjpStatusAt', 'Adherence set')),
       tot:['ScTarget', 'NsoTarget', 'PosmTarget'] },
+    /* EVERY question the "Naya outlet" form asks, in the order it asks them, then the photos, then who
+       decided what and when. Category and the two photo flags used to be saved and never reported —
+       a question worth asking is a question worth carrying into the report. */
     NewStores:{ t:'New outlets', cols:[
       ['Date', 'Date', 'd'], ['StoreId', 'Store id'],
       ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
+      ['DbCode', 'Distributor code'], ['DbName', 'Distributor'],
       ['StoreName', 'Store'], ['StoreType', 'Store type'],
       ['State', 'State'], ['Town', 'Town'], ['Beat', 'Beat'],
-      ['DbCode', 'Distributor code'], ['DbName', 'Distributor'],
-      ['OwnerName', 'Owner'], ['OwnerMobile', 'Mobile'], ['Pincode', 'Pincode'],
+      ['Address', 'Address'], ['Pincode', 'Pincode'], ['Category', 'Category'],
+      ['OwnerName', 'Owner'], ['OwnerMobile', 'Owner mobile'],
       ['DaySales', 'Day sale', 'm'], ['MonthlyTurnover', 'Monthly turnover', 'm'],
-      ['Status', 'Status'], ['Ts', 'Punched at', 'dtm'],
-      ['Address', 'Address'], ['Reason', 'Reason'], ['StatusReason', 'Status note']],
+      ['Reason', 'Kyun add kiya'],
+      [function (r) { return r.PhotoFront ? 'Yes' : 'No'; }, 'Front photo'],
+      [function (r) { return r.PhotoInside ? 'Yes' : 'No'; }, 'Inside photo'],
+      [function (r) { return Rep.photo(r.StoreName, r.Date, r.CompanyCode); }, 'Photos', 'raw'],
+      ['Status', 'Status'], ['StatusReason', 'Status note']]
+      .concat(xlWhen('StatusAt', 'Status'))
+      .concat([['HodBy', 'Decided by'], ['HodRole', 'Decided by role']])
+      .concat(xlWhen('HodAt', 'Decided'))
+      .concat(xlWhen('Ts', 'Punched')),
       tot:['DaySales', 'MonthlyTurnover'] },
+    /* every field the audit form fills, plus the store's own identifiers and the Drive folder. The
+       distributor and the state come from the store master — the audit row does not carry them, but a
+       reader filtering POSM by distributor should not have to go and join two sheets by hand. */
     PosmAudit:{ t:'POSM audit', cols:[
       ['Date', 'Date', 'd'], ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
       ['ClientId', 'Client id'], ['CompanyCode', 'Store code'], ['StoreName', 'Store'],
       ['StoreType', 'Store type'], ['City', 'City'],
+      [function (r) { return Rep.store(r).State || ''; }, 'State'],
+      [function (r) { return Rep.store(r).DbCode || ''; }, 'Distributor code'],
+      [function (r) { return Rep.store(r).DbName || ''; }, 'Distributor'],
       ['PosmStatus', 'POSM there'], ['Element', 'Element'], ['PosmType', 'Type'],
       ['Location', 'Location'], ['Brand', 'Brand'], ['AssetType', 'Asset type'],
       ['Period', 'Install period', 'd'], ['Dominance', 'Dominance'],
       ['Condition', 'Condition'], ['Visibility', 'Visibility'], ['Action', 'Action'],
       ['InstalledBy', 'Installed by'], ['VerifiedBy', 'Verified by'],
       ['VerifyDate', 'Verified on', 'd'], ['NextReview', 'Next review', 'd'],
-      ['Ts', 'Punched at', 'dtm'], ['Remarks', 'Remarks']] },
+      [function (r) { return Rep.photo(r.StoreName, r.Date, r.CompanyCode); }, 'Photos', 'raw'],
+      ['Remarks', 'Remarks']].concat(xlWhen('Ts', 'Punched')) },
     PosmRequirement:{ t:'POSM requirement', cols:[
       ['Date', 'Date', 'd'], ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
       ['ClientId', 'Client id'], ['CompanyCode', 'Store code'], ['StoreName', 'Store'],
       ['StoreType', 'Store type'], ['City', 'City'],
+      [function (r) { return Rep.store(r).State || ''; }, 'State'],
+      [function (r) { return Rep.store(r).DbCode || ''; }, 'Distributor code'],
+      [function (r) { return Rep.store(r).DbName || ''; }, 'Distributor'],
       ['Requirement', 'Needed'], ['Element', 'Element'], ['PosmType', 'Type'],
       ['Location', 'Location'], ['Brand', 'Brand'], ['AssetType', 'Asset type'],
       ['Dominance', 'Dominance'], ['Qty', 'Qty', 'n'],
       ['MonthlyIncome', 'Store income', 'm'], ['DaySale', 'Day sale', 'm'],
-      ['NeededBy', 'Needed by'], ['Status', 'Status'],
-      ['Ts', 'Punched at', 'dtm'], ['Remarks', 'Remarks']],
+      ['NeededBy', 'Needed by', 'd'],
+      [function (r) { return Rep.photo(r.StoreName, r.Date, r.CompanyCode); }, 'Photos', 'raw'],
+      ['Remarks', 'Remarks'], ['Status', 'Status'], ['StatusReason', 'Status note']]
+      .concat(xlWhen('StatusAt', 'Status'))
+      .concat([['HodBy', 'Decided by'], ['HodRole', 'Decided by role']])
+      .concat(xlWhen('HodAt', 'Decided'))
+      .concat(xlWhen('Ts', 'Punched')),
       tot:['Qty'] },
     TaDa:{ t:'TA DA', cols:[
       ['Month', 'Month'], ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
@@ -8548,10 +8943,15 @@ var Rep = {
       ['MeetAmount', 'Meeting ₹', 'm'], ['MeetCity', 'Meeting city'],
       ['Nights', 'Nights', 'n'], ['Total', 'Claim ₹', 'm'],
       ['DeductTotal', 'Deduction ₹', 'm'], ['NetTotal', 'Net TA/DA ₹', 'm'],
+      ['FoodAmount', 'Food ₹', 'm'], ['OtherAmount', 'Other ₹', 'm'],
       ['Status', 'Status'], ['Revision', 'Revision', 'n'],
-      ['SubmittedAt', 'Sent at', 'dtm'], ['HodAt', 'Decided at', 'dtm'], ['HodBy', 'Decided by'],
-      ['HodRemarks', 'HOD message'], ['Remarks', 'Rep remark']],
-      tot:['DaAmount', 'TravelAmount', 'LodgeAmount', 'MeetAmount', 'Total', 'DeductTotal', 'NetTotal'] },
+      ['HodBy', 'Decided by'], ['HodRole', 'Decided by role'],
+      ['HodRemarks', 'HOD message'], ['Remarks', 'Rep remark']]
+      .concat(xlWhen('SubmittedAt', 'Sent'))
+      .concat(xlWhen('HodAt', 'Decided'))
+      .concat(xlWhen('ReturnedAt', 'Returned')),
+      tot:['DaAmount', 'FoodAmount', 'TravelAmount', 'LodgeAmount', 'MeetAmount', 'OtherAmount',
+           'Total', 'DeductTotal', 'NetTotal'] },
     Deviation:{ t:'Plan changes', cols:[
       ['Date', 'Date', 'd'], ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
       /* what the APPROVED PJP said for this very day — the thing the change is measured against */
@@ -8560,48 +8960,60 @@ var Rep = {
       ['NewWw', 'Asked working with'], ['NewTown', 'Asked town'], ['NewBeat', 'Asked beat'],
       ['NewStation', 'Asked station'],
       ['Status', 'Status'], ['TryCount', 'Try', 'n'],
-      ['Ts', 'Asked at', 'dtm'], ['HodAt', 'Decided at', 'dtm'],
       ['HodBy', 'Decided by'], ['HodRole', 'Decided by role'],
-      ['Reason', 'Rep reason'], ['HodRemarks', 'HOD remark']] },
+      ['Reason', 'Rep reason'], ['HodRemarks', 'HOD remark']]
+      .concat(xlWhen('Ts', 'Asked'))
+      .concat(xlWhen('HodAt', 'Decided')) },
     PjpDraft:{ t:'PJP drafts', cols:[
       ['Month', 'Month'], ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
       ['Status', 'Status'], ['Coverage', 'Coverage'], ['Revision', 'Revision', 'n'],
-      ['SubmittedAt', 'Sent at', 'dtm'], ['HodAt', 'Decided at', 'dtm'], ['HodBy', 'Decided by'],
-      ['PublishedRows', 'Published days', 'n'], ['PublishedAt', 'Published at', 'dtm'],
-      ['RejectReason', 'Reject reason']] },
+      ['HodBy', 'Decided by'], ['HodRole', 'Decided by role'],
+      ['PublishedRows', 'Published days', 'n'], ['RejectReason', 'Reject reason']]
+      .concat(xlWhen('SubmittedAt', 'Sent'))
+      .concat(xlWhen('HodAt', 'Decided'))
+      .concat(xlWhen('PublishedAt', 'Published')) },
     Dfr:{ t:'Daily field report', cols:[
       ['Date', 'Date', 'd'], ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
-      ['StoreCount', 'Activities', 'n'], ['OrderCount', 'Orders', 'n'],
-      ['Ts', 'Punched at', 'dtm']], tot:['StoreCount', 'OrderCount'] },
+      ['StoreCount', 'Activities', 'n'], ['OrderCount', 'Orders', 'n']]
+      .concat(xlWhen('Ts', 'Punched')), tot:['StoreCount', 'OrderCount'] },
     StockRemark:{ t:'Stock remarks', cols:[
       ['Date', 'Date', 'd'], ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
-      ['Kind', 'Kind'], ['Code', 'Code'], ['Name', 'Name'],
-      ['Ts', 'Punched at', 'dtm'], ['Remark', 'Remark']] },
+      ['Kind', 'Kind'], ['Code', 'Code'], ['Name', 'Name'], ['Remark', 'Remark']]
+      .concat(xlWhen('Ts', 'Punched')) },
     Photos:{ t:'Photos', cols:[
       ['Date', 'Date', 'd'], ['EmpCode', 'Employee code'], ['Employee', 'Employee'],
       ['Module', 'Module'], ['CompanyCode', 'Store code'], ['StoreName', 'Store'],
-      ['Slot', 'Slot'], ['FileName', 'File'], ['DriveUrl', 'Link'],
-      ['Ts', 'Taken at', 'dtm']] },
+      ['Slot', 'Slot'], ['FileName', 'File'],
+      [function (r) { return Xl.link(r.DriveUrl, 'photo'); }, 'Photo', 'raw'],
+      [function (r) { return Xl.link(r.FolderUrl, 'folder'); }, 'Shop folder', 'raw'],
+      ['RecordId', 'Record id']].concat(xlWhen('Ts', 'Taken')) },
     ActivityLog:{ t:'Activity log', cols:[
-      ['Ts', 'At', 'dtm'], ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
+      ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
       ['Role', 'Role'], ['Kind', 'Kind'], ['Action', 'Action'],
-      ['Ref', 'Reference'], ['Detail', 'Detail']] },
+      ['Ref', 'Reference'], ['Detail', 'Detail']].concat(xlWhen('Ts', 'At')) },
 
     /* ══════════════ DERIVED SHEETS — no tab of their own on the sheet ══════════════ */
 
     /* Every instance of a shop being visited that produced nothing. Not a status list: a visit with
        zero units booked counts even if nobody marked it cancelled. */
+    /* ── no PO on a failed visit ──
+       A visit that produced nothing produced no purchase order either, so there is no PO column here.
+       The row still needs an identity (it is one row in SecOrders, keyed on that column), so it is
+       reported as what it actually is: a visit reference. Field.novId gives a no-order visit an id that
+       is visibly not a PO, and no PO number is consumed for it. */
     FailedVisits:{ t:'Failed visits', cols:[
-      ['Date', 'Date', 'd'], ['PoNumber', 'PO'],
+      ['Date', 'Date', 'd'],
       ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
       ['ClientId', 'Client id'], ['CompanyCode', 'Store code'], ['StoreName', 'Store'],
       ['StoreType', 'Store type'], ['City', 'City'], ['State', 'State'],
+      [function (r) { return Rep.beatOn(r.EmpCode, r.Date).beat || ''; }, 'Beat'],
       ['DbCode', 'Distributor code'], ['DbName', 'Distributor'],
       ['Source', 'Visit type'], ['Status', 'Status'],
-      [function (r) { return Rep.beatOn(r.EmpCode, r.Date).beat || ''; }, 'Beat'],
-      ['Ts', 'Punched at', 'dtm'],
       [function (r) { return Rep.DLV(r.Status); }, 'Delivery status', 'st'],
-      ['Reason', 'Why no order'], ['Remarks', 'Remarks']],
+      ['Reason', 'Why no order'], ['Remarks', 'Remarks'],
+      [function (r) { return Rep.photo(r.StoreName, r.Date, r.CompanyCode); }, 'Photos', 'raw'],
+      [function (r) { return String(r.PoNumber || ''); }, 'Visit reference']]
+      .concat(xlWhen('Ts', 'Punched')),
       src: function (want, from, to) {
         return DB.rows('SecOrders').filter(function (o) {
           if (!Rep.wants(want, o.EmpCode)) return false;
@@ -8613,13 +9025,17 @@ var Rep = {
     /* One row per employee per day: was he out, and if not, why. Built from the day's plan, falling
        back to the published PJP for a day no plan was ever saved for — otherwise a rep who simply
        never opened the app would silently vanish from his own attendance. */
+    /* 'Day type' is gone: it was the single-letter code behind the Attendance column (F/L/O/H/M), so
+       the sheet was saying the same thing twice, once in a language only the app speaks. */
     Attendance:{ t:'Attendance', cols:[
       ['Date', 'Date', 'd'], ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
-      ['Attendance', 'Attendance'], ['WorkingWith', 'Working with'], ['DayType', 'Day type'],
+      ['Attendance', 'Attendance'], ['WorkingWith', 'Working with'],
       ['Station', 'Station'], ['State', 'State'], ['Town', 'Town'], ['Beat', 'Beat'],
-      ['LoginAt', 'Login time'], ['StartAt', 'Day start', 'dtm'], ['EndAt', 'Day end'],
+      ['LoginAt', 'Login time']]
+      .concat(xlWhen('StartAt', 'Day start'))
+      .concat([['EndAt', 'Day end time'],
       ['Visits', 'Stores visited', 'n'], ['Orders', 'Orders', 'n'],
-      ['MrpValue', 'MRP value', 'm'], ['Nsv', 'NSV ₹L', 'n'], ['Source', 'From'], ['Remarks', 'Remarks']],
+      ['MrpValue', 'MRP value', 'm'], ['Nsv', 'NSV ₹L', 'n'], ['Source', 'From'], ['Remarks', 'Remarks']]),
       tot:['Visits', 'Orders', 'MrpValue', 'Nsv'],
       src: function (want, from, to) {
         var seen = {}, out = [];
@@ -8638,11 +9054,15 @@ var Rep = {
           var k = code + '|' + d;
           if (seen[k]) return; seen[k] = 1;
           var kind = Team.KIND(ww), o = ordOf[k] || { v:0, n:0, mrp:0, nsv:0 }, e = eodOf[k] || {};
-          var att = Rep.ATT[kind] || '—';
-          /* a field day nobody ever started is the one case worth naming out loud */
-          if (kind === 'F' && !Plan.started(plan || {})) att = 'Not started';
+          var att = Rep.ATT[kind] || Rep.DASH;
+          /* ── a field day that never started is ABSENT ──
+             It used to read "Not started", which is a description of the app rather than of the day: a
+             rep who was rostered onto a beat and never went is absent, and an attendance sheet has to
+             be able to say so in the word payroll and HR actually use. A Leave / Weekly off / Holiday /
+             Meeting day keeps its own name — none of those is an absence. */
+          if (kind === 'F' && !Plan.started(plan || {})) att = 'Absent';
           out.push({ Date:d, EmpCode:code, EmpName:name || '',
-            Attendance:att, WorkingWith:ww || '', DayType:kind || '',
+            Attendance:att, WorkingWith:ww || '',
             Station:(plan && plan.Station) || '', State:(plan && plan.State) || geo.state || '',
             Town:geo.town || '', Beat:geo.beat || '',
             LoginAt:(plan && plan.PlanAt) || '', StartAt:(plan && plan.StartAt) || '',
@@ -8725,16 +9145,24 @@ var Rep = {
        `line:false` — a master row is not one employee's work, so a reporting line means nothing on
        it. Where the columns are left empty the sheet auto-derives them from the row itself, which
        cannot go stale if the customer adds a column to the sheet. */
+    /* the WHOLE reporting chain, name and mobile together — an escalation list is useless if the
+       number is on a different sheet from the name */
     Master_Employees:{ t:'Master — Employees', priv:true, line:false, cols:[
       ['Code', 'Employee code'], ['Name', 'Employee'], ['Designation', 'Designation'],
       ['HQ', 'HQ'], ['Zone', 'Zone'], ['Mobile', 'Mobile'], ['Email', 'Email'],
       ['DateofJoining', 'Joining', 'd'],
-      ['AsmName', 'ASM'], ['RsmName', 'RSM'], ['ZmName', 'ZSM'], ['HodName', 'HOD']],
+      ['AsmName', 'ASM'], ['AsmMobile', 'ASM mobile'], ['AsmEmail', 'ASM email'],
+      ['RsmName', 'RSM'], ['RsmMobile', 'RSM mobile'], ['RsmEmail', 'RSM email'],
+      ['ZmName', 'ZSM'], ['ZmMobile', 'ZSM mobile'], ['ZmEmail', 'ZSM email'],
+      ['HodName', 'HOD'], ['HodMobile', 'HOD mobile'], ['HodEmail', 'HOD email']],
       src: function () { return (DB.m.Master_Employees || []).slice(); } },
     Master_Stores:{ t:'Master — Stores', priv:true, line:false, cols:[
       ['ClientId', 'Client id'], ['CompanyCode', 'Store code'], ['StoreName', 'Store'],
       ['StoreType', 'Store type'], ['City', 'City'], ['State', 'State'],
-      ['DbCode', 'Distributor code'], ['DbName', 'Distributor'], ['EmAsm', 'Mapped to']],
+      ['DbCode', 'Distributor code'], ['DbName', 'Distributor'],
+      ['Status', 'Status'], ['EnrollDate', 'Enrolled', 'd'],
+      ['Zone', 'Zone'], ['Region', 'Region'], ['AsmName', 'ASM'], ['AsmHq', 'ASM HQ'],
+      ['EmAsm', 'Mapped to'], ['EmAsmHq', 'Mapped HQ']],
       src: function () { return (DB.m.Master_Stores || []).slice(); } },
     Master_Products:{ t:'Master — Products', priv:true, line:false, cols:[
       ['Code', 'SKU code'], ['Name', 'Product'], ['Brand', 'Brand'],
@@ -8744,15 +9172,31 @@ var Rep = {
     Master_PJP:{ t:'Master — Published PJP', priv:true, line:false, cols:[
       ['Date', 'Date', 'd'], ['Code', 'Employee code'],
       [function (r) { return (DB.emp(r.Code) || {}).Name || ''; }, 'Employee'],
+      [function (r) { return (DB.emp(r.Code) || {}).Designation || ''; }, 'Designation'],
+      [function (r) { return (DB.emp(r.Code) || {}).HQ || ''; }, 'HQ'],
+      ['Zone', 'Zone'],
       ['Ww', 'Working with'], ['Week', 'Week'], ['State', 'State'], ['Town', 'Town'],
       ['Beat', 'Beat'], ['Station', 'Station'], ['Focus', 'Focus'],
-      ['Status', 'Status'], ['Approvals', 'Approved by'], ['Remarks', 'Remarks']],
+      ['Status', 'Status'], ['HodApproved', 'HOD approved'], ['Approvals', 'Approved by'],
+      ['Remarks', 'Remarks'],
+      [function (r) { return (DB.emp(r.Code) || {}).AsmName || ''; }, 'ASM'],
+      [function (r) { return (DB.emp(r.Code) || {}).RsmName || ''; }, 'RSM'],
+      [function (r) { return (DB.emp(r.Code) || {}).ZmName || ''; }, 'ZSM'],
+      [function (r) { return (DB.emp(r.Code) || {}).HodName || ''; }, 'HOD']],
       src: function (want, from, to) {
         return (DB.m.Master_PJP || []).filter(function (p) {
           return Rep.wants(want, p.Code) && Rep.inR(p.Date, from, to); })
           .sort(function (a, b) { return String(toISO(a.Date)).localeCompare(String(toISO(b.Date))); });
       } },
-    Master_Distributors:{ t:'Master — Distributors', priv:true, line:false, cols:[],
+    /* the tab a new outlet's distributor is now read from, so it gets named columns rather than the
+       auto-derived dump — the mapping column (EmAsm) matters most: it is what decides whose list a
+       distributor appears in */
+    Master_Distributors:{ t:'Master — Distributors', priv:true, line:false, cols:[
+      ['Code', 'Distributor code'], ['Name', 'Distributor'],
+      ['City', 'City'], ['State', 'State'], ['MetroCity', 'Metro'],
+      ['Zone', 'Zone'], ['Region', 'Region'],
+      ['AsmName', 'ASM'], ['AsmHq', 'ASM HQ'],
+      ['EmAsm', 'Mapped to'], ['EmAsmHq', 'Mapped HQ']],
       src: function () { return (DB.m.Master_Distributors || []).slice(); } },
     Master_Config:{ t:'Master — Config', priv:true, line:false, cols:[],
       src: function () { return (DB.m.Master_Config || []).slice(); } },
@@ -8767,7 +9211,9 @@ var Rep = {
       ['Attendance', 'Attendance'], ['WorkingWith', 'Working with'], ['Station', 'Station'],
       ['State', 'State'], ['Town', 'Town'], ['Beat', 'Beat'], ['Week', 'Week'], ['Focus', 'Focus'],
       ['OffPjp', 'Off PJP'], ['Approval', 'Approval'], ['PjpStatus', 'Adherence'],
-      ['LoginAt', 'Login time'], ['StartAt', 'Day start', 'dtm'], ['EndAt', 'Day end'],
+      ['LoginAt', 'Login time']]
+      .concat(xlWhen('StartAt', 'Day start'))
+      .concat([['EndAt', 'Day end time'],
       ['ScTarget', 'SC target', 'n'], ['Sc', 'SC done', 'n'],
       ['Tc', 'TC', 'n'], ['Pc', 'PC', 'n'],
       ['NsoTarget', 'NSO target', 'n'], ['Nso', 'NSO done', 'n'],
@@ -8775,7 +9221,7 @@ var Rep = {
       ['PosmReq', 'POSM requirement', 'n'],
       ['MslLines', 'MSL lines', 'n'], ['NonMslLines', 'Non MSL lines', 'n'],
       ['Units', 'Units', 'n'], ['MrpValue', 'MRP value', 'm'], ['Nsv', 'NSV ₹L', 'n'],
-      ['Remarks', 'Remarks']],
+      ['Remarks', 'Remarks']]),
       tot:['Sc', 'Tc', 'Pc', 'Nso', 'PosmAudit', 'PosmReq', 'MslLines', 'NonMslLines',
            'Units', 'MrpValue', 'Nsv'],
       src: function (want, from, to) {
@@ -8801,7 +9247,8 @@ var Rep = {
           r.LoginAt = p.PlanAt || ''; r.StartAt = p.StartAt || '';
           r.ScTarget = num(p.ScTarget); r.NsoTarget = num(p.NsoTarget); r.PosmTarget = num(p.PosmTarget);
           var kind = Team.KIND(p.WorkingWith);
-          r.Attendance = (kind === 'F' && !Plan.started(p)) ? 'Not started' : (Rep.ATT[kind] || '—');
+          /* same rule as the Attendance sheet — a rostered field day never started is an absence */
+          r.Attendance = (kind === 'F' && !Plan.started(p)) ? 'Absent' : (Rep.ATT[kind] || Rep.DASH);
         });
         DB.rows('Eod').forEach(function (e) {
           var d = toISO(e.Date), code = String(e.EmpCode || '').toUpperCase();
@@ -8906,13 +9353,18 @@ var Rep = {
         /* a field may be a FUNCTION of the row — that is how a derived column (the reporting line,
            an id resolved from a master, a delivery status) is expressed as data, not as a builder */
         var v = typeof c[0] === 'function' ? c[0](r) : r[c[0]], k = c[2];
-        if (k === 'd') return Xl.dt(toISO(v) || v);
+        /* 'raw' = the column already built its own cell (a Drive hyperlink, a photo folder) */
+        if (k === 'raw') return (v && typeof v === 'object') ? v : Xl.t(Rep.DASH);
+        /* A number keeps its 0 — a zero IS the value, and a dash there would break both the column's
+           format and its TOTAL. Everything else says "no value" with a dash instead of going blank. */
+        if ((v == null || String(v) === '') && k !== 'n' && k !== 'm') return Xl.t(Rep.DASH);
+        if (k === 'd' || k === 'dOf') return Xl.dt(toISO(v) || v);
         if (k === 'dtm') return Xl.dtm(v);
-        if (k === 'st') return Xl.t(v == null ? '' : String(v), Rep.dlvFill(v));
+        if (k === 'st') return Xl.t(String(v), Rep.dlvFill(v));
         if (k === 'm') return Xl.m(num(v));
         /* a value in LAKHS is never a whole number — #,##0 turned ₹3,240 of NSV into "0" */
         if (k === 'n') return /₹l|lakh|nsv/i.test(c[1]) ? Xl.d2(num(v)) : Xl.n(num(v));
-        return Xl.t(v == null ? '' : String(v), wide(c[1]) ? Xl.S.wrap : Xl.S.txt);
+        return Xl.t(String(v), wide(c[1]) ? Xl.S.wrap : Xl.S.txt);
       });
       /* banded: every second row on a faint fill, keeping each cell's own number format */
       return ri % 2 ? cells.map(Xl.band) : cells;
@@ -9128,6 +9580,45 @@ var Sec = {
     });
     out.sort(function (a, b) { return b.short - a.short; });
     return { rows:out, loading:loading };
+  },
+  /* ── the day's PRIMARY order, per distributor ──
+     Secondary demand rolled up the way a distributor has to buy it: one row per distributor × SKU, the
+     units the reps' orders promised, what the distributor's own upload says they are holding, and the
+     shortfall they therefore have to order in. Synchronous on purpose — this feeds the EOD workbook,
+     which cannot wait on a stock fetch, so a distributor whose stock is not in the cache reports its
+     stock as unknown and its whole demand as the primary need rather than silently reading zero.
+     `orders` is whichever set of SecOrders rows the caller means (the day's, for EOD). */
+  primaryRows: function (orders) {
+    var need = {}, dbNames = {};
+    (orders || []).forEach(function (o) {
+      var db = String(o.DbCode || ''); if (!db) return;
+      dbNames[db] = o.DbName || dbNames[db] || '';
+      Sec.lines(o).forEach(function (l) {
+        var sku = String(l.Sku || ''); if (!sku) return;
+        need[db] = need[db] || {};
+        need[db][sku] = need[db][sku] || { name:l.SkuName || '', brand:l.Brand || '',
+          cat:l.Category || '', msl:l.MslStatus || '', mrp:num(l.Mrp), qty:0, val:0 };
+        need[db][sku].qty += num(l.Units);
+        need[db][sku].val += num(l.Units) * num(l.Mrp);
+      });
+    });
+    var out = [];
+    Object.keys(need).sort().forEach(function (db) {
+      var c = Stock.get('', db), known = !!(c && !c.err), stock = {};
+      if (known) (c.db || []).forEach(function (r) {
+        var k = Stock.sku(r); if (k) stock[k] = (stock[k] || 0) + Stock.qty(r); });
+      Object.keys(need[db]).forEach(function (sku) {
+        var n = need[db][sku], have = known ? num(stock[sku]) : null;
+        out.push({ db:db, dbName:dbNames[db] || db, sku:sku, name:n.name, brand:n.brand, cat:n.cat,
+          msl:n.msl, mrp:n.mrp, ordered:n.qty, value:n.val, stock:have,
+          /* the shortfall is only as good as the stock reading it came from — carry that reading's own
+             date onto the row, so nobody acts on a week-old number without knowing it is one */
+          stockAt:known ? ((c && c.dbAt) || '') : '',
+          short:have === null ? n.qty : Math.max(0, n.qty - have) });
+      });
+    });
+    return out.sort(function (a, b) {
+      return String(a.dbName).localeCompare(String(b.dbName)) || (b.short - a.short); });
   },
   primaryHtml: function () {
     var r = Sec.primary();
@@ -9685,8 +10176,8 @@ var Posm = {
     var h = UI.head('', 'POSM', 'Store me POSM laga hai ya nahi — dono case me entry karo.');
     if (!Posm.store) {
       h += '<div class="card"><h3><span class="ic"></span>Store</h3>' +
-        '<div class="sub">Field tab me store ka order/visit save karo — wahi store yahan aa jayega.</div>' +
-        '<div class="btns"><button class="btn ghost" onclick="Router.go(\'field\')">Field pe jao</button></div></div>';
+        '<div class="sub">Field tab me store ka order/visit save karo — wahi store yahan aa jayega. ' +
+        'Niche <b>Next store</b> dabao — Field tab khul jayega.</div></div>';
     } else {
       h += '<div class="banner b"><span></span><div><b>' + esc(Posm.store.StoreName) + '</b><br><span style="font-weight:500">' +
         esc(Posm.store.City || '') + ' · ' + esc(Posm.store.CompanyCode || '') + '</span></div></div>';
@@ -9718,13 +10209,12 @@ var Posm = {
     Cam.clear(['posm1','posm2','posm_x','shop','shelf','req_x']);   /* fresh answer = fresh photos */
     render();
   },
-  /* the same reset saveAudit/saveReq already do on success — this button used to skip it and jump
-     straight to Field instead. Field is still one tap away from the empty-store card below; this
-     just stops FORCING that jump every time. */
+  /* the same reset saveAudit/saveReq already do on success, and then straight to Field — the next
+     store is CHOSEN there, so landing on an empty POSM screen only made the rep tap again. */
   nextStore: function () {
     Posm.store = null; Posm.ans = null; Posm.date = ''; Posm.need = 'Yes';
     Cam.clear(['posm1','posm2','posm_x','shop','shelf','req_x']);
-    render();
+    Router.go('field');
   },
   /* CASE 1 — POSM laga hua hai: do photo compulsory, teesra optional */
   auditPhotos: function () {
@@ -9914,7 +10404,11 @@ var Eod = {
     var brand = {};
     lines.forEach(function (l) { var b = l.Brand || 'Other'; brand[b] = (brand[b] || 0) + num(l.NsvLakh); });
     var msl = lines.filter(function (l) { return /^msl$/i.test(String(l.MslStatus || '')); }).length;
-    return { t:t, plan:plan, ord:ord, lines:lines, ns:ns, pa:pa, pr:pr, withOrd:withOrd, brand:brand, msl:msl,
+    /* everything punched that is NOT an MSL line. Derived, never stored — MSL + non-MSL is always the
+       whole line count, so a separate sheet column could only ever go out of step with it. */
+    var nonMsl = lines.length - msl;
+    return { t:t, plan:plan, ord:ord, lines:lines, ns:ns, pa:pa, pr:pr, withOrd:withOrd, brand:brand,
+      msl:msl, nonMsl:nonMsl,
       sc:num(plan.ScTarget) || 7, tc:ord.length, pc:withOrd.length,
       tele:ord.filter(function (o) { return o.Source === 'Telephonic Call'; }).length,
       value:ord.reduce(function (a, o) { return a + num(o.TotValue); }, 0),
@@ -9930,7 +10424,8 @@ var Eod = {
     h += '<div class="kpis">' + UI.kpi(a.tc + ' / ' + a.sc, 'TC / SC', a.tc >= a.sc ? 'g' : 'w') +
       UI.kpi(a.pc, 'PC', 'g') + UI.kpi(lakh(a.nsv), 'NSV ₹L', 'b') + UI.kpi(a.ns.length, 'Naye outlet', 'w') + '</div>';
     h += '<div class="kpis" style="margin-top:10px">' + UI.kpi(a.pa.length, 'POSM audit', '') +
-      UI.kpi(a.pr.length, 'POSM req', '') + UI.kpi(a.msl, 'MSL lines', '') + UI.kpi(inr(a.value), 'MRP value', 'b') +
+      UI.kpi(a.pr.length, 'POSM req', '') + UI.kpi(a.msl, 'MSL lines', '') +
+      UI.kpi(a.nonMsl, 'Non-MSL lines', '') + UI.kpi(inr(a.value), 'MRP value', 'b') +
       UI.kpi(a.tele, 'Telephonic calls', '') + '</div>';
 
     /* ONE brand table, not two — it used to be a plain generic KPI loop here AND a duplicated (twice!)
@@ -11336,7 +11831,7 @@ var My = {
     ['DayFull', 'Day plan + EOD (ek saath)',
       'Ek hi din ki subah aur shaam ek row me — plan, attendance, login / day-start / day-end, target vs actual, POSM, MSL aur Non-MSL lines, MRP value aur NSV.'],
     ['Attendance', 'Meri attendance (day-wise)',
-      'Har din ka ek row — Present / Leave / Weekly off / Holiday / Meeting / Not started, time ke saath.'],
+      'Har din ka ek row — Present / Absent / Leave / Weekly off / Holiday / Meeting, time ke saath.'],
     ['FailedVisits', 'Failed visits',
       'Wo saari visits jinme order nahi mila — reason aur beat ke saath.'],
     ['BeatCoverage', 'Beat coverage',
@@ -11632,7 +12127,7 @@ var Appr = {
     if (admin) DB.rows('SecOrders').forEach(function (o) {
       var s2 = String(o.Status || ''), map = /Billing/.test(s2) ? 'approved'
         : /Cancel/.test(s2) ? 'rejected' : /No Order/.test(s2) ? 'rejected' : 'pending';
-      out.push({ id:'so_' + Appr.jid(o.PoNumber), icon:'', kind:'Order', go:'sec',
+      out.push({ id:'so_' + Appr.jid(o.PoNumber), icon:'', kind:'Order', go:'trk',
         status:map, act:'so', key:o.PoNumber, statusText:s2,
         title:'Order — ' + (o.StoreName || ''),
         emp:o.EmpName || '',
@@ -12651,7 +13146,7 @@ var Admin = {
     ['DayFull', 'Day plan + EOD (clubbed)',
       'Morning and evening of the same day on ONE row — plan, attendance, login / day-start / day-end, targets vs done, POSM audit and requirement, MSL and Non-MSL lines, MRP value and NSV.'],
     ['Attendance', 'Attendance (day-wise)',
-      'One row per employee per day — Present / Leave / Weekly off / Holiday / Meeting / Not started, with the times and what the day produced. Days with no saved plan come from the published PJP.'],
+      'One row per employee per day — Present / Absent / Leave / Weekly off / Holiday / Meeting, with the times and what the day produced. A rostered field day that never started counts as Absent. Days with no saved plan come from the published PJP.'],
     ['FailedVisits', 'Failed visits',
       'Every shop visit that produced no order — zero units booked or cancelled outright — with the reason given and the beat it happened on.'],
     ['BeatCoverage', 'Beat coverage',
