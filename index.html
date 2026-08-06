@@ -10915,6 +10915,14 @@ var Trk = {
     ns: ['Pending', 'Sent to ASM', 'Code created', 'First billing done', 'Dropped'],
     pq: ['Pending', 'Sent to ASM', 'Approved by ASM', 'Dispatched', 'Installed', 'Rejected']
   },
+  /* ── TAT borrows the ORDER status list ──
+     TAT is not a type of its own: it is a filtered view of SecOrders, so a row on it moves through
+     exactly the order stages. Trk.ST has no 'tat' key, and card() read Trk.ST[kind] directly — which
+     threw the moment the tab actually had a row. It looked healthy only because a tab with nothing
+     overdue returns the empty state before card() is ever reached. Every SAVE path (setSt, setNote)
+     already special-cased 'tat'; this is the render side catching up. */
+  SKIND:{ tat:'ord' },
+  stList: function (k) { return Trk.ST[Trk.SKIND[k] || k] || Trk.ST.ord; },
   /* finished either way (drives the Open/Done filter) and finished BADLY (drives the red pill) */
   DONE:['Billing Done', 'Cancel Order', 'First billing done', 'Dropped',
         'Installed', 'Rejected'],
@@ -10926,7 +10934,7 @@ var Trk = {
      the dropdown would silently show the first one — 'No Order' is gone as a choice, but a row that
      already has it must read as Cancel Order, never silently reopen as 'Order in Process'. */
   st: function (k, v) {
-    var s = String(v || '').trim(), list = Trk.ST[k];
+    var s = String(v || '').trim(), list = Trk.stList(k);
     if (list.indexOf(s) >= 0) return s;
     if (/approv/i.test(s)) return k === 'pq' ? 'Approved by ASM' : k === 'ns' ? 'Code created' : list[0];
     if (/reject|declin|no.?order/i.test(s)) return k === 'ord' ? 'Cancel Order' : k === 'ns' ? 'Dropped' : 'Rejected';
@@ -11048,7 +11056,7 @@ var Trk = {
       '<span class="pill ' + Trk.pill(r.st) + '">' + esc(r.st) + '</span></div>' +
       '<label class="f">Status</label>' +
       '<select class="in" onchange="Trk.setSt(\'' + q + '\',this.value)">' +
-        Trk.ST[k].map(function (s) {
+        Trk.stList(k).map(function (s) {
           return '<option value="' + esc(s) + '"' + (s === r.st ? ' selected' : '') + '>' + esc(s) + '</option>'; }).join('') +
       '</select>' +
       /* Full vs Partial only ever means something once the order is actually billed */
