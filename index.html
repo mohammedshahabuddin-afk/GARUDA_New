@@ -2519,6 +2519,10 @@ I18n.D.en = I18n.EN = {
   'POSM — audit aur requirement':'POSM — audit and requirement',
   'Day plan aur plan change':'Day plans and plan changes',
   'EOD aur DFR':'EOD and DFR',
+  /* the already-plural form has to be listed too, and I18n.re sorts keys LONGEST-FIRST so this one wins:
+     without it the 'Stock remark' rule below matched the first 12 characters of "Stock remarks" and the
+     leftover 's' made it "Stock remarkss" — on the sheet tab, the report picker and the column header. */
+  'Stock remarks':'Stock remarks',
   'Stock remark':'Stock remarks',
   'Photos (row — Drive file rehti hai)':'Photos (the row — the Drive file stays)',
   'Ek tab':'One tab',
@@ -3490,10 +3494,11 @@ var TABS = [
   { v:'fin',   g:'', t:'Sec order' },
   { v:'posm',  g:'', t:'POSM' },
   { v:'eod',   g:'', t:'EOD' },
-  { v:'trk',   g:'', t:'Tracker' },
   { v:'tada',  g:'', t:'TA/DA' },
-  { v:'mydata', g:'', t:'My data' },
-  { v:'appr',  g:'', t:'Approvals' }
+  { v:'mydata', g:'', t:'My data' }
+  /* Tracker and Approvals are VIEWS of the Summary screen now, not tabs of their own — they are both
+     "where does my stuff stand", which is what Summary is for. Router.go still accepts 'trk' and 'appr'
+     and lands on the right view, so every existing link into them keeps working. */
 ];
 /* An admin/HOD does not punch orders — their bar IS the console. There is no "Console" tab any
    more and no chip strip inside it: the five screens are five real tabs, one tap each.
@@ -3515,9 +3520,10 @@ var Nav = {
        Employee    → their own requests that came back REJECTED, i.e. they must redo something.
      A rep's own PENDING request gets no badge: waiting is not a task. */
   badge: function (v) {
-    /* Approvals is the only tab a number means anything on. It used to sit on "Console" too, which
-       now means the Summary screen — a count of decisions on a screen that takes none. */
-    if (v !== 'appr') return 0;
+    /* ONE tab carries the number: Approvals for an Admin/HOD, and Summary for a salesman — because
+       that is where his Approvals view now lives, and a badge on a tab that no longer exists is a
+       badge nobody ever sees. */
+    if (v !== (Auth.isAdmin() ? 'appr' : 'home')) return 0;
     return Nav.counts().appr;
   },
   /* Counted from Appr.list() itself — the SAME list the Approvals screen shows — so the red number can
@@ -3624,6 +3630,11 @@ var Router = {
   cur:'home',
   go: function (v) {
     if (v === 'more') return Nav.more();
+    /* ── Tracker and Approvals live inside Summary for a salesman ──
+       Accepted here rather than rewritten at every call site, so the dozen existing buttons that say
+       Router.go('appr') / Router.go('trk') still land exactly where the reader expects. An Admin/HOD
+       keeps Approvals as a top-level tab: deciding requests IS their job, not a sub-view of a summary. */
+    if ((v === 'trk' || v === 'appr') && !Auth.isAdmin()) { Home.view = v; v = 'home'; }
     Flush.all();                                   /* leaving a tab = save it */
     Flush.clear();
     if (!Gate.allowed(v)) { toast(Gate.why(v)); return; }
@@ -5170,13 +5181,21 @@ var Home = {
        last block on a very long screen. */
     h += Home.todayHtml();
 
-    /* ── the three analysis tabs + the team table ── */
-    var TV = [['dash', 'Dashboard'], ['calls', 'Calls & stores'], ['ord', 'Order vs delivery'], ['team', 'Team']];
+    /* ── the analysis views, plus Tracker and Approvals ──
+       Tracker and Approvals were tabs of their own; they are both "where does my stuff stand", which is
+       what this screen is for. The Approvals chip carries the same red count the tab used to. */
+    var TV = [['dash', 'Dashboard'], ['calls', 'Calls & stores'], ['ord', 'Order vs delivery'],
+              ['team', 'Team'], ['trk', 'Tracker'], ['appr', 'Approvals']];
+    /* neither of those two is measured over a period, so the date selector and the KPI strip below it
+       would be answering a question they do not ask */
+    var own = Home.view === 'trk' || Home.view === 'appr';
     h += '<div class="card" style="padding:10px"><div class="chips" id="hm_chips">' +
       TV.map(function (x) {
+        var n = x[0] === 'appr' ? Nav.counts().appr : 0;
         return '<button class="btn ' + (Home.view === x[0] ? '' : 'ghost') + ' sm"' +
-          (Home.view === x[0] ? ' data-on="1"' : '') + ' onclick="Home.go(\'' + x[0] + '\')">' + esc(x[1]) + '</button>';
-      }).join('') + '</div>' +
+          (Home.view === x[0] ? ' data-on="1"' : '') + ' onclick="Home.go(\'' + x[0] + '\')">' +
+          esc(x[1]) + (n ? ' <span class="badge">' + (n > 99 ? '99+' : n) + '</span>' : '') + '</button>';
+      }).join('') + '</div>' + (own ? '' :
       '<div class="seg" style="margin-top:8px">' +
         [['D', 'Today'], ['W', 'Days'], ['M', 'Month']].map(function (p) {
           return '<button class="' + (Home.per === p[0] ? 'on' : '') + '" onclick="Home.setPer(\'' + p[0] + '\')">' +
@@ -5198,8 +5217,11 @@ var Home = {
             return '<option value="' + m + '"' + (Home.mon() === m ? ' selected' : '') + '>' +
               esc(Home.monLbl(m)) + '</option>'; }).join('') + '</select></div>' : '') +
       '<div class="hint" style="margin-top:8px">' + esc(Home.rangeLbl()) + ' · GARUDA ' +
-      esc(monthName(Home.start()).split(' ')[0]) + ' se chalu</div></div>';
+      esc(monthName(Home.start()).split(' ')[0]) + ' se chalu</div>') + '</div>';
 
+    /* the two screens that came in from their own tabs — they build themselves whole */
+    if (Home.view === 'trk') return h + Trk.html();
+    if (Home.view === 'appr') return h + Appr.html();
     if (Home.view === 'team') return h + Home.teamHtml();
 
     var A = Home.agg();
@@ -8452,7 +8474,7 @@ var Rep = {
   dayTabs: function (code, d) {
     var want = {}; want[String(code || '').toUpperCase()] = 1;
     var sub = code + '  ·  ' + dmy(d);
-    return ['DayFull', 'FailedVisits'].map(function (kind) {
+    return ['DayPlan', 'Eod', 'Attendance', 'FailedVisits'].map(function (kind) {
       var rows = Rep.ANY[kind].src(want, d, d);
       if (!rows.length) return null;
       return Rep.anySheet(kind, rows, null, sub + '  ·  ' + rows.length + ' row');
@@ -8762,6 +8784,85 @@ var Rep = {
     var k1 = String(r.ClientId || '').trim().toUpperCase(), k2 = String(r.CompanyCode || '').trim().toUpperCase();
     return Rep._st[k1] || Rep._st[k2] || {};
   },
+  /* ── what a DAY actually produced, per employee ──
+     The EOD sheet and the Day-plan sheet both have to be readable on their own — "in depth" means the
+     plan and the outcome are both on the row, not split across a third clubbed sheet. Rather than each
+     column re-scanning every order (31 days × 4 tables is a spreadsheet that takes seconds to build),
+     the whole period is indexed ONCE per pull, keyed employee|date. */
+  _act:null, _actFor:null,
+  dayAct: function (code, d) {
+    if (Rep._actFor !== DB.pulledAt || !Rep._act) {
+      var m = {};
+      var ens = function (c, dt) {
+        var k = String(c || '').toUpperCase() + '|' + toISO(dt);
+        if (!m[k]) m[k] = { visits:0, productive:0, noOrder:0, tele:0, units:0, sku:0, mrp:0, nsv:0,
+                            msl:0, nonMsl:0, posmA:0, posmR:0, nso:0, stockNotes:0, photos:0 };
+        return m[k];
+      };
+      DB.rows('SecOrders').forEach(function (o) {
+        var r = ens(o.EmpCode, o.Date);
+        r.visits++;
+        if (num(o.TotUnits) > 0 && !/cancel|no.?order/i.test(String(o.Status || ''))) r.productive++;
+        else r.noOrder++;
+        if (/telephonic/i.test(String(o.Source || ''))) r.tele++;
+        r.units += num(o.TotUnits); r.sku += num(o.TotSku);
+        r.mrp += num(o.TotValue); r.nsv += num(o.TotNsvLakh);
+      });
+      DB.rows('SecOrderLines').forEach(function (l) {
+        var r = ens(l.EmpCode, l.Date);
+        if (/^msl$/i.test(String(l.MslStatus || ''))) r.msl++; else r.nonMsl++;
+      });
+      DB.rows('PosmAudit').forEach(function (x) { ens(x.EmpCode, x.Date).posmA++; });
+      DB.rows('PosmRequirement').forEach(function (x) { ens(x.EmpCode, x.Date).posmR++; });
+      DB.rows('NewStores').forEach(function (x) { ens(x.EmpCode, x.Date).nso++; });
+      DB.rows('StockRemark').forEach(function (x) { ens(x.EmpCode, x.Date).stockNotes++; });
+      DB.rows('Photos').forEach(function (x) { ens(x.EmpCode, x.Date).photos++; });
+      Rep._act = m; Rep._actFor = DB.pulledAt;
+    }
+    return Rep._act[String(code || '').toUpperCase() + '|' + toISO(d)] ||
+      { visits:0, productive:0, noOrder:0, tele:0, units:0, sku:0, mrp:0, nsv:0, msl:0, nonMsl:0,
+        posmA:0, posmR:0, nso:0, stockNotes:0, photos:0 };
+  },
+  /* the saved DayPlan row for an employee-day, and the published Master_PJP row for the same day.
+     Both indexed once per pull — a 31-day sheet asks for them on every row. */
+  _pl:null, _plFor:null,
+  plan: function (code, d) {
+    if (Rep._plFor !== DB.pulledAt || !Rep._pl) {
+      Rep._pl = {}; Rep._plFor = DB.pulledAt;
+      DB.rows('DayPlan').forEach(function (p) {
+        Rep._pl[String(p.EmpCode || '').toUpperCase() + '|' + toISO(p.Date)] = p; });
+    }
+    return Rep._pl[String(code || '').toUpperCase() + '|' + toISO(d)] || {};
+  },
+  _pj:null, _pjFor:null,
+  pjpOn: function (code, d) {
+    if (Rep._pjFor !== DB.pulledAt || !Rep._pj) {
+      Rep._pj = {}; Rep._pjFor = DB.pulledAt;
+      (DB.m.Master_PJP || []).forEach(function (p) {
+        Rep._pj[String(p.Code || '').toUpperCase() + '|' + toISO(p.Date)] = p; });
+    }
+    return Rep._pj[String(code || '').toUpperCase() + '|' + toISO(d)] || {};
+  },
+  /* ONE attendance rule, used by the Attendance sheet, the Day-plan sheet and anything else that has to
+     say whether a day was worked — so the three can never disagree about what Absent means. */
+  att: function (planRow) {
+    var kind = Team.KIND(Pjp.ww((planRow && planRow.WorkingWith) || 'Self Working'));
+    if (kind === 'F' && !Plan.started(planRow || {})) return 'Absent';
+    return Rep.ATT[kind] || Rep.DASH;
+  },
+  /* ── the day's Drive folder ──
+     Photos are filed Employee / Date / Shop, so every photo taken on a day shares a parent. A day-level
+     sheet (EOD, Day plan, Attendance, DFR) gets ONE link that opens that day's folder — the shop-level
+     sheets already link their own shop folder. Takes the first row's folder and walks up one level. */
+  dayPhoto: function (code, d) {
+    var iso = toISO(d), c = String(code || '').toUpperCase();
+    var ps = DB.rows('Photos').filter(function (p) {
+      return toISO(p.Date) === iso && String(p.EmpCode || '').toUpperCase() === c; });
+    if (!ps.length) return Xl.t(Rep.DASH);
+    var url = '';
+    for (var i = 0; i < ps.length && !url; i++) url = ps[i].FolderUrl || ps[i].DriveUrl || '';
+    return url ? Xl.link(url, ps.length + ' photo') : Xl.t(Rep.DASH);
+  },
   /* which beat the rep actually worked on a given day — the join that lets an ORDER (which carries a
      city but no beat) be credited to a beat. The day's own plan wins; the published PJP is the
      fallback for a day the rep never saved a plan for. */
@@ -8830,8 +8931,7 @@ var Rep = {
       [function (r) { return Rep.photo(r.StoreName, r.Date, r.CompanyCode); }, 'Photos', 'raw']]
       .concat(xlWhen('Ts', 'Punched'))
       .concat(xlWhen('DeliveredAt', 'Billed'))
-      .concat([['HodBy', 'Decided by'], ['HodRole', 'Decided by role']])
-      .concat(xlWhen('HodAt', 'Decided')),
+      .concat([['HodAt', 'Approved at', 'dtm']]),
       tot:['TotSku', 'TotUnits', 'TotValue', 'TotNsvLakh', 'BilledUnits'] },
     SecOrderLines:{ t:'Order lines', cols:[
       ['Date', 'Date', 'd'], ['PoNumber', 'PO'],
@@ -8852,28 +8952,68 @@ var Rep = {
       [function (r) { return Rep.ord(r).Source || ''; }, 'Visit type'],
       ['LineId', 'Line id']],
       tot:['Units', 'Value', 'NsvLakh'] },
+    /* ── EOD, in depth and standing on its own ──
+       The stored row (what the rep closed the day with) PLUS what that day actually produced, recounted
+       from the orders / lines / POSM / outlets themselves, and the plan's targets beside them so the row
+       answers "was the day met" without a second sheet. This is what the clubbed "Day plan + EOD" tab
+       used to be for; the depth now lives on the two real sheets instead. */
     Eod:{ t:'EOD', cols:[
       ['Date', 'Date', 'd'], ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
-      ['Sc', 'SC', 'n'], ['Tc', 'TC', 'n'], ['Pc', 'PC', 'n'], ['Nso', 'NSO', 'n'],
-      ['PosmCount', 'POSM audit', 'n'], ['MslCount', 'MSL lines', 'n'],
+      [function (r) { return Rep.plan(r.EmpCode, r.Date).WorkingWith || ''; }, 'Working with'],
+      [function (r) { return Rep.beatOn(r.EmpCode, r.Date).town || ''; }, 'Town'],
+      [function (r) { return Rep.beatOn(r.EmpCode, r.Date).beat || ''; }, 'Beat'],
+      [function (r) { return Rep.plan(r.EmpCode, r.Date).Station || ''; }, 'Station'],
+      /* target vs done, side by side */
+      [function (r) { return num(Rep.plan(r.EmpCode, r.Date).ScTarget) || num(r.Sc); }, 'SC target', 'n'],
+      ['Tc', 'TC (visits)', 'n'], ['Pc', 'PC (productive)', 'n'],
+      [function (r) { return Rep.dayAct(r.EmpCode, r.Date).noOrder; }, 'No-order visits', 'n'],
+      [function (r) { return Rep.dayAct(r.EmpCode, r.Date).tele; }, 'Telephonic', 'n'],
+      [function (r) { return num(Rep.plan(r.EmpCode, r.Date).NsoTarget); }, 'NSO target', 'n'],
+      ['Nso', 'NSO done', 'n'],
+      [function (r) { return num(Rep.plan(r.EmpCode, r.Date).PosmTarget); }, 'POSM target', 'n'],
+      ['PosmCount', 'POSM audit', 'n'],
+      [function (r) { return Rep.dayAct(r.EmpCode, r.Date).posmR; }, 'POSM requirement', 'n'],
+      ['MslCount', 'MSL lines', 'n'],
+      [function (r) { return Rep.dayAct(r.EmpCode, r.Date).nonMsl; }, 'Non MSL lines', 'n'],
+      [function (r) { return Rep.dayAct(r.EmpCode, r.Date).sku; }, 'SKU', 'n'],
+      [function (r) { return Rep.dayAct(r.EmpCode, r.Date).units; }, 'Units', 'n'],
       ['OrderValue', 'MRP value', 'm'], ['NsvLakh', 'NSV ₹L', 'n'],
-      ['ClosedAt', 'Day end time'], ['Remarks', 'Remarks']]
+      [function (r) { return Rep.dayAct(r.EmpCode, r.Date).stockNotes; }, 'Stock remarks', 'n'],
+      [function (r) { return Rep.plan(r.EmpCode, r.Date).PlanAt || ''; }, 'Login time'],
+      ['ClosedAt', 'Day end time'], ['Remarks', 'Remarks'],
+      [function (r) { return Rep.dayPhoto(r.EmpCode, r.Date); }, 'Photos', 'raw']]
       .concat(xlWhen('Ts', 'Punched')),
-      tot:['Sc', 'Tc', 'Pc', 'Nso', 'PosmCount', 'MslCount', 'OrderValue', 'NsvLakh'] },
+      tot:['Tc', 'Pc', 'Nso', 'PosmCount', 'MslCount', 'OrderValue', 'NsvLakh'] },
+    /* ── the day plan, in depth and standing on its own ──
+       The morning plan, what the APPROVED PJP said for that same day (which is what makes the off-PJP
+       flag meaningful rather than just a Yes), whether the day was ever started, and what came of it. */
     DayPlan:{ t:'Day plans', cols:[
       ['Date', 'Date', 'd'], ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
-      ['WorkingWith', 'Working with'], ['Station', 'Station'],
+      [function (r) { return Rep.att(r); }, 'Attendance'],
+      ['WorkingWith', 'Working with'], ['WwDetail', 'Working-with detail'], ['Station', 'Station'],
       ['State', 'State'], ['Town', 'Town'], ['Beat', 'Beat'],
       ['Week', 'Week'], ['Focus', 'Focus'],
-      ['ScTarget', 'SC target', 'n'], ['NsoTarget', 'NSO target', 'n'],
-      ['PosmTarget', 'POSM target', 'n'],
+      /* what the approved PJP asked for on this very day — the thing off-PJP is measured against */
+      [function (r) { return Rep.pjpOn(r.EmpCode, r.Date).Ww || ''; }, 'PJP working with'],
+      [function (r) { return Rep.pjpOn(r.EmpCode, r.Date).Town || ''; }, 'PJP town'],
+      [function (r) { return Rep.pjpOn(r.EmpCode, r.Date).Beat || ''; }, 'PJP beat'],
       ['OffPjp', 'Off PJP'], ['Approval', 'Approval'], ['PjpStatus', 'Adherence'],
       ['PjpStatusBy', 'Adherence by'],
-      ['WwDetail', 'Working-with detail'],
+      ['ScTarget', 'SC target', 'n'], ['NsoTarget', 'NSO target', 'n'],
+      ['PosmTarget', 'POSM target', 'n'],
+      /* and what the day actually did against those targets */
+      [function (r) { return Rep.dayAct(r.EmpCode, r.Date).visits; }, 'Stores visited', 'n'],
+      [function (r) { return Rep.dayAct(r.EmpCode, r.Date).productive; }, 'Productive visits', 'n'],
+      [function (r) { return Rep.dayAct(r.EmpCode, r.Date).nso; }, 'NSO done', 'n'],
+      [function (r) { return Rep.dayAct(r.EmpCode, r.Date).posmA; }, 'POSM audit', 'n'],
+      [function (r) { return Rep.dayAct(r.EmpCode, r.Date).units; }, 'Units', 'n'],
+      [function (r) { return Rep.dayAct(r.EmpCode, r.Date).mrp; }, 'MRP value', 'm'],
+      [function (r) { return Rep.dayAct(r.EmpCode, r.Date).nsv; }, 'NSV ₹L', 'n'],
       /* TWO moments, not three: when the plan was saved (that is when the morning image exists) and
          when it went out on WhatsApp, which IS the start of the day. StartAt is the full timestamp;
          the old separate "Notified at" said the same thing in a weaker format. */
-      ['PlanAt', 'Login time'], ['NotifiedAt', 'Notified time']]
+      ['PlanAt', 'Login time'], ['NotifiedAt', 'Notified time'],
+      [function (r) { return Rep.dayPhoto(r.EmpCode, r.Date); }, 'Photos', 'raw']]
       .concat(xlWhen('StartAt', 'Day start'))
       .concat(xlWhen('PjpStatusAt', 'Adherence set')),
       tot:['ScTarget', 'NsoTarget', 'PosmTarget'] },
@@ -8895,8 +9035,7 @@ var Rep = {
       [function (r) { return Rep.photo(r.StoreName, r.Date, r.CompanyCode); }, 'Photos', 'raw'],
       ['Status', 'Status'], ['StatusReason', 'Status note']]
       .concat(xlWhen('StatusAt', 'Status'))
-      .concat([['HodBy', 'Decided by'], ['HodRole', 'Decided by role']])
-      .concat(xlWhen('HodAt', 'Decided'))
+      .concat([['HodAt', 'Approved at', 'dtm']])
       .concat(xlWhen('Ts', 'Punched')),
       tot:['DaySales', 'MonthlyTurnover'] },
     /* every field the audit form fills, plus the store's own identifiers and the Drive folder. The
@@ -8932,8 +9071,7 @@ var Rep = {
       [function (r) { return Rep.photo(r.StoreName, r.Date, r.CompanyCode); }, 'Photos', 'raw'],
       ['Remarks', 'Remarks'], ['Status', 'Status'], ['StatusReason', 'Status note']]
       .concat(xlWhen('StatusAt', 'Status'))
-      .concat([['HodBy', 'Decided by'], ['HodRole', 'Decided by role']])
-      .concat(xlWhen('HodAt', 'Decided'))
+      .concat([['HodAt', 'Approved at', 'dtm']])
       .concat(xlWhen('Ts', 'Punched')),
       tot:['Qty'] },
     TaDa:{ t:'TA DA', cols:[
@@ -8945,13 +9083,63 @@ var Rep = {
       ['DeductTotal', 'Deduction ₹', 'm'], ['NetTotal', 'Net TA/DA ₹', 'm'],
       ['FoodAmount', 'Food ₹', 'm'], ['OtherAmount', 'Other ₹', 'm'],
       ['Status', 'Status'], ['Revision', 'Revision', 'n'],
-      ['HodBy', 'Decided by'], ['HodRole', 'Decided by role'],
-      ['HodRemarks', 'HOD message'], ['Remarks', 'Rep remark']]
+      ['HodRemarks', 'HOD message'], ['Remarks', 'Rep remark'],
+      ['HodAt', 'Approved at', 'dtm']]
       .concat(xlWhen('SubmittedAt', 'Sent'))
-      .concat(xlWhen('HodAt', 'Decided'))
       .concat(xlWhen('ReturnedAt', 'Returned')),
       tot:['DaAmount', 'FoodAmount', 'TravelAmount', 'LodgeAmount', 'MeetAmount', 'OtherAmount',
            'Total', 'DeductTotal', 'NetTotal'] },
+    /* ── TA/DA, ONE ROW PER DAY ──
+       The TaDa table stores a whole month as a single row with the days packed into DaysJson, which is
+       the right shape for a claim (it is approved as one thing) and the wrong shape for a report: nobody
+       can total a rep's outstation nights, or find the day a lodging bill came from, out of a JSON blob.
+       This unpacks it — one row per claimed day, carrying the month's decision alongside so a day can be
+       read without the parent, plus any per-day deduction the HOD applied. */
+    TaDaDays:{ t:'TA DA day-wise', cols:[
+      ['Date', 'Date', 'd'], ['Month', 'Month'],
+      ['EmpCode', 'Employee code'], ['EmpName', 'Employee'], ['Designation', 'Designation'],
+      ['DayType', 'Day type'], ['City', 'City'],
+      ['WorkingWith', 'Working with'], ['Beat', 'Beat'],
+      ['Da', 'DA ₹', 'm'], ['Ta', 'TA ₹', 'm'], ['Lodge', 'Lodging ₹', 'm'],
+      ['Nights', 'Nights', 'n'], ['DayTotal', 'Day total ₹', 'm'],
+      ['Deduct', 'Deduction ₹', 'm'], ['DeductNote', 'Deduction reason'],
+      ['DayNet', 'Day net ₹', 'm'],
+      ['Edited', 'Rep ne badla'], ['Note', 'Rep note'],
+      ['Status', 'Claim status'], ['HodRemarks', 'HOD message'], ['HodAt', 'Approved at', 'dtm'],
+      ['MonthTotal', 'Month claim ₹', 'm'], ['MonthNet', 'Month net ₹', 'm']],
+      tot:['Da', 'Ta', 'Lodge', 'Nights', 'DayTotal', 'Deduct', 'DayNet'],
+      src: function (want, from, to) {
+        var out = [];
+        DB.rows('TaDa').forEach(function (r) {
+          if (!Rep.wants(want, r.EmpCode)) return;
+          var days = {}, ded = {};
+          try { days = JSON.parse(r.DaysJson || '{}') || {}; } catch (e) { days = {}; }
+          try { ded = JSON.parse(r.DeductJson || '{}') || {}; } catch (e) { ded = {}; }
+          Object.keys(days).sort().forEach(function (d) {
+            var iso = toISO(d); if (!iso || iso < from || iso > to) return;
+            var x = days[d] || {}, k = ded[d] || {};
+            var da = num(x.da), ta = num(x.ta), lo = num(x.lodge);
+            var tot = da + ta + lo, cut = num(k.amt);
+            var pl = Rep.plan(r.EmpCode, iso);
+            out.push({ Date:iso, Month:r.Month || iso.slice(0, 7),
+              EmpCode:r.EmpCode, EmpName:r.EmpName || '', Designation:r.Designation || '',
+              DayType:Tada.stLbl(x.st), City:x.city || '',
+              WorkingWith:pl.WorkingWith || Rep.pjpOn(r.EmpCode, iso).Ww || '',
+              Beat:Rep.beatOn(r.EmpCode, iso).beat || '',
+              Da:da, Ta:ta, Lodge:lo, Nights:num(x.night), DayTotal:tot,
+              Deduct:cut, DeductNote:k.why || k.note || k.reason || '',
+              DayNet:Math.max(0, tot - cut),
+              /* 'rep' means he typed over the policy default — worth seeing next to the amount */
+              Edited:String(x.from || '') === 'rep' ? 'Yes' : 'No', Note:x.note || '',
+              /* the month's decision, carried onto every day of it, so a day reads without the parent */
+              Status:r.Status || '', HodRemarks:r.HodRemarks || '', HodAt:r.HodAt || '',
+              MonthTotal:num(r.Total), MonthNet:num(r.NetTotal || (num(r.Total) - num(r.DeductTotal))) });
+          });
+        });
+        return out.sort(function (a, b) {
+          return String(a.Date).localeCompare(String(b.Date)) ||
+                 String(a.EmpCode).localeCompare(String(b.EmpCode)); });
+      } },
     Deviation:{ t:'Plan changes', cols:[
       ['Date', 'Date', 'd'], ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
       /* what the APPROVED PJP said for this very day — the thing the change is measured against */
@@ -8960,17 +9148,15 @@ var Rep = {
       ['NewWw', 'Asked working with'], ['NewTown', 'Asked town'], ['NewBeat', 'Asked beat'],
       ['NewStation', 'Asked station'],
       ['Status', 'Status'], ['TryCount', 'Try', 'n'],
-      ['HodBy', 'Decided by'], ['HodRole', 'Decided by role'],
-      ['Reason', 'Rep reason'], ['HodRemarks', 'HOD remark']]
-      .concat(xlWhen('Ts', 'Asked'))
-      .concat(xlWhen('HodAt', 'Decided')) },
+      ['Reason', 'Rep reason'], ['HodRemarks', 'HOD remark'],
+      ['HodAt', 'Approved at', 'dtm']]
+      .concat(xlWhen('Ts', 'Asked')) },
     PjpDraft:{ t:'PJP drafts', cols:[
       ['Month', 'Month'], ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
       ['Status', 'Status'], ['Coverage', 'Coverage'], ['Revision', 'Revision', 'n'],
-      ['HodBy', 'Decided by'], ['HodRole', 'Decided by role'],
-      ['PublishedRows', 'Published days', 'n'], ['RejectReason', 'Reject reason']]
+      ['PublishedRows', 'Published days', 'n'], ['RejectReason', 'Reject reason'],
+      ['HodAt', 'Approved at', 'dtm']]
       .concat(xlWhen('SubmittedAt', 'Sent'))
-      .concat(xlWhen('HodAt', 'Decided'))
       .concat(xlWhen('PublishedAt', 'Published')) },
     Dfr:{ t:'Daily field report', cols:[
       ['Date', 'Date', 'd'], ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
@@ -9034,8 +9220,10 @@ var Rep = {
       ['LoginAt', 'Login time']]
       .concat(xlWhen('StartAt', 'Day start'))
       .concat([['EndAt', 'Day end time'],
+      /* 'From' (Day plan / PJP) is gone — it described how the app BUILT the row, not anything about
+         the rep's day, and it was the one column on the sheet nobody could interpret. */
       ['Visits', 'Stores visited', 'n'], ['Orders', 'Orders', 'n'],
-      ['MrpValue', 'MRP value', 'm'], ['Nsv', 'NSV ₹L', 'n'], ['Source', 'From'], ['Remarks', 'Remarks']]),
+      ['MrpValue', 'MRP value', 'm'], ['Nsv', 'NSV ₹L', 'n'], ['Remarks', 'Remarks']]),
       tot:['Visits', 'Orders', 'MrpValue', 'Nsv'],
       src: function (want, from, to) {
         var seen = {}, out = [];
@@ -9086,10 +9274,115 @@ var Rep = {
                  String(a.EmpCode).localeCompare(String(b.EmpCode)); });
       } },
 
-    /* One row per beat the PJP asked for: how many days were planned on it, how many were actually
-       worked, and what the beat produced. Orders carry a city but no beat, so each one is credited
-       through the beat the rep was on that day (Rep.beatOn). */
-    BeatCoverage:{ t:'Beat coverage', cols:[
+    /* ══════════ BEAT COVERAGE — one row per PLANNED DAY ══════════
+       The question this has to answer is "what was my plan for that day, and how much of it did I
+       actually cover" — so it is day-wise, and the plan and the outcome sit side by side on the row:
+         · what the approved PJP asked for   (working-with, state / town / beat, station, week, focus)
+         · what actually happened            (attendance, the beat he was really on, station)
+         · a one-word VERDICT of the two      (see the Coverage column below)
+         · and what the day produced          (visits, productive, no-order, units, MRP, NSV, NSO, POSM)
+       Every planned day appears, including the ones nothing happened on — a day missed is the single
+       most important row in a coverage report, and an aggregate hid it inside a percentage. */
+    BeatCoverage:{ t:'Beat coverage (day-wise)', cols:[
+      ['Date', 'Date', 'd'], ['Day', 'Day'],
+      ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
+      /* ── the plan ── */
+      ['PjpWw', 'PJP working with'], ['PjpState', 'PJP state'], ['PjpTown', 'PJP town'],
+      ['PjpBeat', 'PJP beat'], ['PjpStation', 'PJP station'], ['Week', 'Week'], ['Focus', 'Focus'],
+      /* ── what happened ── */
+      ['Attendance', 'Attendance'], ['ActWw', 'Actual working with'],
+      ['ActTown', 'Actual town'], ['ActBeat', 'Actual beat'], ['ActStation', 'Actual station'],
+      ['Coverage', 'Coverage'], ['OffPjp', 'Off PJP'], ['Approval', 'Off-PJP approval'],
+      ['Started', 'Day started'],
+      /* ── and what it produced ── */
+      ['Visits', 'Stores visited', 'n'], ['Productive', 'Productive visits', 'n'],
+      ['NoOrder', 'No-order visits', 'n'], ['StrikeRate', 'Strike rate %', 'n'],
+      ['ScTarget', 'SC target', 'n'],
+      ['Units', 'Units', 'n'], ['MrpValue', 'MRP value', 'm'], ['Nsv', 'NSV ₹L', 'n'],
+      ['Nso', 'New outlets', 'n'], ['PosmAudit', 'POSM audit', 'n'], ['PosmReq', 'POSM requirement', 'n'],
+      ['LoginAt', 'Login time'],
+      [function (r) { return Rep.dayPhoto(r.EmpCode, r.Date); }, 'Photos', 'raw'],
+      ['Remarks', 'EOD remarks']],
+      tot:['Visits', 'Productive', 'NoOrder', 'Units', 'MrpValue', 'Nsv', 'Nso', 'PosmAudit', 'PosmReq'],
+      src: function (want, from, to) {
+        var DN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        var same = function (a, b) {
+          return String(a || '').trim().toUpperCase() === String(b || '').trim().toUpperCase(); };
+        var by = {}, out = [];
+        var ens = function (code, d, name) {
+          var k = code + '|' + d;
+          if (!by[k]) {
+            by[k] = { Date:d, Day:DN[new Date(d + 'T00:00:00').getDay()] || '',
+              EmpCode:code, EmpName:name || '',
+              PjpWw:'', PjpState:'', PjpTown:'', PjpBeat:'', PjpStation:'', Week:'', Focus:'',
+              Attendance:'', ActWw:'', ActTown:'', ActBeat:'', ActStation:'',
+              Coverage:'', OffPjp:'', Approval:'', Started:'',
+              Visits:0, Productive:0, NoOrder:0, StrikeRate:0, ScTarget:0,
+              Units:0, MrpValue:0, Nsv:0, Nso:0, PosmAudit:0, PosmReq:0,
+              LoginAt:'', Remarks:'' };
+            out.push(by[k]);
+          }
+          if (name && !by[k].EmpName) by[k].EmpName = name;
+          return by[k];
+        };
+        /* 1. every day the approved PJP asked for — the spine of the report */
+        (DB.m.Master_PJP || []).forEach(function (p) {
+          var d = toISO(p.Date), code = String(p.Code || '').toUpperCase();
+          if (!d || !Rep.wants(want, code) || d < from || d > to || d > today()) return;
+          var e = DB.emp(code) || {}, r = ens(code, d, e.Name);
+          r.PjpWw = Pjp.ww(p.Ww); r.PjpState = p.State || ''; r.PjpTown = p.Town || '';
+          r.PjpBeat = p.Beat || ''; r.PjpStation = p.Station || '';
+          r.Week = p.Week || ''; r.Focus = p.Focus || '';
+        });
+        /* 2. what the rep actually saved for that day */
+        DB.rows('DayPlan').forEach(function (p) {
+          var d = toISO(p.Date), code = String(p.EmpCode || '').toUpperCase();
+          if (!d || !Rep.wants(want, code) || d < from || d > to) return;
+          var r = ens(code, d, p.EmpName);
+          r.ActWw = Pjp.ww(p.WorkingWith); r.ActTown = p.Town || ''; r.ActBeat = p.Beat || '';
+          r.ActStation = p.Station || ''; r.OffPjp = p.OffPjp || ''; r.Approval = p.Approval || '';
+          r.ScTarget = num(p.ScTarget); r.LoginAt = p.PlanAt || '';
+          r.Started = Plan.started(p) ? 'Yes' : 'No';
+          r.Attendance = Rep.att(p);
+          if (!r.PjpWw) r.PjpWw = Rep.pjpOn(code, d).Ww ? Pjp.ww(Rep.pjpOn(code, d).Ww) : '';
+        });
+        /* 3. the day's output, and the EOD remark */
+        DB.rows('Eod').forEach(function (e) {
+          var d = toISO(e.Date), code = String(e.EmpCode || '').toUpperCase();
+          if (!d || !Rep.wants(want, code) || d < from || d > to) return;
+          if (!by[code + '|' + d]) return;          /* an EOD with no planned day is not coverage */
+          by[code + '|' + d].Remarks = e.Remarks || '';
+        });
+        out.forEach(function (r) {
+          var a = Rep.dayAct(r.EmpCode, r.Date);
+          r.Visits = a.visits; r.Productive = a.productive; r.NoOrder = a.noOrder;
+          r.Units = a.units; r.MrpValue = a.mrp; r.Nsv = a.nsv;
+          r.Nso = a.nso; r.PosmAudit = a.posmA; r.PosmReq = a.posmR;
+          r.StrikeRate = a.visits ? Math.round(a.productive / a.visits * 100) : 0;
+          if (!r.Attendance) r.Attendance = r.PjpWw
+            ? (Pjp.isField(r.PjpWw) ? 'Absent' : (Rep.ATT[Team.KIND(r.PjpWw)] || Rep.DASH)) : Rep.DASH;
+          /* ── the verdict ──
+             A non-field day is not coverage at all and says so. A field day is COVERED when the rep
+             actually went and worked the beat the PJP named; "Different beat" when he worked but
+             somewhere else (that is what off-PJP means, spelled out); "Not covered" when the day was
+             never started; and "Beat not filled" when the PJP itself named no beat to cover. */
+          var plannedField = r.PjpWw ? Pjp.isField(r.PjpWw) : Pjp.isField(r.ActWw);
+          if (!plannedField) r.Coverage = 'Not a field day';
+          else if (r.Started !== 'Yes') r.Coverage = 'Not covered — din shuru nahi hua';
+          else if (!r.PjpBeat) r.Coverage = 'PJP me beat nahi tha';
+          else if (same(r.ActBeat, r.PjpBeat) && (!r.ActTown || same(r.ActTown, r.PjpTown)))
+            r.Coverage = 'Covered';
+          else r.Coverage = 'Different beat — ' + (r.ActBeat || r.ActTown || 'pata nahi');
+        });
+        return out.sort(function (a, b) {
+          return String(a.Date).localeCompare(String(b.Date)) ||
+                 String(a.EmpCode).localeCompare(String(b.EmpCode)); });
+      } },
+
+    /* the same data rolled up per beat — which beats are under-covered across the whole period. Kept
+       alongside the day-wise sheet because it answers a different question: not "what happened on the
+       4th" but "which of my beats am I not getting to". */
+    BeatSummary:{ t:'Beat coverage (per beat)', cols:[
       ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
       ['State', 'State'], ['Town', 'Town'], ['Beat', 'Beat'],
       ['Planned', 'Planned days', 'n'], ['Worked', 'Worked days', 'n'],
@@ -9137,6 +9430,62 @@ var Rep = {
           return String(a.EmpCode).localeCompare(String(b.EmpCode)) ||
                  String(a.Town).localeCompare(String(b.Town)) ||
                  String(a.Beat).localeCompare(String(b.Beat)); });
+      } },
+
+    /* ══════════ PRIMARY ORDER — what the distributor has to buy ══════════
+       The SKUs a rep has taken orders for that the distributor cannot currently serve: secondary demand
+       per distributor × SKU against the stock that distributor is holding, and the shortfall between
+       them. Only PENDING orders count — a billed order has already come out of the distributor's stock,
+       so counting it again would charge the same demand twice.
+       Stock_Distributor is ~50k rows and is never shipped with the pull; it is read live per distributor.
+       Rep.primaryWarm() fetches every distributor in the range before the download builds, so the rows
+       are complete; anything still unknown says so instead of quietly reading zero. */
+    /* line:false — a distributor × SKU row is not one employee's work, so a reporting line on it would
+       be seven dashes. The employees who took the orders are named in the last two columns instead. */
+    PrimaryOrder:{ t:'Primary Order', line:false, cols:[
+      ['DbCode', 'Distributor code'], ['DbName', 'Distributor'],
+      ['Sku', 'SKU code'], ['Name', 'Product'], ['Brand', 'Brand'], ['Category', 'Category'],
+      ['Msl', 'MSL'], ['Mrp', 'MRP', 'm'],
+      ['Ordered', 'Order quantity (units)', 'n'], ['Value', 'Order value', 'm'],
+      ['Stock', 'Distributor stock (units)'], ['Short', 'Primary order needed (units)', 'n'],
+      ['StockAsOf', 'Stock as of', 'd'], ['StockAge', 'Stock age (days)'],
+      ['Orders', 'Pending orders'], ['Stores', 'Stores waiting'],
+      ['EmpCode', 'Employee code'], ['EmpName', 'Employee']],
+      tot:['Ordered', 'Value', 'Short'],
+      src: function (want, from, to) {
+        /* the pending orders in range — the demand that is still owed to a shop */
+        var pend = DB.rows('SecOrders').filter(function (o) {
+          return Rep.wants(want, o.EmpCode) && Rep.inR(o.Date, from, to) &&
+                 !/billing|delivered|cancel|no.?order/i.test(String(o.Status || ''));
+        });
+        var stores = {}, orders = {}, emp = {};
+        pend.forEach(function (o) {
+          var db = String(o.DbCode || ''); if (!db) return;
+          Sec.lines(o).forEach(function (l) {
+            var k = db + '|' + String(l.Sku || '');
+            (orders[k] = orders[k] || {})[String(o.PoNumber)] = 1;
+            (stores[k] = stores[k] || {})[String(o.StoreName || o.CompanyCode || '')] = 1;
+            (emp[k] = emp[k] || {})[String(o.EmpCode || '').toUpperCase()] = o.EmpName || '';
+          });
+        });
+        return Sec.primaryRows(pend).map(function (x) {
+          var k = x.db + '|' + x.sku, ag = Stock.age(x.stockAt);
+          var codes = Object.keys(emp[k] || {});
+          return { DbCode:x.db, DbName:x.dbName, Sku:x.sku, Name:x.name || x.sku, Brand:x.brand,
+            Category:x.cat, Msl:Rep.msl(x.msl), Mrp:x.mrp,
+            Ordered:x.ordered, Value:x.value,
+            /* a dash, never a 0, when the distributor's upload has not been read — the two mean
+               completely different things to whoever acts on this row */
+            Stock:x.stock === null ? Rep.DASH : String(x.stock),
+            Short:x.short,
+            StockAsOf:ag.known ? ag.iso : '', StockAge:ag.known ? String(ag.days) : Rep.DASH,
+            Orders:String(Object.keys(orders[k] || {}).length),
+            Stores:String(Object.keys(stores[k] || {}).length),
+            EmpCode:codes.join(', '),
+            EmpName:codes.map(function (c) { return emp[k][c] || c; }).join(', ') };
+        }).filter(function (r) { return r.Short > 0 || r.Stock === Rep.DASH; })
+          .sort(function (a, b) {
+            return String(a.DbName).localeCompare(String(b.DbName)) || (b.Short - a.Short); });
       } },
 
     /* ── the MASTERS, for an Admin/HOD only ──
@@ -9203,84 +9552,31 @@ var Rep = {
     Master_Phasing:{ t:'Master — Phasing', priv:true, line:false, cols:[],
       src: function () { return (DB.m.Master_Phasing || []).slice(); } },
 
-    /* The morning and the evening of the same day, on one row — what was planned, when the day
-       actually started and ended, and what came of it. POSM AUDIT belongs to the plan side (did the
-       POSM exist), POSM REQUIREMENT to the EOD side (what has to be sent). */
-    DayFull:{ t:'Day plan + EOD', cols:[
-      ['Date', 'Date', 'd'], ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
-      ['Attendance', 'Attendance'], ['WorkingWith', 'Working with'], ['Station', 'Station'],
-      ['State', 'State'], ['Town', 'Town'], ['Beat', 'Beat'], ['Week', 'Week'], ['Focus', 'Focus'],
-      ['OffPjp', 'Off PJP'], ['Approval', 'Approval'], ['PjpStatus', 'Adherence'],
-      ['LoginAt', 'Login time']]
-      .concat(xlWhen('StartAt', 'Day start'))
-      .concat([['EndAt', 'Day end time'],
-      ['ScTarget', 'SC target', 'n'], ['Sc', 'SC done', 'n'],
-      ['Tc', 'TC', 'n'], ['Pc', 'PC', 'n'],
-      ['NsoTarget', 'NSO target', 'n'], ['Nso', 'NSO done', 'n'],
-      ['PosmTarget', 'POSM target', 'n'], ['PosmAudit', 'POSM audit', 'n'],
-      ['PosmReq', 'POSM requirement', 'n'],
-      ['MslLines', 'MSL lines', 'n'], ['NonMslLines', 'Non MSL lines', 'n'],
-      ['Units', 'Units', 'n'], ['MrpValue', 'MRP value', 'm'], ['Nsv', 'NSV ₹L', 'n'],
-      ['Remarks', 'Remarks']]),
-      tot:['Sc', 'Tc', 'Pc', 'Nso', 'PosmAudit', 'PosmReq', 'MslLines', 'NonMslLines',
-           'Units', 'MrpValue', 'Nsv'],
-      src: function (want, from, to) {
-        var by = {}, out = [];
-        var ens = function (code, name, d) {
-          var k = code + '|' + d;
-          if (!by[k]) { by[k] = { Date:d, EmpCode:code, EmpName:name || '', Attendance:'', WorkingWith:'',
-            Station:'', State:'', Town:'', Beat:'', Week:'', Focus:'', OffPjp:'', Approval:'',
-            PjpStatus:'', LoginAt:'', StartAt:'', EndAt:'', ScTarget:0, Sc:0, Tc:0, Pc:0,
-            NsoTarget:0, Nso:0, PosmTarget:0, PosmAudit:0, PosmReq:0, MslLines:0, NonMslLines:0,
-            Units:0, MrpValue:0, Nsv:0, Remarks:'' }; out.push(by[k]); }
-          if (name && !by[k].EmpName) by[k].EmpName = name;
-          return by[k];
-        };
-        DB.rows('DayPlan').forEach(function (p) {
-          var d = toISO(p.Date), code = String(p.EmpCode || '').toUpperCase();
-          if (!d || !Rep.wants(want, code) || d < from || d > to) return;
-          var r = ens(code, p.EmpName, d);
-          r.WorkingWith = p.WorkingWith || ''; r.Station = p.Station || '';
-          r.State = p.State || ''; r.Town = p.Town || ''; r.Beat = p.Beat || '';
-          r.Week = p.Week || ''; r.Focus = p.Focus || '';
-          r.OffPjp = p.OffPjp || ''; r.Approval = p.Approval || ''; r.PjpStatus = p.PjpStatus || '';
-          r.LoginAt = p.PlanAt || ''; r.StartAt = p.StartAt || '';
-          r.ScTarget = num(p.ScTarget); r.NsoTarget = num(p.NsoTarget); r.PosmTarget = num(p.PosmTarget);
-          var kind = Team.KIND(p.WorkingWith);
-          /* same rule as the Attendance sheet — a rostered field day never started is an absence */
-          r.Attendance = (kind === 'F' && !Plan.started(p)) ? 'Absent' : (Rep.ATT[kind] || Rep.DASH);
-        });
-        DB.rows('Eod').forEach(function (e) {
-          var d = toISO(e.Date), code = String(e.EmpCode || '').toUpperCase();
-          if (!d || !Rep.wants(want, code) || d < from || d > to) return;
-          var r = ens(code, e.EmpName, d);
-          r.Sc = num(e.Sc); r.Tc = num(e.Tc); r.Pc = num(e.Pc); r.Nso = num(e.Nso);
-          r.MslLines = num(e.MslCount); r.MrpValue = num(e.OrderValue); r.Nsv = num(e.NsvLakh);
-          r.EndAt = e.ClosedAt || ''; r.Remarks = e.Remarks || '';
-        });
-        /* the counts the EOD row does not carry, straight from the rows themselves */
-        DB.rows('PosmAudit').forEach(function (x) {
-          var d = toISO(x.Date), code = String(x.EmpCode || '').toUpperCase();
-          if (!d || !Rep.wants(want, code) || d < from || d > to) return;
-          ens(code, x.EmpName, d).PosmAudit++;
-        });
-        DB.rows('PosmRequirement').forEach(function (x) {
-          var d = toISO(x.Date), code = String(x.EmpCode || '').toUpperCase();
-          if (!d || !Rep.wants(want, code) || d < from || d > to) return;
-          ens(code, x.EmpName, d).PosmReq++;
-        });
-        DB.rows('SecOrderLines').forEach(function (l) {
-          var d = toISO(l.Date), code = String(l.EmpCode || '').toUpperCase();
-          if (!d || !Rep.wants(want, code) || d < from || d > to) return;
-          var r = ens(code, l.EmpName, d);
-          r.Units += num(l.Units);
-          if (/^msl$/i.test(String(l.MslStatus || ''))) { /* already counted by Eod.MslCount */ }
-          else r.NonMslLines++;
-        });
-        return out.sort(function (a, b) {
-          return String(a.Date).localeCompare(String(b.Date)) ||
-                 String(a.EmpCode).localeCompare(String(b.EmpCode)); });
-      } }
+    /* The clubbed "Day plan + EOD" sheet is gone. It existed because the EOD sheet and the Day-plan
+       sheet were each too thin to read on their own; both now carry the plan, the targets and the
+       day's actuals themselves (see Rep.dayAct), so a third sheet saying the same thing in a third
+       shape was one more place for the numbers to disagree. */
+  },
+  /* ── warm the distributor stock the Primary Order report needs ──
+     Stock_Distributor is read live, one distributor at a time, and the download itself is synchronous.
+     So before building, fetch every distributor that has a pending order in the range and wait. Anything
+     that fails or times out simply stays unknown on the row — the report says so rather than guessing.
+     Returns a promise; safe to call when PrimaryOrder was not selected (it resolves immediately). */
+  primaryWarm: function (kinds, code, from, to) {
+    if ((kinds || []).indexOf('PrimaryOrder') < 0) return Promise.resolve();
+    var want = Rep.codeSet(code), seen = {}, jobs = [];
+    DB.rows('SecOrders').forEach(function (o) {
+      if (!Rep.wants(want, o.EmpCode) || !Rep.inR(o.Date, from, to)) return;
+      if (/billing|delivered|cancel|no.?order/i.test(String(o.Status || ''))) return;
+      var db = String(o.DbCode || '').trim();
+      if (!db || seen[db]) return;
+      seen[db] = 1;
+      if (!Stock.get('', db)) jobs.push(Stock.load('', db) || Promise.resolve());
+    });
+    if (!jobs.length) return Promise.resolve();
+    toast(jobs.length + ' distributor ka stock aa raha hai…', 2500);
+    return Promise.all(jobs.map(function (p) {
+      return Promise.resolve(p).catch(function () { return null; }); }));
   },
   codeSet: function (code) {
     var a = code == null ? [] : (typeof code === 'string' ? [code] : code);
@@ -9320,8 +9616,9 @@ var Rep = {
   },
   anyRows: function (kind, code, from, to) {
     var want = Rep.codeSet(code);
-    /* a DERIVED sheet builds its own rows (Failed visits, Attendance, Beat coverage, the clubbed
-       EOD + Day plan): there is no tab of that name to read, so the registry entry supplies them */
+    /* a DERIVED sheet builds its own rows (Failed visits, Attendance, both Beat coverage sheets, the
+       day-wise TA/DA, Primary Order): there is no tab of that name on the sheet to read, so the
+       registry entry supplies them */
     var def = Rep.ANY[kind];
     if (def && def.src) return def.src(want, from, to);
     return DB.rows(kind).filter(function (x) {
@@ -9466,8 +9763,13 @@ var Rep = {
       }
       var rows = Rep.anyRows(kind, code, from, to);
       about.push([Xl.t(I18n.s((Rep.ANY[kind] || { t:kind }).t), Xl.S.K), Xl.n(rows.length)]);
-      if (!rows.length) return;
-      var sub = Rep.who(code) + '  ·  ' + dmy(from) + ' – ' + dmy(to) + '  ·  ' + rows.length + ' row';
+      /* ── a report with no rows STILL gets its tab ──
+         It used to be skipped, which is indistinguishable from a broken download: you tick "Stock
+         remarks", the file arrives, and there is simply no such tab in it. Now the tab is there with its
+         headers and a line saying the period was empty — the answer is "nothing to report", which is a
+         real answer, and it is visibly the one being given. */
+      var sub = Rep.who(code) + '  ·  ' + dmy(from) + ' – ' + dmy(to) + '  ·  ' +
+        (rows.length ? rows.length + ' row' : 'is period me kuch nahi');
       sheets.push(Rep.anySheet(kind, rows, null, sub)); n++;
       if (kind === 'SecOrders') {
         var pos = {}; rows.forEach(function (o) { pos[String(o.PoNumber)] = 1; });
@@ -11822,36 +12124,38 @@ var My = {
   /* [code, label, what it contains]. Only reports that belong to ONE employee — no master ever, and
      nothing team-wide, so nothing team-wide can even be asked for. */
   KINDS:[
-    ['SecOrders', 'Mere orders (lines ke saath)',
-      'Aapke punch kiye har order — store, distributor, SKU, units, MRP value, NSV aur billing status. SKU lines alag tab me.'],
+    ['SecOrders', 'Order summary (lines ke saath)',
+      'Aapke punch kiye har order — store, distributor, SKU, units, MRP value, NSV, billing status aur photo link. SKU lines alag tab me.'],
     ['Eod', 'Mera EOD',
-      'Har band kiye din ka row — SC / TC / PC, NSO, POSM, MSL lines, MRP value, NSV aur day-end time.'],
+      'Har band kiye din ka row — target vs done (SC / TC / PC, NSO, POSM), MSL aur Non-MSL lines, SKU, units, MRP value, NSV, day-end time aur us din ka photo folder.'],
     ['DayPlan', 'Mere day plans',
-      'Roz ka subah ka plan — working-with, station, town/beat, target, login time aur day start.'],
-    ['DayFull', 'Day plan + EOD (ek saath)',
-      'Ek hi din ki subah aur shaam ek row me — plan, attendance, login / day-start / day-end, target vs actual, POSM, MSL aur Non-MSL lines, MRP value aur NSV.'],
+      'Roz ka subah ka plan — attendance, working-with, station, town/beat, focus, PJP kya kehta tha, off-PJP, target, aur us din kitna kaam hua. Login time aur day start ke saath.'],
     ['Attendance', 'Meri attendance (day-wise)',
       'Har din ka ek row — Present / Absent / Leave / Weekly off / Holiday / Meeting, time ke saath.'],
+    ['Dfr', 'Mera DFR (daily field report)',
+      'Har din ka roll-up — us din kitni activity hui aur kitne order bane.'],
     ['FailedVisits', 'Failed visits',
-      'Wo saari visits jinme order nahi mila — reason aur beat ke saath.'],
-    ['BeatCoverage', 'Beat coverage',
-      'Har beat ka ek row — kitne din plan the, kitne din actually kaam hua, coverage %, aur us beat se kitna business.'],
+      'Wo saari visits jinme order nahi mila — reason, beat aur photo link ke saath. Failed visit par koi PO nahi banta.'],
+    ['BeatCoverage', 'Beat coverage (din-wise)',
+      'Har plan kiye din ka ek row — PJP ne kya kaha tha (working-with, state/town/beat, station, week, focus), aap actually kahan gaye, coverage ka verdict (Covered / Different beat / Not covered), aur us din kitna kaam hua.'],
+    ['BeatSummary', 'Beat coverage (beat-wise total)',
+      'Har beat ka ek row — kitne din plan the, kitne din actually kaam hua, coverage %, aur us beat se kitna business. Kaunsa beat chhoot raha hai, ye isme dikhta hai.'],
+    ['PrimaryOrder', 'Primary order — distributor ko kya lena hai',
+      'Jin SKU ka order mila hai par distributor ke paas order se kam stock hai — kitna order hua, distributor ke paas kitna hai, aur kitna primary order karna padega. Stock live padha jata hai, isliye download se pehle thoda time lagta hai.'],
     ['NewStores', 'Naye outlet',
-      'Aapke khole hue shop — id, type, town/beat, distributor, owner, day sale aur tracker status.'],
+      'Aapke khole hue shop — id, type, state/town/beat, distributor code aur naam, address, pincode, category, owner, day sale, monthly turnover, photo link aur tracker status.'],
     ['PosmAudit', 'POSM audit',
-      'Store-wise POSM check — element, type, brand, install period, condition, visibility aur action.'],
+      'Store-wise POSM check — client id, store code, element, type, location, brand, asset type, install period, dominance, condition, visibility, action aur photo link.'],
     ['PosmRequirement', 'POSM requirement',
-      'Kis store ko kaunsa POSM chahiye — element, type, brand, qty, needed-by aur status.'],
-    ['TaDa', 'Mera TA / DA',
-      'Month ka claim — DA, TA, lodging, meeting, nights, gross claim, HOD deduction aur net payable.'],
+      'Kis store ko kaunsa POSM chahiye — element, type, brand, qty, needed-by, photo link aur status.'],
+    ['TaDaDays', 'Mera TA / DA (day-wise)',
+      'Har claim kiye din ka alag row — day type, city, DA, TA, lodging, nights, us din ka total, HOD deduction aur net.'],
     ['Deviation', 'Plan change requests',
       'Approved PJP se hatt kar kaam karne ki request — PJP kya kehta tha, aap ne kya maanga, aur HOD ka decision.'],
-    ['PjpDraft', 'Mere PJP drafts',
-      'Month ka PJP submission — status, coverage, revision, kab bheja aur kitne din publish hue.'],
     ['StockRemark', 'Stock remarks',
       'Store ya distributor stock par aapke likhe note.'],
     ['Photos', 'Meri photos',
-      'Aapki li hui har photo ka row — module, store, slot, filename aur Drive link.']],
+      'Aapki li hui har photo ka row — module, store, slot, filename, photo ka link aur uske shop folder ka link.']],
   lbl: function (k) {
     var x = My.KINDS.filter(function (y) { return y[0] === k; })[0];
     return x ? x[1] : k;
@@ -11887,14 +12191,13 @@ var My = {
           '" value="' + esc(r[0]) + '" onchange="My.set(\'from\',this.value)"></div>' +
         '<div><label class="f">To</label><input class="in" type="date" max="' + today() +
           '" value="' + esc(r[1]) + '" onchange="My.set(\'to\',this.value)"></div></div>' +
-      '<div class="btns" style="margin-top:8px">' +
-        '<button class="btn ghost sm" onclick="My.quick(30)">Last 30 din</button>' +
-        '<button class="btn ghost sm" onclick="My.quick(0)">Ye month</button></div>' +
+      /* From / To and one download button — nothing else. The "Last 30 din" / "Ye month" shortcuts are
+         gone: they were a second way to set the same two dates, and a rep who wanted a fortnight or a
+         single day had to undo one of them first. The dates default to the last 30 days anyway. */
       '<div class="hint" style="margin-top:8px">' + rows + ' row milenge — ' + kinds.length +
         ' report · ' + dmy(r[0]) + ' – ' + dmy(r[1]) + '</div>' +
       '<div class="btns"><button class="btn" onclick="My.dl(this)"' +
-        (kinds.length && rows ? '' : ' disabled') + '>Excel download</button>' +
-      '<button class="btn ghost" onclick="My.dlAll(this)">Sab reports (ek file)</button></div>' +
+        (kinds.length && rows ? '' : ' disabled') + '>Excel download</button></div>' +
       '</div>';
 
     /* what is in there, before downloading it */
@@ -11915,36 +12218,25 @@ var My = {
   },
   all: function (on) { My.kinds = on ? My.KINDS.map(function (k) { return k[0]; }) : []; render(); },
   set: function (k, v) { My[k] = v; render(); },
-  quick: function (days) {
-    var t = today();
-    if (days) { var d = new Date(t + 'T00:00:00'); d.setDate(d.getDate() - (days - 1)); My.from = iso(d); }
-    else My.from = t.slice(0, 8) + '01';
-    My.to = t; render();
-  },
   dl: function (el) {
     var r = My.range(), me = String(DB.me.code || '').trim().toUpperCase();
     if (!me) return toast('Login phir se karo');
     var kinds = My.kinds.slice();
     if (!kinds.length) return toast('Pehle report chuno');
     return Busy.run('mydl', el, 'Ban raha hai…', function () {
-      /* the code is STILL not a parameter he can choose — it is who is logged in, every time */
-      var f = kinds.length === 1 ? Rep.any(kinds[0], me, r[0], r[1])
-                                 : Rep.some(kinds, me, r[0], r[1]);
-      Log.add('Data', 'Downloaded ' + kinds.join(','), me, r[0] + '..' + r[1]);
-      toast('Download shuru — ' + kinds.length + ' report');
-      return Promise.resolve(f);
-    });
-  },
-  dlAll: function (el) {
-    var r = My.range(), me = String(DB.me.code || '').trim().toUpperCase();
-    if (!me) return toast('Login phir se karo');
-    return Busy.run('mydlall', el, 'Ban raha hai…', function () {
-      var f = Rep.everything(me, r[0], r[1]);
-      Log.add('Data', 'Downloaded all reports', me, r[0] + '..' + r[1]);
-      toast('Download shuru — ' + f.sheets + ' tab');
-      return Promise.resolve(f);
+      /* the Primary Order report needs each distributor's live stock — fetch it before building */
+      return Rep.primaryWarm(kinds, me, r[0], r[1]).then(function () {
+        /* the code is STILL not a parameter he can choose — it is who is logged in, every time */
+        var f = kinds.length === 1 ? Rep.any(kinds[0], me, r[0], r[1])
+                                   : Rep.some(kinds, me, r[0], r[1]);
+        Log.add('Data', 'Downloaded ' + kinds.join(','), me, r[0] + '..' + r[1]);
+        toast('Download shuru — ' + kinds.length + ' report');
+        return f;
+      });
     });
   }
+  /* My.dlAll is gone with the "Sab reports (ek file)" button: the report picker is multi-select, so
+     "everything" is already Select-all + Excel download — one button, not two doing the same job. */
 };
 
 /* ═══════════════ APPROVALS — "meri requests" ═══════════════
@@ -13137,32 +13429,38 @@ var Admin = {
   /* [code, label, what it actually contains] — the third slot is the line UI.multi shows under the
      name, so nobody has to download a file to find out what is in it. */
   KINDS:[
-    ['SecOrders', 'Orders (with lines)',
-      'Every order punched in the range — store, distributor, SKU count, units, MRP value, NSV, billing status. Its SKU lines come as a second tab.'],
+    ['SecOrders', 'Order summary (with lines)',
+      'Every order punched in the range — store, distributor, SKU count, units, MRP value, NSV, billing status, beat and the shop\'s photo folder. Its SKU lines come as a second tab.'],
     ['Eod', 'EOD',
-      'One row per closed day — SC / TC / PC, NSO, POSM count, MSL lines, MRP value, NSV and the day-end time.'],
+      'One row per closed day, in depth — target vs done for SC / TC / PC, NSO and POSM, no-order and telephonic visits, MSL and Non-MSL lines, SKU, units, MRP value, NSV, day-end time and the day\'s photo folder.'],
     ['DayPlan', 'Day plans',
-      'The morning plan per day — working-with, station, town/beat, targets, off-PJP flag, login time and day start.'],
-    ['DayFull', 'Day plan + EOD (clubbed)',
-      'Morning and evening of the same day on ONE row — plan, attendance, login / day-start / day-end, targets vs done, POSM audit and requirement, MSL and Non-MSL lines, MRP value and NSV.'],
+      'The morning plan per day, in depth — attendance, working-with, station, town/beat, focus, what the approved PJP said for that same day, the off-PJP flag and adherence, targets, and what the day actually produced against them.'],
     ['Attendance', 'Attendance (day-wise)',
       'One row per employee per day — Present / Absent / Leave / Weekly off / Holiday / Meeting, with the times and what the day produced. A rostered field day that never started counts as Absent. Days with no saved plan come from the published PJP.'],
     ['FailedVisits', 'Failed visits',
       'Every shop visit that produced no order — zero units booked or cancelled outright — with the reason given and the beat it happened on.'],
-    ['BeatCoverage', 'Beat coverage',
-      'One row per beat — days planned vs days actually worked, coverage %, stores visited, orders billed, units, MRP value and NSV.'],
+    ['BeatCoverage', 'Beat coverage (day-wise)',
+      'One row per PLANNED DAY — what the approved PJP asked for (working-with, state/town/beat, station, week, focus) against what actually happened (attendance, the beat really worked, station), a one-word coverage verdict, and what the day produced. Days that were missed appear as rows, not as a percentage.'],
+    ['BeatSummary', 'Beat coverage (per beat)',
+      'The same data rolled up per beat — days planned vs days actually worked, coverage %, stores visited, productive visits, units, MRP value and NSV. Answers which beats are being missed across the period.'],
+    ['PrimaryOrder', 'Primary order — distributor shortfall',
+      'The SKUs with a pending secondary order that the distributor cannot serve: order quantity per distributor × SKU against the stock they hold, and the primary order needed to close the gap. Distributor stock is read live, so this download takes a moment.'],
     ['NewStores', 'New outlets',
       'Shops opened in the range — id, type, town/beat, distributor, owner and mobile, day sale and monthly turnover, tracker status.'],
     ['PosmAudit', 'POSM audit',
       'Store-by-store POSM check — element, type, brand, install period, condition, visibility, action needed, who installed and verified.'],
     ['PosmRequirement', 'POSM requirement',
       'What POSM a store still needs — element, type, brand, quantity, needed-by date and the tracker status.'],
-    ['TaDa', 'TA / DA claims',
-      'Monthly travel claims — DA, TA, lodging, meeting, nights, gross claim, HOD deduction and the net payable, with who decided it.'],
+    /* day-wise only. The month-total sheet is gone: every one of its figures (gross claim, deduction,
+       net payable, status, HOD message, approved-at) is carried on EVERY day row of this one, so the
+       month is still readable here — and a claim can finally be totalled, filtered and pivoted by day,
+       which a single row with the days packed into JSON never could be. */
+    ['TaDaDays', 'TA / DA (day-wise)',
+      'One row per CLAIMED DAY, unpacked out of the month\'s DaysJson — day type, city, working-with, beat, DA, TA, lodging, nights, the day\'s total, any per-day HOD deduction with its reason, and the day net. The month\'s claim total, net, status and approval travel on every row.'],
     ['Deviation', 'Plan changes',
       'Requests to work off the approved PJP — what the PJP said for that day against what was asked for, the reason, and the HOD decision.'],
     ['PjpDraft', 'PJP drafts',
-      'Monthly PJP submissions — status, coverage, revision, when sent, who decided, and how many days reached Master_PJP.'],
+      'Monthly PJP submissions — status, coverage, revision, when sent, when approved, and how many days reached Master_PJP.'],
     ['Dfr', 'Daily field report',
       'The per-day activity roll-up — how many activities and how many orders each day carried.'],
     ['StockRemark', 'Stock remarks',
@@ -13194,7 +13492,8 @@ var Admin = {
   DELKINDS: function () {
     return Admin.KINDS.filter(function (k) {
       return k[0] !== 'PJP' && !/^Master_/.test(k[0]) &&
-             ['DayFull', 'Attendance', 'FailedVisits', 'BeatCoverage'].indexOf(k[0]) < 0;
+             ['Attendance', 'FailedVisits', 'BeatCoverage', 'BeatSummary', 'TaDaDays',
+              'PrimaryOrder'].indexOf(k[0]) < 0;
     });
   },
   kindLbl: function (k) {
@@ -13215,7 +13514,7 @@ var Admin = {
     ['LastUpdated', 'Written at']] },
   DRFCOL:{ t:'PJP drafts', cols:[
     ['Month', 'Month'], ['EmpCode', 'Code'], ['EmpName', 'Employee'], ['Status', 'Status'],
-    ['SubmittedAt', 'Sent at'], ['HodAt', 'Decided at'], ['HodBy', 'Decided by'],
+    ['SubmittedAt', 'Sent at'], ['HodAt', 'Approved at', 'dtm'],
     ['HodRemarks', 'Remarks'], ['RejectedDays', 'Days sent back'], ['UpdatedAt', 'Updated at']] },
   pjpRows: function (codes, from, to) {
     var want = Admin.codeSet(codes);
@@ -14380,8 +14679,13 @@ var Admin = {
         rej.push({ town:d.NewTown || '', beat:d.NewBeat || '', at:new Date().toISOString(), by:DB.me.name });
     }
     Busy.run('dev_' + id, null, '', function () {
-      return DB.save('Deviation', Object.assign({}, d, { Status:ok ? 'Approved' : 'Rejected', HodRemarks:rem || '',
-        HodBy:DB.me.name, HodAt:new Date().toISOString(), RejectedJson:JSON.stringify(rej), UpdatedAt:Date.now() }))
+      /* Admin.stamp() rather than a hand-written HodBy/HodAt pair: this was the one decision path that
+         did not go through it, so the sheet's own HodRole cell was never filled for a plan change. The
+         reports only show "Approved at" now, but the who/in-what-capacity trail still belongs IN the
+         sheet — and it should be written the same way by all five decision paths. */
+      return DB.save('Deviation', Object.assign({}, d, Admin.stamp(),
+        { Status:ok ? 'Approved' : 'Rejected', HodRemarks:rem || '',
+          RejectedJson:JSON.stringify(rej), UpdatedAt:Date.now() }))
         .then(function () {
           Log.add('Deviation', ok ? 'Approved' : 'Rejected', id, (d.NewTown || '') + '/' + (d.NewBeat || '') + ' ' + rem);
           render(); toast(ok ? ' Approved' : ' Rejected \u2014 rep ko dusra beat chunna padega');
