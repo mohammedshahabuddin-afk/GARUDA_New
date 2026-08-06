@@ -2783,6 +2783,9 @@ I18n.D.en = I18n.EN = {
   'Order summary (lines ke saath)':'Order summary (with lines)',
   'Beat coverage (din-wise)':'Beat coverage (day by day)',
   'Beat coverage (beat-wise total)':'Beat coverage (total per beat)',
+  'Meri attendance (day-wise)':'My attendance (day by day)',
+  'Mera DFR (daily field report)':'My DFR (daily field report)',
+  'Mera TA / DA (day-wise)':'My TA / DA (day by day)',
   'Aapke punch kiye har order — store, distributor, SKU, units, MRP value, NSV, billing status aur photo link. SKU lines alag tab me.':
     'Every order you punched — store, distributor, SKU, units, MRP value, NSV, billing status and photo link. The SKU lines are on their own tab.',
   'Har band kiye din ka row — target vs done (SC / TC / PC, NSO, POSM), MSL aur Non-MSL lines, SKU, units, MRP value, NSV, day-end time aur us din ka photo folder.':
@@ -9085,11 +9088,16 @@ var Rep = {
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return '';            /* a bare date has no time of its own */
     var d = (v instanceof Date) ? v : new Date(s);
     if (isNaN(d.getTime())) return '';
-    return d.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+    /* en-IN renders "10:15 am"; the bare-string branch above returns "08:35 AM". One column cannot
+       hold both — a sheet that writes the same clock two ways looks like two different sources. */
+    return d.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }).toUpperCase();
   },
 
   ANY:{
-    SecOrders:{ t:'Orders', cols:[
+    /* the tab is called Order Summary, not Orders: the workbook it lands in also carries Order lines,
+       and "Orders / Order lines" made the pair read as the same thing at two zoom levels rather than
+       as a header and its detail */
+    SecOrders:{ t:'Order Summary', cols:[
       ['Date', 'Date', 'd'], ['PoNumber', 'PO'],
       ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
       ['ClientId', 'Client id'], ['CompanyCode', 'Store code'], ['StoreName', 'Store'],
@@ -9332,10 +9340,48 @@ var Rep = {
       ['HodAt', 'Approved at', 'dtm']]
       .concat(xlWhen('SubmittedAt', 'Sent'))
       .concat(xlWhen('PublishedAt', 'Published')) },
+    /* ══════════ DAILY FIELD REPORT — ONE ROW PER ACTIVITY ══════════
+       This used to be one row per employee-day carrying two numbers: how many activities and how many
+       orders. That is a count, not a report — it could not answer the only question a DFR is ever
+       opened for, which is "walk me through that day". The Dfr TAB on the sheet holds the same two
+       numbers plus a JSON blob, so reading it could never do better.
+
+       So the report is derived instead, from the records the activities actually left behind, and it
+       is built at the grain the reader wants: one row per thing that happened, in the order it
+       happened, with everything known about it on the row —
+
+         Day plan saved · Plan sent to HOD · Day started
+         Store visit (order) · Store visit (no order) · New outlet
+         POSM audit · POSM requirement · Stock remark · Plan change request
+         Day closed (EOD)
+
+       Every day in the period is represented even when nothing happened on it: a field day with no
+       activity says so in one row, and a leave / weekly off / holiday / meeting day says which it was.
+       A day missing from a daily report is the one row the reader most needs to see.
+       `Gap` is the minutes since the previous activity of that same day — the column that shows a
+       four-hour hole between two visits without anybody having to subtract timestamps by hand. */
     Dfr:{ t:'Daily field report', cols:[
-      ['Date', 'Date', 'd'], ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
-      ['StoreCount', 'Activities', 'n'], ['OrderCount', 'Orders', 'n']]
-      .concat(xlWhen('Ts', 'Punched')), tot:['StoreCount', 'OrderCount'] },
+      ['Date', 'Date', 'd'], ['Day', 'Day'], ['Time', 'Time'], ['Seq', '#', 'n'],
+      ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
+      ['Activity', 'Activity'], ['Gap', 'Gap (min)', 'n'],
+      /* where the day was supposed to be, and what kind of day it was */
+      ['Attendance', 'Attendance'], ['WorkingWith', 'Working with'], ['Station', 'Station'],
+      ['PlanState', 'State'], ['PlanTown', 'Town'], ['PlanBeat', 'Beat'],
+      /* who it was with */
+      ['ClientId', 'Client id'], ['StoreCode', 'Store code'], ['StoreName', 'Store'],
+      ['StoreType', 'Store type'], ['City', 'City'],
+      ['DbCode', 'Distributor code'], ['DbName', 'Distributor'],
+      /* what it was */
+      ['Ref', 'Reference'], ['Status', 'Status'],
+      [function (r) { return r.Status ? Rep.DLV(r.Status) : ''; }, 'Delivery status', 'st'],
+      ['Detail', 'Detail'], ['Products', 'Products'],
+      ['Skus', 'SKU', 'n'], ['Units', 'Units', 'n'],
+      ['MrpValue', 'MRP value', 'm'], ['Nsv', 'NSV ₹L', 'n'],
+      ['Reason', 'Reason'], ['Remarks', 'Remarks'],
+      [function (r) { return r.StoreName
+        ? Rep.photo(r.StoreName, r.Date, r.StoreCode) : Xl.t(Rep.DASH); }, 'Photos', 'raw']],
+      tot:['Skus', 'Units', 'MrpValue', 'Nsv'],
+      src: function (want, from, to) { return Rep.dfrRows(want, from, to); } },
     StockRemark:{ t:'Stock remarks', cols:[
       ['Date', 'Date', 'd'], ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
       ['Kind', 'Kind'], ['Code', 'Code'], ['Name', 'Name'], ['Remark', 'Remark']]
@@ -9788,6 +9834,214 @@ var Rep = {
     return /delivered/i.test(v) ? Xl.S.good : /cancel/i.test(v) ? Xl.S.bad
          : v ? Xl.S.warn : Xl.S.txt;
   },
+  /* ══ minutes past midnight, from any of the three shapes a time is stored in ══
+     A full ISO timestamp (SecOrders.Ts), a bare clock string (DayPlan.PlanAt — "08:35 PM"), or
+     nothing at all. Returns -1 for "no time known", which sorts to the END of its day rather than
+     pretending the activity happened at midnight. */
+  mins: function (v) {
+    var s = String(v == null ? '' : v).trim();
+    if (!s) return -1;
+    if (!/^\d{4}-/.test(s)) {
+      var m = /^(\d{1,2}):(\d{2})(?::\d{2})?\s*([AaPp])?/.exec(s);
+      if (m) {
+        var h = +m[1];
+        if (m[3]) { h = h % 12; if (/p/i.test(m[3])) h += 12; } else { h = h % 24; }
+        return h * 60 + (+m[2]);
+      }
+    }
+    var d = new Date(s);
+    return isNaN(d.getTime()) ? -1 : d.getHours() * 60 + d.getMinutes();
+  },
+  DAYNAME:['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+  dayName: function (iso) {
+    var d = /^\d{4}-\d{2}-\d{2}$/.test(String(iso)) ? new Date(iso + 'T00:00:00') : null;
+    return d && !isNaN(d.getTime()) ? Rep.DAYNAME[d.getDay()] : '';
+  },
+
+  /* ══ the DFR feed — every activity of every day, in the order it happened ══
+     Deliberately built from the SOURCE records rather than from the Dfr tab: the tab only ever held a
+     count and a JSON summary written at save time, so anything edited afterwards (a status changed in
+     the Tracker, a partial billing) would never reach the report. Reading the records means the row
+     always says what the sheet says now. */
+  dfrRows: function (want, from, to) {
+    var acts = {}, plans = {};                 /* both keyed employee|date */
+    var key = function (code, d) { return String(code || '').toUpperCase() + '|' + toISO(d); };
+    var take = function (code, d) {
+      var c = String(code || '').toUpperCase(), iso = toISO(d);
+      if (!iso || iso < from || iso > to || !Rep.wants(want, c)) return null;
+      return (acts[c + '|' + iso] = acts[c + '|' + iso] || []);
+    };
+    var name = function (code, fallback) {
+      return fallback || (DB.emp(code) || {}).Name || '';
+    };
+
+    /* ── the plan behind each day: the geography every activity row inherits ── */
+    DB.rows('DayPlan').forEach(function (p) {
+      var k = key(p.EmpCode, p.Date);
+      if (toISO(p.Date) >= from && toISO(p.Date) <= to) plans[k] = p;
+    });
+    (DB.m.Master_PJP || []).forEach(function (p) {
+      var k = key(p.Code, p.Date), iso = toISO(p.Date);
+      if (iso >= from && iso <= to && !plans[k])
+        plans[k] = { EmpCode:p.Code, Date:p.Date, WorkingWith:Pjp.ww(p.Ww), State:p.State,
+                     Town:p.Town, Beat:p.Beat, Station:p.Station, _pjp:1 };
+    });
+
+    /* ── 1. the day's own milestones ── */
+    DB.rows('DayPlan').forEach(function (p) {
+      var a = take(p.EmpCode, p.Date); if (!a) return;
+      var nm = name(p.EmpCode, p.EmpName);
+      if (p.PlanAt) a.push({ at:p.PlanAt, ord:0, EmpName:nm, Activity:'Day plan saved',
+        Detail:'Day plan saved — ' + (p.Town || Rep.DASH) + ' / ' + (p.Beat || Rep.DASH) });
+      if (p.NotifiedAt) a.push({ at:p.NotifiedAt, ord:1, EmpName:nm, Activity:'Plan sent to HOD',
+        Detail:'Plan sent to the HOD on WhatsApp' });
+      if (p.StartAt) a.push({ at:p.StartAt, ord:2, EmpName:nm, Activity:'Day started',
+        Detail:'Field work started' });
+    });
+
+    /* ── 2. every store visit, with the whole order on the row ── */
+    DB.rows('SecOrders').forEach(function (o) {
+      var a = take(o.EmpCode, o.Date); if (!a) return;
+      var units = num(o.TotUnits), dead = /cancel|no.?order/i.test(String(o.Status || ''));
+      var lines = [];
+      try { lines = JSON.parse(o.LinesJson || '[]') || []; } catch (e) {}
+      if (!lines.length) lines = DB.rows('SecOrderLines').filter(function (l) {
+        return String(l.PoNumber) === String(o.PoNumber); });
+      /* the products themselves, on the activity row — the reason nobody has to open Order lines
+         just to find out what the visit actually booked */
+      var prod = lines.map(function (l) {
+        return (l.SkuName || l.Sku || '?') + ' × ' + num(l.Units); }).join(', ');
+      a.push({ at:o.Ts || o.Date, ord:5, EmpName:name(o.EmpCode, o.EmpName),
+        Activity:(units > 0 && !dead) ? 'Store visit — order' : 'Store visit — no order',
+        ClientId:o.ClientId || '', StoreCode:o.CompanyCode || '', StoreName:o.StoreName || '',
+        StoreType:o.StoreType || '', City:o.City || '',
+        DbCode:o.DbCode || '', DbName:o.DbName || '',
+        Ref:o.PoNumber || '', Status:o.Status || '',
+        Detail:(units > 0 && !dead)
+          ? num(o.TotSku) + ' SKU · ' + units + ' units · ' + inr(o.TotValue) +
+            (o.BillingType ? ' · ' + o.BillingType + ' billing' +
+              (String(o.BillingType) === 'Partial' ? ' (' + num(o.BilledUnits) + ' invoiced)' : '') : '')
+          : 'Store was visited but no order came out of it',
+        Products:prod, Skus:num(o.TotSku), Units:units,
+        MrpValue:num(o.TotValue), Nsv:num(o.TotNsvLakh),
+        Reason:o.Reason || '', Remarks:o.Remarks || o.BillingRemark || '' });
+    });
+
+    /* ── 3. new outlets ── */
+    DB.rows('NewStores').forEach(function (r) {
+      var a = take(r.EmpCode, r.Date); if (!a) return;
+      a.push({ at:r.Ts || r.Date, ord:6, EmpName:name(r.EmpCode, r.EmpName), Activity:'New outlet',
+        StoreCode:r.StoreId || '', StoreName:r.StoreName || '', StoreType:r.StoreType || '',
+        City:r.Town || '', DbCode:r.DbCode || '', DbName:r.DbName || '',
+        Ref:r.StoreId || '', Status:r.Status || '',
+        Detail:'New outlet opened — ' + (r.Town || Rep.DASH) + (r.Beat ? ' / ' + r.Beat : '') +
+          (r.OwnerName ? ' · ' + r.OwnerName : '') +
+          (num(r.DaySales) ? ' · day sale ' + inr(r.DaySales) : ''),
+        Reason:r.Reason || '', Remarks:r.StatusReason || r.Address || '' });
+    });
+
+    /* ── 4 & 5. POSM, both kinds ── */
+    DB.rows('PosmAudit').forEach(function (r) {
+      var a = take(r.EmpCode, r.Date); if (!a) return;
+      a.push({ at:r.Ts || r.Date, ord:7, EmpName:name(r.EmpCode, r.EmpName), Activity:'POSM audit',
+        ClientId:r.ClientId || '', StoreCode:r.CompanyCode || '', StoreName:r.StoreName || '',
+        StoreType:r.StoreType || '', City:r.City || '', Ref:r.Id || '', Status:r.PosmStatus || '',
+        Detail:[r.Element, r.PosmType, r.Location, r.Brand, r.Condition, r.Visibility]
+          .filter(Boolean).join(' · ') || Rep.DASH,
+        Remarks:r.Remarks || '' });
+    });
+    DB.rows('PosmRequirement').forEach(function (r) {
+      var a = take(r.EmpCode, r.Date); if (!a) return;
+      a.push({ at:r.Ts || r.Date, ord:8, EmpName:name(r.EmpCode, r.EmpName),
+        Activity:'POSM requirement',
+        ClientId:r.ClientId || '', StoreCode:r.CompanyCode || '', StoreName:r.StoreName || '',
+        StoreType:r.StoreType || '', City:r.City || '', Ref:r.Id || '', Status:r.Status || '',
+        Detail:[r.Element, r.PosmType, num(r.Qty) ? num(r.Qty) + ' qty' : '', r.Brand,
+                r.NeededBy ? 'needed by ' + dmy(r.NeededBy) : ''].filter(Boolean).join(' · ') || Rep.DASH,
+        Units:num(r.Qty), Remarks:r.Remarks || r.StatusReason || '' });
+    });
+
+    /* ── 6. stock remarks ── */
+    DB.rows('StockRemark').forEach(function (r) {
+      var a = take(r.EmpCode, r.Date); if (!a) return;
+      a.push({ at:r.Ts || r.Date, ord:9, EmpName:name(r.EmpCode, r.EmpName), Activity:'Stock remark',
+        StoreName:/store/i.test(String(r.Kind || '')) ? (r.Name || '') : '',
+        DbName:/db|distrib/i.test(String(r.Kind || '')) ? (r.Name || '') : '',
+        Ref:r.Code || '', Detail:(r.Kind || 'Stock') + ' stock checked', Remarks:r.Remark || '' });
+    });
+
+    /* ── 7. plan change requests ── */
+    DB.rows('Deviation').forEach(function (r) {
+      var a = take(r.EmpCode, r.Date); if (!a) return;
+      a.push({ at:r.Ts || r.Date, ord:3, EmpName:name(r.EmpCode, r.EmpName),
+        Activity:'Plan change request', Ref:r.Id || '', Status:r.Status || '',
+        Detail:'Asked for ' + (r.NewTown || Rep.DASH) + ' / ' + (r.NewBeat || Rep.DASH) +
+          ' — the PJP said ' + (r.PlannedTown || Rep.DASH) + ' / ' + (r.PlannedBeat || Rep.DASH),
+        Reason:r.Reason || '', Remarks:r.HodRemarks || '' });
+    });
+
+    /* ── 8. the day closed ── */
+    DB.rows('Eod').forEach(function (e) {
+      var a = take(e.EmpCode, e.Date); if (!a) return;
+      a.push({ at:e.ClosedAt || e.Ts || e.Date, ord:99, EmpName:name(e.EmpCode, e.EmpName),
+        Activity:'Day closed (EOD)',
+        Detail:'TC ' + num(e.Tc) + ' / SC ' + num(e.Sc) + ' · PC ' + num(e.Pc) +
+          ' · NSO ' + num(e.Nso) + ' · ' + inr(e.OrderValue) + ' · NSV ' + lakh(e.NsvLakh) + ' L',
+        MrpValue:num(e.OrderValue), Nsv:num(e.NsvLakh), Remarks:e.Remarks || '' });
+    });
+
+    /* ── a day with nothing on it is still a row ──
+       Otherwise the one thing a daily report must never do — go silent about a day — is exactly what
+       it does. A non-field day says which kind it was; a field day that produced nothing says so. */
+    Object.keys(plans).forEach(function (k) {
+      if (acts[k] && acts[k].length) return;
+      var p = plans[k], code = k.split('|')[0], d = k.split('|')[1];
+      if (!Rep.wants(want, code) || d > today()) return;
+      var kind = Team.KIND(p.WorkingWith);
+      (acts[k] = acts[k] || []).push({ at:'', ord:50, EmpName:name(code, p.EmpName),
+        Activity:kind === 'F' ? 'No activity recorded' : (Rep.ATT[kind] || 'No activity recorded'),
+        Detail:kind === 'F'
+          ? 'A field day with nothing recorded against it'
+          : 'Not a field day — the plan said ' + (p.WorkingWith || Rep.DASH) });
+    });
+
+    /* ── flatten: sort each day by the clock, number the activities, measure the gaps ── */
+    var out = [];
+    Object.keys(acts).sort().forEach(function (k) {
+      var code = k.split('|')[0], d = k.split('|')[1], p = plans[k] || {};
+      var kind = Team.KIND(p.WorkingWith);
+      var att = Rep.ATT[kind] || Rep.DASH;
+      if (kind === 'F' && !Plan.started(p)) att = 'Absent';
+      var list = acts[k].slice().sort(function (a, b) {
+        var ma = Rep.mins(a.at), mb = Rep.mins(b.at);
+        if (ma < 0 && mb >= 0) return 1;                 /* no time known → end of the day */
+        if (mb < 0 && ma >= 0) return -1;
+        return (ma - mb) || (a.ord - b.ord);
+      });
+      var prev = -1;
+      list.forEach(function (a, i) {
+        var m = Rep.mins(a.at);
+        out.push({ Date:d, Day:Rep.dayName(d), Time:Rep.tpart(a.at), Seq:i + 1,
+          EmpCode:code, EmpName:a.EmpName || '',
+          Activity:a.Activity, Gap:(m >= 0 && prev >= 0) ? m - prev : '',
+          Attendance:att, WorkingWith:p.WorkingWith || '', Station:p.Station || '',
+          PlanState:p.State || '', PlanTown:p.Town || '', PlanBeat:p.Beat || '',
+          ClientId:a.ClientId || '', StoreCode:a.StoreCode || '', StoreName:a.StoreName || '',
+          StoreType:a.StoreType || '', City:a.City || '',
+          DbCode:a.DbCode || '', DbName:a.DbName || '',
+          Ref:a.Ref || '', Status:a.Status || '', Detail:a.Detail || '',
+          Products:a.Products || '', Skus:a.Skus || 0, Units:a.Units || 0,
+          MrpValue:a.MrpValue || 0, Nsv:a.Nsv || 0,
+          Reason:a.Reason || '', Remarks:a.Remarks || '' });
+        if (m >= 0) prev = m;
+      });
+    });
+    return out.sort(function (a, b) {
+      return String(a.Date).localeCompare(String(b.Date)) ||
+             String(a.EmpCode).localeCompare(String(b.EmpCode)) || (a.Seq - b.Seq);
+    });
+  },
+
   anyRows: function (kind, code, from, to) {
     var want = Rep.codeSet(code);
     /* a DERIVED sheet builds its own rows (Failed visits, Attendance, both Beat coverage sheets, the
@@ -12722,8 +12976,7 @@ var My = {
   },
   html: function () {
     var r = My.range(), kinds = My.kinds;
-    var per = kinds.map(function (k) { return [k, My.rows(k, r).length]; });
-    var rows = per.reduce(function (a, x) { return a + x[1]; }, 0);
+    var rows = kinds.reduce(function (a, k) { return a + My.rows(k, r).length; }, 0);
     var h = UI.head('', 'Mera data',
       'Apni koi bhi report — ek ya kai — jitne din ki chahiye, Excel me. Sirf aapka data jata hai.');
     h += '<div class="card">' +
@@ -12742,17 +12995,14 @@ var My = {
         ' report · ' + dmy(r[0]) + ' – ' + dmy(r[1]) + '</div>' +
       '<div class="btns"><button class="btn" onclick="My.dl(this)"' +
         (kinds.length && rows ? '' : ' disabled') + '>Excel download</button></div>' +
-      '</div>';
-
-    /* what is in there, before downloading it */
-    h += '<div class="sec-title">Is period me kitna</div><div class="card"><div class="tw"><table><tbody>' +
-      My.KINDS.map(function (k) {
-        var n = My.rows(k[0], r).length;
-        return '<tr' + (kinds.indexOf(k[0]) >= 0 ? ' class="me"' : '') + '><td>' + esc(k[1]) + '</td>' +
-          '<td class="num">' + n + '</td></tr>'; }).join('') +
-      '</tbody></table></div>' +
+      /* ── the "What is in this period" table is gone ──
+         It listed a row count against EVERY report kind, selected or not, which is the same fact the
+         line above already gives for the ones actually being downloaded — and it cost a full
+         Rep.anyRows() scan per kind on every single render just to print numbers nobody was acting
+         on. The privacy note it carried is real, so it moves up here where the picker is. */
       '<div class="hint" style="margin-top:8px">Ye sirf aapke rows hain — team ka data kabhi nahi ' +
-      'aata. Kisi aur ka data chahiye to HOD se maango.</div></div>';
+      'aata. Kisi aur ka data chahiye to HOD se maango.</div>' +
+      '</div>';
     return h;
   },
   tgl: function (v) {
