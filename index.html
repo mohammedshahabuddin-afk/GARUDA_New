@@ -6060,6 +6060,8 @@ var Pjp = {
     return !Pjp.approvedFor(Pjp.month);
   },
   html: function () {
+    /* doj still drives the day list below — a day before joining renders as a greyed, unplannable
+       row. Only the footnote ABOUT it was removed from the card above. */
     var dr = Pjp.load(), c = Pjp.cover(), doj = DB.doj(DB.me.code);
     /* only an APPROVED plan is frozen. While it is merely pending the rep can still edit and re-send:
        the new request supersedes the old one. */
@@ -6075,15 +6077,17 @@ var Pjp = {
         UI.kpi((c.need ? Math.round(c.done / c.need * 100) : 0) + '%', 'Complete', c.done === c.need ? 'g' : 'w') +
         UI.kpi(c.miss.length, 'Pending', c.miss.length ? 'r' : 'g') + UI.kpi(c.off, 'Off / Leave', '') +
         UI.kpi(esc(dr.Status || 'Draft'), 'Status', locked ? 'g' : '') + '</div>' +
-      '<div class="hint" style="margin-top:8px"> Har change turant <b>PjpDraft</b> tab me save hota hai (ek hi row per month — duplicate nahi banti). Approve hone par har din ki alag row <b>Master_PJP</b> me chali jayegi.</div>' +
-      (dr.PublishedAt ? '<div class="banner g" style="margin-top:10px"><span></span><div>Ye plan <b>Master_PJP me publish</b> ho chuka hai (' + esc(dr.PublishedRows || '') + ' din).</div></div>' : '') +
-      (doj ? '<div class="hint" style="margin-top:8px"> Joining' + dmy(doj) + ' — usse pehle ke din plan me count nahi hote.</div>' : '') +
+      /* ── four notices removed from the foot of this card ──
+         They ran one under the other and between them said almost nothing a rep can act on:
+           · how the app stores a draft (PjpDraft / Master_PJP tab names) — that is plumbing;
+           · "already published to Master_PJP (31 days)" — the same fact, in the same words;
+           · the joining-date footnote, which only ever mattered while filling the plan in;
+           · "<month> approve ho gaya — no more changes" — which the Status KPI above already shows
+             in green AND the status banner below the card repeats in full.
+         What is left in this card is the three notices that ask for something: the window is open,
+         some days came back rejected, or it is sitting with the HOD. */
       (Pjp.winOpen() && !locked ? '<div class="banner w" style="margin-top:10px"><span>!</span><div><b>PJP window khuli hai (27 se 1 tarikh)</b><br>' +
         '<span style="font-weight:500">' + esc(monthName(Pjp.winMonth())) + ' ka plan abhi bhar ke HOD ko bhej do.</span></div></div>' : '') +
-      (locked ? '<div class="banner g" style="margin-top:10px"><span></span><div><b>' + esc(monthName(Pjp.month)) + ' approve ho gaya</b><br>' +
-        /* no <b> inside a translatable sentence — I18n.tr only ever sees the text BETWEEN tags, so
-           a tag in the middle splits one phrase into three the dictionary cannot match */
-        '<span style="font-weight:500">Ab is month me change nahi hoga — agli PJP 27 tarikh se khulegi.</span></div></div>' : '') +
       (part ? '<div class="banner r" style="margin-top:10px"><span>!</span><div><b>' + rejD.length +
         ' din reject hue hain</b><br><span style="font-weight:500">' +
         rejD.map(function (k) { return dmy(k); }).join(', ') +
@@ -9392,6 +9396,12 @@ var Rep = {
       ['Slot', 'Slot'], ['FileName', 'File'],
       [function (r) { return Xl.link(r.DriveUrl, 'photo'); }, 'Photo', 'raw'],
       [function (r) { return Xl.link(r.FolderUrl, 'folder'); }, 'Shop folder', 'raw'],
+      /* ── the URL itself, as text, next to the one-click version ──
+         The two columns above are HYPERLINK() formulas: one tap opens the photo, but the address is
+         hidden behind the word "photo", so it cannot be copied into a mail, pasted into another
+         sheet, or read at all if the file is opened anywhere that does not evaluate formulas
+         (Google Sheets import, a CSV export, a phone preview). These say it out loud. */
+      ['DriveUrl', 'Photo link'], ['FolderUrl', 'Shop folder link'],
       ['RecordId', 'Record id']].concat(xlWhen('Ts', 'Taken')) },
     ActivityLog:{ t:'Activity log', cols:[
       ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
