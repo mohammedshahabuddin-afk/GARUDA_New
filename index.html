@@ -2699,7 +2699,9 @@ I18n.D.en = I18n.EN = {
 };
 
 /* ═══════════════ STORE — cache + offline queue ═══════════════ */
-var K = { sess:'g2_session', cache:'g2_cache', queue:'g2_queue', users:'g2_users', pulled:'g2_pulled', lock:'g2_lock', navoff:'g2_navoff' };
+/* ntf is a PREFIX, not a key: the read receipts are stored per employee code (K.ntf + '_' + code),
+   because a phone in the market gets handed around and one rep's dismissals are not another's. */
+var K = { sess:'g2_session', cache:'g2_cache', queue:'g2_queue', users:'g2_users', pulled:'g2_pulled', lock:'g2_lock', navoff:'g2_navoff', ntf:'g2_ntf' };
 var Store = {
   get: function (k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
   set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
@@ -3568,7 +3570,11 @@ var Nav = {
        that is where his Approvals view now lives, and a badge on a tab that no longer exists is a
        badge nobody ever sees. */
     if (v !== (Auth.isAdmin() ? 'appr' : 'home')) return 0;
-    return Nav.counts().appr;
+    var c = Nav.counts();
+    /* a rep's Summary tab carries BOTH the things waiting for him: what came back rejected, and
+       whatever the Notification centre is holding unread. They live one chip apart on the same
+       screen, so two separate red numbers on one tab would only ever confuse. */
+    return Auth.isAdmin() ? c.appr : c.appr + c.notif;
   },
   /* Counted from Appr.list() itself — the SAME list the Approvals screen shows — so the red number can
      never disagree with the queue. It covers PJP, plan changes and TA/DA; orders are excluded because
@@ -3578,7 +3584,7 @@ var Nav = {
   _c:null, _cAt:0,
   counts: function () {
     if (Nav._c && Date.now() - Nav._cAt < 400) return Nav._c;
-    var out = { admin:0, appr:0 };
+    var out = { admin:0, appr:0, notif:0 };
     try {
       var list = Appr.list();
       if (Auth.isAdmin()) {
@@ -3587,6 +3593,7 @@ var Nav = {
         /* a rep is nudged about what needs REDOING, not about waiting */
         out.appr = list.filter(function (o) {
           return o.status === 'rejected' || o.status === 'partial'; }).length;
+        out.notif = Notif.unread();
       }
     } catch (e) {}
     Nav._c = out; Nav._cAt = Date.now();
@@ -3678,7 +3685,10 @@ var Router = {
        Accepted here rather than rewritten at every call site, so the dozen existing buttons that say
        Router.go('appr') / Router.go('trk') still land exactly where the reader expects. An Admin/HOD
        keeps Approvals as a top-level tab: deciding requests IS their job, not a sub-view of a summary. */
-    if ((v === 'trk' || v === 'appr') && !Auth.isAdmin()) { Home.view = v; v = 'home'; }
+    /* the Notification centre is a REP's screen — it is built out of his own stuck work. An
+       Admin/HOD asking for it lands on Approvals, which is already their whole-team feed. */
+    if (v === 'notif' && Auth.isAdmin()) v = 'appr';
+    if ((v === 'trk' || v === 'appr' || v === 'notif') && !Auth.isAdmin()) { Home.view = v; v = 'home'; }
     Flush.all();                                   /* leaving a tab = save it */
     Flush.clear();
     if (!Gate.allowed(v)) { toast(Gate.why(v)); return; }
@@ -5230,7 +5240,8 @@ var Home = {
        "Today's work" used to sit above all of this. It is gone: the hero card already names the ONE
        next action, and a four-line checklist under it repeated that in a weaker form while pushing
        the actual dashboard below the fold. */
-    var TV = [['dash', 'Dashboard'], ['trk', 'Tracker'], ['appr', 'Approvals']];
+    var TV = [['dash', 'Dashboard'], ['trk', 'Tracker'], ['appr', 'Approvals'],
+              ['notif', 'Notification']];
     var SV = [['overview', 'Overview'], ['calls', 'Calls & Stores'],
               ['ord', 'Order v/s Delivery'], ['team', 'Me v/s Team']];
     var top = Home.top(), sub = Home.sub();
@@ -5239,7 +5250,7 @@ var Home = {
     var own = top !== 'dash';
     h += '<div class="card" style="padding:0 12px 12px"><div class="hnav" id="hm_chips">' +
       TV.map(function (x) {
-        var n = x[0] === 'appr' ? Nav.counts().appr : 0;
+        var n = x[0] === 'appr' ? Nav.counts().appr : x[0] === 'notif' ? Nav.counts().notif : 0;
         return '<button class="' + (top === x[0] ? 'on' : '') + '"' +
           (top === x[0] ? ' data-on="1"' : '') + ' onclick="Home.go(\'' + x[0] + '\')">' +
           esc(x[1]) + (n ? '<span class="badge">' + (n > 99 ? '99+' : n) + '</span>' : '') + '</button>';
@@ -5273,9 +5284,10 @@ var Home = {
       '<div class="hint" style="margin-top:8px">' + esc(Home.rangeLbl()) + ' · GARUDA ' +
       esc(monthName(Home.start()).split(' ')[0]) + ' se chalu</div>')) + '</div>';
 
-    /* the two screens that came in from their own tabs — they build themselves whole */
+    /* the three screens that came in from their own tabs — they build themselves whole */
     if (top === 'trk') return h + Trk.html();
     if (top === 'appr') return h + Appr.html();
+    if (top === 'notif') return h + Notif.html();
     if (sub === 'team') return h + Home.teamHtml();
 
     var A = Home.agg();
@@ -5308,7 +5320,7 @@ var Home = {
      own deep-links) keeps working untouched. top() says which primary tab that value belongs to and
      sub() which dashboard cut, defaulting to Overview. 'dash' is accepted as an alias for 'overview'
      because older links and the saved default both use it. */
-  TOPS:{ trk:'trk', appr:'appr' },
+  TOPS:{ trk:'trk', appr:'appr', notif:'notif' },
   SUBS:{ overview:1, calls:1, ord:1, team:1 },
   top: function () { return Home.TOPS[Home.view] || 'dash'; },
   sub: function () {
@@ -10903,26 +10915,20 @@ var Eod = {
    (never a new one) and syncs like everything else, so the sheet always shows the real stage. */
 var Trk = {
   kind:'ord', filter:'open',
-  KINDS:[['ord', 'Orders'], ['ns', 'New outlets'], ['pq', 'POSM'], ['tat', 'TAT'], ['poi', 'PO vs Invoice']],
-  TAB:{ ord:'SecOrders', ns:'NewStores', pq:'PosmRequirement', tat:'SecOrders' },
-  /* an order still stuck at "Order in Process" this many days after it was punched needs an ASM
-     nudge — TAT is a FILTER over the same SecOrders data, not a separate table */
-  TAT_DAYS:7,
-  age: function (o) { return Math.floor((Date.now() - (Appr.ts(o.Ts) || Appr.ts(o.Date))) / 86400000); },
+  /* ── TAT is NOT a tab here any more ──
+     "Orders stuck past their turnaround" is an ALERT, not a follow-up board of its own: it was a
+     filtered view of the very rows already sitting on the Orders tab, so it said the same thing
+     twice. It now lives in the Notification centre (Notif.TAT_DAYS), which is where every other
+     "somebody should chase this" line already goes. */
+  KINDS:[['ord', 'Orders'], ['ns', 'New outlets'], ['pq', 'POSM'], ['poi', 'PO vs Invoice']],
+  TAB:{ ord:'SecOrders', ns:'NewStores', pq:'PosmRequirement' },
   /* one status list per type, in the order the work actually moves */
   ST:{
     ord:['Order in Process', 'Billing Done', 'Cancel Order'],
     ns: ['Pending', 'Sent to ASM', 'Code created', 'First billing done', 'Dropped'],
     pq: ['Pending', 'Sent to ASM', 'Approved by ASM', 'Dispatched', 'Installed', 'Rejected']
   },
-  /* ── TAT borrows the ORDER status list ──
-     TAT is not a type of its own: it is a filtered view of SecOrders, so a row on it moves through
-     exactly the order stages. Trk.ST has no 'tat' key, and card() read Trk.ST[kind] directly — which
-     threw the moment the tab actually had a row. It looked healthy only because a tab with nothing
-     overdue returns the empty state before card() is ever reached. Every SAVE path (setSt, setNote)
-     already special-cased 'tat'; this is the render side catching up. */
-  SKIND:{ tat:'ord' },
-  stList: function (k) { return Trk.ST[Trk.SKIND[k] || k] || Trk.ST.ord; },
+  stList: function (k) { return Trk.ST[k] || Trk.ST.ord; },
   /* finished either way (drives the Open/Done filter) and finished BADLY (drives the red pill) */
   DONE:['Billing Done', 'Cancel Order', 'First billing done', 'Dropped',
         'Installed', 'Rejected'],
@@ -10951,14 +10957,6 @@ var Trk = {
         sub2:(o.Source || '') + (o.DbName ? ' · ' + o.DbName : ''),
         st:Trk.st('ord', o.Status), note:o.Remarks || '', at:o.StatusAt || o.DeliveredAt || '',
         units:num(o.TotUnits), billType:o.BillingType || '', billUnits:o.BilledUnits, billRemark:o.BillingRemark || '' });
-    });
-    if (k === 'tat') DB.mine('SecOrders').filter(function (o) {
-      return String(o.Status) === 'Order in Process' && Trk.age(o) > Trk.TAT_DAYS;
-    }).forEach(function (o) {
-      out.push({ key:String(o.PoNumber), date:toISO(o.Date), title:o.StoreName || '',
-        sub:o.PoNumber + ' · ' + num(o.TotUnits) + ' units · ' + Trk.age(o) + ' din se pending',
-        sub2:(o.DbName ? 'DB: ' + o.DbName : ''),
-        st:'Order in Process', note:o.Remarks || '', at:o.StatusAt || o.Ts || o.Date, units:num(o.TotUnits) });
     });
     if (k === 'ns') DB.mine('NewStores').forEach(function (r) {
       out.push({ key:String(r.StoreId), date:toISO(r.Date), title:r.StoreName || '',
@@ -11004,10 +11002,8 @@ var Trk = {
     if (Trk.kind === 'poi') return Trk.poiHtml();
     var all = Trk.rows();
     var open = all.filter(function (r) { return !Trk.shut(r.st); });
-    var sub = Trk.kind === 'tat'
-      ? Trk.TAT_DAYS + ' din se zyada purane orders jo abhi tak "Order in Process" hain — ASM ko notify karo.'
-      : 'Apne order, naye outlet aur POSM ka status khud update karo. Koi approval nahi — ' +
-        'ASM se baat karke jo hua wahi yahan mark kar do, sheet me chala jayega.';
+    var sub = 'Apne order, naye outlet aur POSM ka status khud update karo. Koi approval nahi — ' +
+      'ASM se baat karke jo hua wahi yahan mark kar do, sheet me chala jayega.';
     var h = UI.head('', 'Tracker', sub);
 
     h += '<div class="kpis k3">' +
@@ -11120,7 +11116,7 @@ var Trk = {
      one is given; the <select> is reverted (via render()) if the rep backs out of the dialog */
   setSt: function (key, s) {
     var k = Trk.kind, now = new Date().toISOString();
-    if ((k === 'ord' || k === 'tat') && s === 'Cancel Order') {
+    if (k === 'ord' && s === 'Cancel Order') {
       return UI.prompt({ icon:'', title:'Order cancel karna hai?', danger:true,
         msg:'Reason likhna zaroori hai — ASM aur HOD dono ko yehi dikhega.',
         label:'Cancel karne ka reason', placeholder:'e.g. shop band tha, stock nahi chahiye…',
@@ -11131,7 +11127,7 @@ var Trk = {
           .then(function () { render(); toast('Order cancel ho gaya'); });
       });
     }
-    if (k === 'ord' || k === 'tat') return Sec.setStatus(key, s);
+    if (k === 'ord') return Sec.setStatus(key, s);
     var tab = Trk.TAB[k], r = DB.find(tab, key);
     if (!r) return toast('Ye row nahi mili — Sync karo');
     DB.save(tab, Object.assign({}, r, { Status:s, StatusAt:now })).then(function () {
@@ -11141,7 +11137,7 @@ var Trk = {
   },
   setNote: function (key, id, el) {
     var k = Trk.kind, box = $('tk_n_' + id), v = box ? box.value : '';
-    if (k === 'ord' || k === 'tat') { Sec.setField(key, 'Remarks', v); return toast('Note save ho gaya'); }
+    if (k === 'ord') { Sec.setField(key, 'Remarks', v); return toast('Note save ho gaya'); }
     var tab = Trk.TAB[k], r = DB.find(tab, key);
     if (!r) return toast('Ye row nahi mili — Sync karo');
     Busy.run('tk_' + id, el, 'Save…', function () {
@@ -11153,35 +11149,520 @@ var Trk = {
   set: function (f) { Trk.filter = f; render(); },
 
   /* ── PO vs Invoice Generated — ordered units against what was actually billed, side by side.
-     Cancel Order is excluded: nothing was ever meant to be invoiced there, so it is not a "gap". */
-  poiHtml: function () {
-    var rows = DB.mine('SecOrders').filter(function (o) {
+     Cancel Order is excluded: nothing was ever meant to be invoiced there, so it is not a "gap".
+     Every block OPENS: a rep who sees "gap 8" immediately wants to know which SKUs, which
+     distributor and what reason was recorded — poiDetail() puts all of it under the row rather
+     than sending him to another tab to look the same order up again. */
+  poiOpen:{},
+  poiToggle: function (po) { Trk.poiOpen[po] = !Trk.poiOpen[po]; render(); },
+  poiRows: function () {
+    return DB.mine('SecOrders').filter(function (o) {
       return num(o.TotUnits) > 0 && o.Status !== 'Cancel Order';
     }).map(function (o) {
       var billed = o.BillingType ? num(o.BilledUnits) : (o.Status === 'Billing Done' ? num(o.TotUnits) : 0);
-      return { po:o.PoNumber, store:o.StoreName, date:o.Date, poUnits:num(o.TotUnits), billed:billed,
-        status:o.Status, type:o.BillingType || '' };
+      return { po:String(o.PoNumber), store:o.StoreName, date:o.Date, poUnits:num(o.TotUnits), billed:billed,
+        status:o.Status, type:o.BillingType || '', row:o };
     }).sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
-    var h = UI.head('', 'Tracker', 'PO me kitna order tha, uske against kitna invoice bana — dono side by side.');
-    var totPo = 0, totBill = 0;
-    rows.forEach(function (r) { totPo += r.poUnits; totBill += r.billed; });
+  },
+  poiHtml: function () {
+    var rows = Trk.poiRows();
+    var h = UI.head('', 'Tracker', 'PO me kitna order tha, uske against kitna invoice bana — dono side by side. ' +
+      'Kisi bhi order par tap karo, poori detail khul jayegi.');
+    var totPo = 0, totBill = 0, gaps = 0;
+    rows.forEach(function (r) { totPo += r.poUnits; totBill += r.billed; if (r.poUnits - r.billed > 0) gaps++; });
     h += '<div class="kpis k3">' + UI.kpi(totPo, 'PO units', 'b') + UI.kpi(totBill, 'Invoiced units', 'g') +
       UI.kpi(totPo ? Math.round(totBill / totPo * 100) + '%' : '—', 'Fill rate', '') + '</div>';
     h += Trk.navHtml() + '</div>';
     if (!rows.length) return h + '<div class="card">' + UI.empty('', 'Abhi koi order nahi') + '</div>';
-    h += '<div class="sec-title">' + rows.length + ' order</div><div class="card"><div class="pane"><table>' +
-      '<thead><tr><th>Store / PO</th><th class="num">PO units</th><th class="num">Invoiced</th><th class="num">Gap</th></tr></thead><tbody>' +
-      rows.map(function (r) {
-        var gap = r.poUnits - r.billed;
-        return '<tr><td><b class="nm">' + esc(r.store) + '</b><div class="hint">' + esc(r.po) + ' · ' + dmy(r.date) +
-          (r.type ? ' · ' + esc(r.type) : '') + '</div></td>' +
-          '<td class="num">' + r.poUnits + '</td>' +
-          '<td class="num">' + r.billed + '</td>' +
-          '<td class="num">' + (gap > 0 ? '<span class="pill p-warn">' + gap + '</span>' :
-            (r.status === 'Billing Done' ? '<span class="pill p-ok">0</span>' : '—')) + '</td></tr>';
-      }).join('') + '</tbody></table></div></div>';
+    h += '<div class="sec-title">' + rows.length + ' order' +
+      (gaps ? ' · ' + gaps + ' me gap hai' : '') + '</div>';
+    h += rows.map(Trk.poiCard).join('');
+    return h;
+  },
+  /* one order = one tappable block. Closed it is the same four numbers the table carried; open it is
+     everything the sheet knows about that PO. */
+  poiCard: function (r) {
+    var gap = r.poUnits - r.billed, op = !!Trk.poiOpen[r.po];
+    /* an order nobody has billed YET has no gap — a gap is what an invoice left behind, and pinning
+       "Gap 20" on an order punched this morning reads as a failure that has not happened */
+    var billedAny = r.billed > 0 || r.status === 'Billing Done';
+    var pill = !billedAny ? '<span class="pill p-grey">Invoice baaki</span>'
+      : gap > 0 ? '<span class="pill p-warn">Gap ' + gap + '</span>'
+      : '<span class="pill p-ok">Poora invoice</span>';
+    var h = '<div class="card ap k-ord' + (op ? ' op' : '') + '" onclick="Trk.poiToggle(\'' +
+        Appr.q(r.po) + '\')">' +
+      '<div class="ap-h"><div class="m">' +
+        '<div class="t">' + esc(r.store || '—') + '</div>' +
+        '<div class="s">' + esc(r.po) + ' · ' + dmy(r.date) +
+          (r.type ? ' · ' + esc(r.type) : '') + '</div>' +
+        '<div class="sum">PO ' + r.poUnits + ' units · invoice ' + r.billed + ' units' +
+          (r.poUnits ? ' · ' + Math.round(r.billed / r.poUnits * 100) + '%' : '') + '</div>' +
+      '</div>' + pill + '<span class="ap-x">' + (op ? '▴' : '▾') + '</span></div>';
+    if (op) h += '<div onclick="event.stopPropagation()">' + Trk.poiDetail(r) + '</div>';
+    return h + '</div>';
+  },
+  /* the whole record of one PO: the order as punched, the invoice as recorded, and the SKU lines.
+     Read straight from the SecOrders row, so it can never drift from what the sheet holds. */
+  poiDetail: function (r) {
+    var o = r.row, gap = r.poUnits - r.billed;
+    var lines = [];
+    try { lines = JSON.parse(o.LinesJson || '[]') || []; } catch (e) {}
+    if (!lines.length) lines = DB.rows('SecOrderLines').filter(function (l) {
+      return String(l.PoNumber) === r.po; });
+
+    var h = '<div class="sec-title" style="margin-top:12px">Order — jaisa punch hua</div>' +
+      '<table class="ap-t">' +
+      '<tr><td>PO number</td><td><b>' + esc(r.po) + '</b></td></tr>' +
+      '<tr><td>Store</td><td><b>' + esc(o.StoreName || '—') + '</b></td></tr>' +
+      '<tr><td>Store code / city</td><td><b>' + esc(o.CompanyCode || '—') + ' · ' + esc(o.City || '—') + '</b></td></tr>' +
+      '<tr><td>Distributor</td><td><b>' + esc(o.DbName || '—') + '</b></td></tr>' +
+      '<tr><td>Order date</td><td><b>' + dmy(o.Date) + '</b></td></tr>' +
+      '<tr><td>Visit type</td><td><b>' + esc(o.Source || '—') + '</b></td></tr>' +
+      '<tr><td>SKU / units</td><td><b>' + num(o.TotSku) + ' SKU · ' + r.poUnits + ' units</b></td></tr>' +
+      '<tr><td>MRP value</td><td><b>' + inr(o.TotValue) + '</b></td></tr>' +
+      '<tr><td>NSV</td><td><b>' + lakh(o.TotNsvLakh) + ' L</b></td></tr>' +
+      (o.Remarks ? '<tr><td>Remarks</td><td><b>' + esc(o.Remarks) + '</b></td></tr>' : '') +
+      '</table>';
+
+    /* the invoice half — only ever meaningful once billing was actually marked */
+    h += '<div class="sec-title" style="margin-top:12px">Invoice — jo actually bana</div>';
+    if (!r.type && r.status !== 'Billing Done') {
+      h += '<div class="banner b"><span></span><div><b>Invoice abhi nahi bana</b><br>' +
+        '<span style="font-weight:500">Order abhi "' + esc(o.Status || '—') + '" par hai. Orders tab me ' +
+        'billing mark karoge to poori detail yahan aa jayegi.</span></div></div>';
+    } else {
+      var pct = r.poUnits ? Math.round(r.billed / r.poUnits * 100) : 0;
+      var unitVal = r.poUnits ? num(o.TotValue) / r.poUnits : 0;
+      h += '<table class="ap-t">' +
+        '<tr><td>Billing type</td><td><b>' + esc(r.type || 'Full') + '</b></td></tr>' +
+        '<tr><td>Order status</td><td><b>' + esc(o.Status || '—') + '</b></td></tr>' +
+        '<tr><td>PO units</td><td><b>' + r.poUnits + '</b></td></tr>' +
+        '<tr><td>Invoiced units</td><td><b>' + r.billed + '</b></td></tr>' +
+        '<tr><td>Gap</td><td><b>' + (gap > 0 ? gap + ' units short' : 'Koi gap nahi') + '</b></td></tr>' +
+        '<tr><td>Fill rate</td><td><b>' + pct + '%</b></td></tr>' +
+        '<tr><td>Invoice value (approx)</td><td><b>' + inr(Math.round(unitVal * r.billed)) +
+          '</b><div class="hint">PO ke average unit rate se nikala hua</div></td></tr>' +
+        (gap > 0 ? '<tr><td>Bina invoice ka value</td><td><b>' + inr(Math.round(unitVal * gap)) + '</b></td></tr>' : '') +
+        (o.BillingRemark ? '<tr><td>Partial ka reason</td><td><b>' + esc(o.BillingRemark) + '</b></td></tr>' : '') +
+        '<tr><td>Billing mark hua</td><td><b>' + (Appr.when(o.StatusAt || o.DeliveredAt) || '—') + '</b></td></tr>' +
+        '</table>';
+    }
+
+    if (!lines.length) return h + '<div class="hint" style="margin-top:8px">Is order ki SKU lines abhi ' +
+      'local me nahi hain — Sync karo.</div>';
+
+    /* per-SKU, with the same proportional split applied so a partial invoice reads line by line too */
+    var ratio = r.poUnits ? r.billed / r.poUnits : 0;
+    var u = 0, v = 0, nsv = 0;
+    lines.forEach(function (l) { u += num(l.Units); v += num(l.Value); nsv += num(l.NsvLakh); });
+    h += '<div class="sec-title" style="margin-top:12px">' + lines.length + ' SKU</div>' +
+      '<div class="tw"><table><thead><tr><th>SKU</th><th class="num">MRP</th>' +
+      '<th class="num">PO qty</th><th class="num">Invoiced</th><th class="num">MRP value</th>' +
+      '<th class="num">NSV ₹L</th></tr></thead><tbody>' +
+      lines.map(function (l) {
+        var q = num(l.Units), b = Math.round(q * ratio);
+        return '<tr><td><b class="nm">' + esc(l.SkuName || l.Sku || '—') + '</b>' +
+          '<div class="hint">' + esc(l.Brand || '') + (l.Category ? ' · ' + esc(l.Category) : '') +
+          (l.MslStatus ? ' · ' + esc(l.MslStatus) : '') + '</div></td>' +
+          '<td class="num">' + inr(l.Mrp) + '</td>' +
+          '<td class="num">' + q + '</td>' +
+          '<td class="num">' + b + '</td>' +
+          '<td class="num">' + inr(l.Value) + '</td>' +
+          '<td class="num">' + lakh(l.NsvLakh) + '</td></tr>'; }).join('') +
+      '<tr class="tot"><td><b>TOTAL</b></td><td></td><td class="num"><b>' + u + '</b></td>' +
+      '<td class="num"><b>' + r.billed + '</b></td><td class="num"><b>' + inr(v) + '</b></td>' +
+      '<td class="num"><b>' + lakh(nsv) + '</b></td></tr></tbody></table></div>';
+    if (ratio > 0 && ratio < 1) h += '<div class="hint" style="margin-top:6px">Partial billing me ' +
+      'per-SKU invoiced qty proportion se nikali gayi hai — exact SKU-wise invoice distributor ke paas hai.</div>';
+    h += '<div class="btns"><button class="btn ghost sm" onclick="Trk.go(\'ord\')">Orders tab me kholo</button></div>';
     return h;
   }
+};
+
+/* ═══════════════ NOTIFICATION CENTRE — everything that is asking for attention ═══════════════
+   Three screens already answer "what did I ask for and what came back" (Approvals), "what am I
+   chasing" (Tracker) and "what is due today" (the hero card). None of them ever SAYS anything: they
+   all wait to be opened. So the things with nobody to raise them — an order sitting at "Order in
+   Process" for ten days, a POSM requirement the ASM never moved, a new outlet with no code, a PO
+   half invoiced, the PJP window about to shut — were invisible until somebody went looking.
+
+   This is that missing voice. Every line is DERIVED from data the app already holds, so there is no
+   new sheet, no push service and nothing to keep in sync: open the tab and the alerts are recomputed
+   from SecOrders / NewStores / PosmRequirement / PjpDraft / Deviation / TaDa exactly as they stand.
+   The only stored state is which ids the reader has already seen, in localStorage per employee — a
+   read receipt is personal, and it must survive a sync that rewrites every row underneath it.
+
+   HOD-pushed Notify rows are folded in as well, and marking one read here closes it on the sheet
+   too, so this screen and the Approvals feed can never disagree about what has been seen. */
+var Notif = {
+  kindF:'all', filter:'unread', open:{},
+
+  /* the ages at which "still open" becomes "somebody should chase this" */
+  TAT_DAYS:7,        /* an order still at "Order in Process" this long needs an ASM nudge */
+  NS_DAYS:7,         /* a new outlet with no code after a week */
+  PQ_DAYS:7,         /* a POSM requirement the ASM has not moved */
+  DEV_DAYS:1,        /* a plan change is a SAME-DAY decision — a day old is already late */
+  PJP_DAYS:2,
+  FRESH_DAYS:30,     /* a decision older than this is history, not news */
+
+  KINDS:[['TAT', 'TAT — order atka hai'], ['Billing', 'Billing / invoice'],
+         ['New outlet', 'Naya outlet'], ['POSM', 'POSM'], ['PJP', 'PJP'],
+         ['Plan change', 'Plan change'], ['TA/DA', 'TA/DA'], ['Update', 'HOD update']],
+  KCLS:{ 'TAT':'k-ord', 'Billing':'k-ord', 'New outlet':'k-plan', 'POSM':'k-plan',
+         'PJP':'k-pjp', 'Plan change':'k-plan', 'TA/DA':'k-tada', 'Update':'k-pjp' },
+  kcls: function (k) { return Notif.KCLS[k] || 'k-pjp'; },
+  /* how loud, not what kind — red is "you are late", amber is "look at this", the rest is news */
+  SEV:{ bad:['Zaroori', 'p-bad'], warn:['Dekho', 'p-warn'], ok:['Ho gaya', 'p-ok'],
+        info:['Update', 'p-blue'] },
+  /* 1-based on purpose: a 0 here would be swallowed by the `|| fallback` in the sort below, and the
+     loudest alerts would quietly sort to the bottom of the list */
+  RANK:{ bad:1, warn:2, info:3, ok:4 },
+  /* only red and amber are WORK — an approval that came through is news, not a to-do */
+  todo: function (o) { return !o.read && (o.sev === 'bad' || o.sev === 'warn'); },
+
+  /* ── read receipts, per employee, on this device ──
+     Keyed by employee code because a shared phone in a market is normal, and one rep dismissing his
+     own alerts must not silence the next person who logs in. */
+  rkey: function () { return K.ntf + '_' + ((DB.me && DB.me.code) || 'x'); },
+  read: function () { return Store.get(Notif.rkey(), {}) || {}; },
+  days: function (t) { return t ? Math.floor((Date.now() - t) / 86400000) : 0; },
+  fresh: function (t) { return !!t && Notif.days(t) <= Notif.FRESH_DAYS; },
+
+  /* ── the feed ──
+     One pass per source, each pushing the SAME shape: id (stable, so a read receipt sticks), kind,
+     severity, one-line title, one-line summary, the rows behind it, and where to go about it. */
+  list: function () {
+    var rd = Notif.read(), out = [];
+    var add = function (o) { o.read = !!rd[o.id]; o.t = o.t || 0; out.push(o); };
+
+    /* ══ 1. TAT — orders that never turned into an invoice ══ */
+    DB.mine('SecOrders').forEach(function (o) {
+      if (String(o.Status || '') !== 'Order in Process') return;
+      var t = Appr.ts(o.Ts) || Appr.ts(o.Date), d = Notif.days(t);
+      if (d <= Notif.TAT_DAYS) return;
+      add({ id:'tat_' + Appr.jid(o.PoNumber), kind:'TAT', sev:d > Notif.TAT_DAYS * 2 ? 'bad' : 'warn', t:t,
+        title:(o.StoreName || 'Order') + ' — ' + d + ' din se pending',
+        sum:'PO abhi tak "Order in Process" hai — ' + num(o.TotUnits) + ' units · ' + inr(o.TotValue) +
+          '. ASM ko nudge karo.',
+        rows:[['PO', String(o.PoNumber || '—')], ['Store', o.StoreName || '—'],
+              ['Distributor', o.DbName || '—'], ['Order date', dmy(o.Date)],
+              ['Kitne din se', d + ' din'],
+              ['SKU / units', num(o.TotSku) + ' / ' + num(o.TotUnits)],
+              ['MRP value', inr(o.TotValue)],
+              ['Aakhri note', o.Remarks || '—']],
+        go:['trk', 'ord', 'Tracker me status update karo'] });
+    });
+
+    /* ══ 2. BILLING — the PO vs invoice gap, and the invoice that did land ══ */
+    DB.mine('SecOrders').forEach(function (o) {
+      if (String(o.Status || '') === 'Cancel Order' || !num(o.TotUnits)) return;
+      var po = num(o.TotUnits);
+      var billed = o.BillingType ? num(o.BilledUnits) : (o.Status === 'Billing Done' ? po : 0);
+      var t = Appr.ts(o.StatusAt) || Appr.ts(o.DeliveredAt) || Appr.ts(o.Ts) || Appr.ts(o.Date);
+      if (String(o.BillingType || '') === 'Partial' && po - billed > 0) {
+        add({ id:'gap_' + Appr.jid(o.PoNumber), kind:'Billing', sev:'warn', t:t,
+          title:(o.StoreName || 'Order') + ' — ' + (po - billed) + ' units invoice nahi hue',
+          sum:'Partial billing: ' + billed + ' / ' + po + ' units bane' +
+            (o.BillingRemark ? ' — ' + o.BillingRemark : ''),
+          rows:[['PO', String(o.PoNumber || '—')], ['Store', o.StoreName || '—'],
+                ['Distributor', o.DbName || '—'],
+                ['PO units', String(po)], ['Invoiced units', String(billed)],
+                ['Gap', (po - billed) + ' units'],
+                ['Fill rate', Math.round(billed / po * 100) + '%'],
+                ['Reason', o.BillingRemark || '—']],
+          go:['trk', 'poi', 'PO vs Invoice me poori detail dekho'] });
+      } else if (String(o.Status || '') === 'Billing Done' && Notif.fresh(t)) {
+        add({ id:'bil_' + Appr.jid(o.PoNumber), kind:'Billing', sev:'ok', t:t,
+          title:(o.StoreName || 'Order') + ' — invoice ban gaya',
+          sum:'Poora order invoice ho gaya — ' + billed + ' units · ' + inr(o.TotValue),
+          rows:[['PO', String(o.PoNumber || '—')], ['Store', o.StoreName || '—'],
+                ['Distributor', o.DbName || '—'], ['Order date', dmy(o.Date)],
+                ['Invoiced units', String(billed)], ['MRP value', inr(o.TotValue)],
+                ['Billing type', o.BillingType || 'Full']],
+          go:['trk', 'poi', 'PO vs Invoice me poori detail dekho'] });
+      }
+    });
+
+    /* ══ 3. NEW OUTLETS the ASM never coded ══ */
+    DB.mine('NewStores').forEach(function (r) {
+      var st = Trk.st('ns', r.Status);
+      if (Trk.shut(st)) return;
+      var t = Appr.ts(r.Ts) || Appr.ts(r.Date), d = Notif.days(t);
+      if (d <= Notif.NS_DAYS) return;
+      add({ id:'ns_' + Appr.jid(r.StoreId), kind:'New outlet', sev:d > Notif.NS_DAYS * 2 ? 'bad' : 'warn', t:t,
+        title:(r.StoreName || 'Naya outlet') + ' — ' + d + ' din se ' + st,
+        sum:'Naye outlet ka code abhi tak nahi bana. ASM se follow-up karo.',
+        rows:[['Store', r.StoreName || '—'], ['Store id', String(r.StoreId || '—')],
+              ['Town / beat', (r.Town || '—') + (r.Beat ? ' / ' + r.Beat : '')],
+              ['Distributor', r.DbName || '—'], ['Kholne ki date', dmy(r.Date)],
+              ['Kitne din se', d + ' din'], ['Status', st],
+              ['Aakhri note', r.StatusReason || '—']],
+        go:['trk', 'ns', 'Tracker me status update karo'] });
+    });
+
+    /* ══ 4. POSM requirements nobody moved ══ */
+    DB.mine('PosmRequirement').forEach(function (r) {
+      var st = Trk.st('pq', r.Status);
+      if (Trk.shut(st)) return;
+      var t = Appr.ts(r.Ts) || Appr.ts(r.Date), d = Notif.days(t);
+      if (d <= Notif.PQ_DAYS) return;
+      add({ id:'pq_' + Appr.jid(r.Id), kind:'POSM', sev:d > Notif.PQ_DAYS * 2 ? 'bad' : 'warn', t:t,
+        title:(r.StoreName || 'POSM') + ' — ' + d + ' din se ' + st,
+        sum:(r.Element || 'POSM') + ' ka requirement abhi tak ' + st + ' hai.',
+        rows:[['Store', r.StoreName || '—'], ['Element', r.Element || '—'],
+              ['Qty', num(r.Qty) ? String(num(r.Qty)) : '—'], ['City', r.City || '—'],
+              ['Kab tak chahiye', r.NeededBy ? dmy(r.NeededBy) : '—'],
+              ['Maanga', dmy(r.Date)], ['Kitne din se', d + ' din'], ['Status', st],
+              ['Aakhri note', r.StatusReason || '—']],
+        go:['trk', 'pq', 'Tracker me status update karo'] });
+    });
+
+    /* ══ 5. PJP — the window, and whatever the HOD did with the plan ══ */
+    try {
+      if (!Auth.isAdmin() && Pjp.winOpen() && !Pjp.approvedFor(Pjp.winMonth())) {
+        var wm = Pjp.winMonth();
+        add({ id:'pjpwin_' + wm, kind:'PJP', sev:'bad', t:Date.now(),
+          title:'PJP window khula hai — ' + (monthName(wm) || wm),
+          sum:'1 tareekh tak plan bhejna hai. Approve nahi hua to Field tab band rahega.',
+          rows:[['Month', monthName(wm) || wm], ['Window', '27 se 1 tareekh tak'],
+                ['Abhi ka status', 'Approve nahi hua']],
+          go:['pjp', '', 'PJP tab kholo'] });
+      }
+    } catch (e) {}
+    DB.mine('PjpDraft').forEach(function (d) {
+      var st = Appr.norm(d.Status), t = Appr.ts(d.HodAt) || Appr.ts(d.UpdatedAt) || Appr.ts(d.SubmittedAt);
+      var sent = Appr.ts(d.SubmittedAt);
+      if (st === 'rejected' || st === 'partial') {
+        var nrej = (Admin.rejDays(d) || []).length;
+        add({ id:'pjpd_' + Appr.jid(d.Key) + '_' + (t || 0), kind:'PJP', sev:'bad', t:t,
+          title:'PJP ' + (st === 'partial' ? 'me kuch din reject hue' : 'reject hua') +
+            ' — ' + (monthName(d.Month) || d.Month || ''),
+          sum:(st === 'partial' ? nrej + ' din theek karke dobara bhejo' : 'Dusra plan banake bhejo') +
+            (d.RejectReason ? ' — ' + d.RejectReason : ''),
+          rows:[['Month', monthName(d.Month) || d.Month || '—'],
+                ['Kisne', (d.HodBy || '—') + (d.HodRole ? ' (' + d.HodRole + ')' : '')],
+                ['Kab', Appr.when(t) || '—'],
+                ['Reason', d.RejectReason || '—'],
+                ['Reject hue din', nrej ? String(nrej) : '—']],
+          go:['pjp', '', 'PJP tab me theek karo'] });
+      } else if (st === 'approved' && Notif.fresh(t)) {
+        add({ id:'pjpa_' + Appr.jid(d.Key) + '_' + (t || 0), kind:'PJP', sev:'ok', t:t,
+          title:'PJP approve ho gaya — ' + (monthName(d.Month) || d.Month || ''),
+          sum:'Plan Master_PJP me chala gaya — Plan tab me roz dikhega.',
+          rows:[['Month', monthName(d.Month) || d.Month || '—'],
+                ['Kisne approve kiya', (d.HodBy || '—') + (d.HodRole ? ' (' + d.HodRole + ')' : '')],
+                ['Kab', Appr.when(t) || '—'],
+                ['Field din bhare', Appr.cover(d.Coverage) || '—']],
+          go:['plan', '', 'Plan tab kholo'] });
+      } else if (st === 'pending' && Notif.days(sent) > Notif.PJP_DAYS) {
+        add({ id:'pjpw_' + Appr.jid(d.Key), kind:'PJP', sev:'warn', t:sent,
+          title:'PJP ' + Notif.days(sent) + ' din se HOD ke paas hai',
+          sum:(monthName(d.Month) || d.Month || '') + ' ka plan abhi tak decide nahi hua — HOD ko yaad dilao.',
+          rows:[['Month', monthName(d.Month) || d.Month || '—'],
+                ['Bheja', Appr.when(sent) || '—'],
+                ['Pending', Appr.gap(Date.now() - sent)]],
+          go:['appr', '', 'Approvals me dekho'] });
+      }
+    });
+
+    /* ══ 6. PLAN CHANGES — a same-day decision, so a day of silence is already a problem ══ */
+    DB.mine('Deviation').forEach(function (d) {
+      var st = Appr.norm(d.Status), t = Appr.ts(d.HodAt) || Appr.ts(d.UpdatedAt) || Appr.ts(d.Ts);
+      var sent = Appr.ts(d.Ts) || Appr.ts(d.Date);
+      var want = (d.NewTown || '—') + ' / ' + (d.NewBeat || '—');
+      if (st === 'pending' && Notif.days(sent) >= Notif.DEV_DAYS) {
+        add({ id:'devw_' + Appr.jid(d.Id), kind:'Plan change', sev:'warn', t:sent,
+          title:'Plan change ' + dmy(d.Date) + ' — abhi tak decide nahi hua',
+          sum:'Maanga tha ' + want + '. Jab tak approve nahi hota, PJP wala beat hi chalega.',
+          rows:[['Date', dmy(d.Date)], ['PJP me tha', (d.PlannedTown || '—') + ' / ' + (d.PlannedBeat || '—')],
+                ['Aap ne maanga', want], ['Reason', d.Reason || '—'],
+                ['Bheja', Appr.when(sent) || '—'], ['Pending', Appr.gap(Date.now() - sent)]],
+          go:['appr', '', 'Approvals me dekho'] });
+      } else if ((st === 'approved' || st === 'rejected') && Notif.fresh(t)) {
+        add({ id:'dev_' + Appr.jid(d.Id) + '_' + (t || 0), kind:'Plan change',
+          sev:st === 'approved' ? 'ok' : 'bad', t:t,
+          title:'Plan change ' + dmy(d.Date) + ' — ' + (st === 'approved' ? 'approve' : 'reject') + ' ho gaya',
+          sum:st === 'approved' ? want + ' par kaam kar sakte ho.'
+            : 'Ye beat dobara request nahi kar sakte — koi dusra beat chuno.' +
+              (d.HodRemarks ? ' ' + d.HodRemarks : ''),
+          rows:[['Date', dmy(d.Date)], ['Aap ne maanga', want],
+                ['Kisne', (d.HodBy || '—') + (d.HodRole ? ' (' + d.HodRole + ')' : '')],
+                ['Kab', Appr.when(t) || '—'], ['HOD ka message', d.HodRemarks || '—']],
+          go:['plan', '', 'Plan tab kholo'] });
+      }
+    });
+
+    /* ══ 7. TA/DA — a deduction is the rep's move, an approval is news ══ */
+    DB.mine('TaDa').forEach(function (r) {
+      var st = Appr.norm(r.Status), t = Appr.ts(r.HodAt) || Appr.ts(r.UpdatedAt);
+      var mo = monthName(r.Month) || r.Month || '';
+      if (st === 'partial' || st === 'rejected') {
+        add({ id:'tada_' + Appr.jid(r.Id) + '_' + (t || 0), kind:'TA/DA', sev:'bad', t:t,
+          title:'TA/DA ' + mo + ' — ' + (st === 'rejected' ? 'reject hua' : 'deduction ke saath wapas aaya'),
+          sum:'Claim ' + inr(r.Total) + (num(r.DeductTotal) ? ' · deduction ' + inr(r.DeductTotal) : '') +
+            ' — theek karke dobara bhejo.',
+          rows:[['Month', mo || '—'], ['Claim', inr(r.Total)],
+                ['Deduction', num(r.DeductTotal) ? '− ' + inr(r.DeductTotal) : '—'],
+                ['Net payable', inr(r.NetTotal || (num(r.Total) - num(r.DeductTotal)))],
+                ['Kisne', (r.HodBy || '—') + (r.HodRole ? ' (' + r.HodRole + ')' : '')],
+                ['Kab', Appr.when(t) || '—'], ['HOD ka message', r.HodRemarks || '—']],
+          go:['tada', '', 'TA/DA tab me theek karo'] });
+      } else if (st === 'approved' && Notif.fresh(t)) {
+        add({ id:'tadaa_' + Appr.jid(r.Id) + '_' + (t || 0), kind:'TA/DA', sev:'ok', t:t,
+          title:'TA/DA ' + mo + ' approve ho gaya',
+          sum:'Net payable ' + inr(r.NetTotal || r.Total) + '.',
+          rows:[['Month', mo || '—'], ['Claim', inr(r.Total)],
+                ['Deduction', num(r.DeductTotal) ? '− ' + inr(r.DeductTotal) : '—'],
+                ['Net payable', inr(r.NetTotal || (num(r.Total) - num(r.DeductTotal)))],
+                ['Kisne approve kiya', (r.HodBy || '—') + (r.HodRole ? ' (' + r.HodRole + ')' : '')],
+                ['Kab', Appr.when(t) || '—']],
+          go:['appr', '', 'Approvals me dekho'] });
+      }
+    });
+
+    /* ══ 8. whatever the HOD pushed by hand ══ */
+    DB.mine('Notify').forEach(function (n) {
+      var t = Appr.ts(n.Ts), shut = String(n.Status || '').toLowerCase() === 'closed';
+      add({ id:'nt_' + Appr.jid(n.Id), kind:'Update', sev:shut ? 'info' : 'warn', t:t,
+        title:n.Title || 'Update',
+        sum:String(n.Detail || '').split('\n')[0] || 'HOD ne kuch update kiya hai.',
+        rows:[['Kya badla', n.Detail || '—'], ['Kisne', n.By || '—'], ['Kab', Appr.when(t) || '—']],
+        sheetKey:n.Id, sheetRead:shut,
+        go:['appr', '', 'Approvals me dekho'] });
+    });
+
+    /* a Notify row already closed on the sheet is read everywhere, even on a fresh device */
+    out.forEach(function (o) { if (o.sheetRead) o.read = true; });
+    /* unread first, then loudest, then newest — the order somebody scans a notification list in */
+    return out.sort(function (a, b) {
+      return (a.read ? 1 : 0) - (b.read ? 1 : 0) ||
+             (Notif.RANK[a.sev] || 9) - (Notif.RANK[b.sev] || 9) ||
+             (b.t || 0) - (a.t || 0);
+    });
+  },
+
+  /* the one number the nav badge and the chip both use */
+  unread: function () {
+    try { return Notif.list().filter(function (o) { return !o.read; }).length; } catch (e) { return 0; }
+  },
+
+  html: function () {
+    var all = Notif.list();
+    var h = UI.head('', 'Notifications',
+      'Har wo cheez jo aapka dhyaan maang rahi hai — atke hue order, POSM, naye outlet, ' +
+      'PJP ka window aur HOD ke update. Kisi bhi card par tap karke detail dekho.');
+
+    var un = all.filter(function (o) { return !o.read; }).length;
+    var todo = all.filter(Notif.todo).length;
+    h += '<div class="kpis k3">' +
+      UI.kpi(un, 'Naya', un ? 'r' : 'g') +
+      UI.kpi(todo, 'Action chahiye', todo ? 'r' : 'g') +
+      UI.kpi(all.length, 'Total', 'b') + '</div>';
+
+    /* the SAME two dropdowns Approvals uses — type on the left, read state on the right, and the
+       count against an option is what still needs doing, never a total */
+    var kinds = [['all', 'Sab', todo]];
+    Notif.KINDS.forEach(function (k) {
+      var g = all.filter(function (o) { return o.kind === k[0]; });
+      if (!g.length) return;
+      kinds.push([k[0], k[1], g.filter(Notif.todo).length]);
+    });
+    var byKind = all.filter(function (o) { return Notif.kindF === 'all' || o.kind === Notif.kindF; });
+    var nUn = byKind.filter(function (o) { return !o.read; }).length;
+    var states = [['unread', 'Naya', nUn], ['read', 'Dekh liya', 0], ['all', 'Sab', 0]];
+    h += '<div class="card" style="padding:10px"><div class="row two">' +
+      '<div><label class="f">Type</label><select class="in" onchange="Notif.setKind(this.value)">' +
+        kinds.map(function (c) {
+          return '<option value="' + esc(c[0]) + '"' + (Notif.kindF === c[0] ? ' selected' : '') + '>' +
+            esc(c[1]) + (c[2] ? ' (' + (c[2] > 99 ? '99+' : c[2]) + ')' : '') + '</option>'; }).join('') +
+      '</select></div>' +
+      '<div><label class="f">Status</label><select class="in" onchange="Notif.set(this.value)">' +
+        states.map(function (c) {
+          return '<option value="' + esc(c[0]) + '"' + (Notif.filter === c[0] ? ' selected' : '') + '>' +
+            esc(c[1]) + (c[2] ? ' (' + (c[2] > 99 ? '99+' : c[2]) + ')' : '') + '</option>'; }).join('') +
+      '</select></div></div>' +
+      (un ? '<div class="btns"><button class="btn ghost sm" onclick="Notif.markAll()">Sab dekh liya</button></div>' : '') +
+      '</div>';
+
+    var show = byKind.filter(function (o) {
+      return Notif.filter === 'all' || (Notif.filter === 'unread' ? !o.read : o.read); });
+    if (!show.length) return h + '<div class="card">' +
+      UI.empty('', all.length ? 'Is filter me kuch nahi hai'
+        : 'Sab kuch theek hai — koi notification nahi.') + '</div>';
+
+    h += '<div class="sec-title">' + show.length + ' notification' + (show.length > 1 ? 's' : '') + '</div>';
+    h += show.slice(0, 80).map(Notif.card).join('');
+    if (show.length > 80) h += '<div class="hint">Sirf pehle 80 dikha rahe hain — filter use karo.</div>';
+    h += '<div class="card"><div class="btns">' +
+      '<button class="btn ghost" onclick="Sync.now(true,this)">Sync</button></div></div>';
+    return h;
+  },
+
+  card: function (o) {
+    var op = !!Notif.open[o.id], sev = Notif.SEV[o.sev] || Notif.SEV.info;
+    var h = '<div class="card ap ' + Notif.kcls(o.kind) + (op ? ' op' : '') +
+        '" onclick="Notif.toggle(\'' + Appr.q(o.id) + '\')">' +
+      '<div class="ap-h"><div class="m">' +
+        /* a notification's TITLE is the message — it wraps. Approvals can clip its titles because
+           "PJP — Aug 2026" says everything; "Sharma Store — 20 din se pending" clipped to an
+           ellipsis says nothing at all. */
+        '<div class="t" style="white-space:normal;overflow:visible;line-height:1.35">' +
+          (o.read ? '' : '<span class="pill p-open" style="margin-right:6px">Naya</span>') +
+          esc(o.title) + '</div>' +
+        '<div class="s"><span class="pill k-pill ' + Notif.kcls(o.kind) + '">' + esc(o.kind) + '</span>' +
+          (o.t ? ' · ' + esc(Appr.when(o.t)) : '') + '</div>' +
+        (o.sum ? '<div class="sum">' + esc(o.sum) + '</div>' : '') +
+      '</div><span class="pill ' + sev[1] + '">' + sev[0] + '</span>' +
+      '<span class="ap-x">' + (op ? '▴' : '▾') + '</span></div>';
+    if (op) {
+      h += '<table class="ap-t">' + o.rows.map(function (r) {
+        return '<tr><td>' + esc(r[0]) + '</td><td><b>' + esc(r[1]) + '</b></td></tr>'; }).join('') + '</table>';
+      h += '<div class="btns" onclick="event.stopPropagation()">' +
+        (o.go ? '<button class="btn" onclick="Notif.jump(\'' + o.go[0] + '\',\'' + (o.go[1] || '') + '\')">' +
+          esc(o.go[2] || 'Kholo') + '</button>' : '') +
+        '<button class="btn ghost" onclick="Notif.see(\'' + Appr.q(o.id) + '\',' + (o.read ? '0' : '1') + ')">' +
+          (o.read ? 'Dobara naya karo' : 'Dekh liya') + '</button></div>';
+    }
+    return h + '</div>';
+  },
+
+  /* opening a notification IS reading it — nobody taps a card and then hunts for a "mark read" button */
+  toggle: function (id) {
+    Notif.open[id] = !Notif.open[id];
+    if (Notif.open[id]) Notif.see(id, 1, true);
+    else render();
+  },
+  /* on = 1 read, 0 back to unread. A Notify row is closed on the SHEET too, so the Approvals feed
+     and this screen always agree about what has been seen. */
+  see: function (id, on, quiet) {
+    var m = Notif.read();
+    if (on) m[id] = Date.now(); else delete m[id];
+    Store.set(Notif.rkey(), m);
+    Nav._c = null;
+    var it = Notif.list().filter(function (x) { return x.id === id; })[0];
+    if (it && it.sheetKey && on && !it.sheetRead) {
+      DB.save('Notify', { Id:it.sheetKey, Status:'Closed' }, { quiet:true }).then(function () { render(); });
+    }
+    render();
+    if (!quiet) toast(on ? 'Dekh liya mark ho gaya' : 'Naya mark ho gaya');
+  },
+  markAll: function () {
+    var m = Notif.read(), list = Notif.list(), n = 0;
+    list.forEach(function (o) {
+      if (o.read) return;
+      m[o.id] = Date.now(); n++;
+      if (o.sheetKey && !o.sheetRead) DB.save('Notify', { Id:o.sheetKey, Status:'Closed' }, { quiet:true });
+    });
+    Store.set(Notif.rkey(), m);
+    Nav._c = null; render();
+    toast(n ? n + ' notification dekh liye' : 'Kuch naya nahi tha');
+  },
+  jump: function (v, k) {
+    if (k && v === 'trk') Trk.kind = k;
+    Router.go(v);
+  },
+  set: function (f) { Notif.filter = f; render(); },
+  setKind: function (k) { Notif.kindF = k; Notif.filter = 'all'; render(); }
 };
 
 /* ═══════════════ TA / DA — the travel claim, built from the policy ═══════════════
