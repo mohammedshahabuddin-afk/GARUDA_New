@@ -1062,7 +1062,9 @@ var I18n = {
       /* the download and delete screens count rows out loud — 1 rows reads like a bug */
       [/(\d+)\s+rows?\b/g, 'row', 'rows'], [/(\d+)\s+draft\b/g, 'draft', 'drafts'],
       [/(\d+)\s+reports?\b/g, 'report', 'reports'], [/(\d+)\s+employees?\b/g, 'employee', 'employees'],
-      [/(\d+)\s+line\b/g, 'line', 'lines'], [/(\d+)\s+tab\b/g, 'tab', 'tabs']],
+      [/(\d+)\s+line\b/g, 'line', 'lines'], [/(\d+)\s+tab\b/g, 'tab', 'tabs'],
+      /* "3 order · 2 have a gap" on the PO vs Invoice list */
+      [/(\d+)\s+order\b/g, 'order', 'orders']],
   /* translate a plain string (a toast, a dialog title, a canvas label) */
   s: function (str) {
     if (I18n.lang === 'hing' || str == null) return str;
@@ -1333,7 +1335,11 @@ I18n.D.en = I18n.EN = {
   'request par decision aa gaya':'request(s) decided',
   'Dekho':'View',
   'Chalo':'Go',
-  'aur':'more',
+  /* "aur" is AND almost everywhere it appears — it only means "more" in front of a counted noun,
+     and those cases ('aur store', 'aur employee') have their own longer keys, which win because
+     the matcher tries the longest key first. Mapping the bare word to "more" turned every list of
+     two things into "A more B". */
+  'aur':'and',
   'Pending orders — ASM se follow-up':'Pending orders — follow up with your ASM',
   'din purana':'days old',
   'Sab dekho':'View all',
@@ -2695,7 +2701,120 @@ I18n.D.en = I18n.EN = {
   'Dekh liya':'Seen',
   'Dekh liya — band karo':'Seen — dismiss',
   'Kya badla':'What changed',
-  'ne update kiya':'made this update'
+  'ne update kiya':'made this update',
+
+  /* ── notification centre ──
+     Every sentence here is a WHOLE phrase on purpose. The translator is a regex over the text runs
+     of the rendered HTML, so a sentence with a number or a store name spliced into its middle can
+     never be matched — which is why Notif builds its cards as "static sentence + separate value"
+     rather than as one interpolated string. */
+  'Atke hue order':'Stuck orders',
+  'Billing aur invoice':'Billing and invoice',
+  'Zaroori':'Urgent',
+  /* NOT 'Dekho' — that key is already taken by the Approvals button and means "View" there. A
+     duplicate key silently wins over the earlier one, which would have renamed a button on a
+     screen this module has nothing to do with. */
+  'Dhyan do':'Check this',
+  'Ho gaya':'Done',
+  'aaj hi':'today',
+  'ek din pehle':'a day ago',
+  'din pehle':'days ago',
+  'Wo kaam jo atak gaya hai aur koi uska peecha nahi kar raha — order, billing, naye outlet aur POSM. Aap ne jo request bheji hai wo Approvals me hai; yahan sirf wahi hai jo chup-chaap ruka pada hai.':
+    'The work that has got stuck and nobody is chasing — orders, billing, new outlets and POSM. Anything you have requested lives in Approvals; this screen is only what has quietly stopped moving.',
+  'Action chahiye':'Needs action',
+  'Sab dekh liya':'Mark all as seen',
+  'Kuch bhi atka hua nahi hai — sab clear.':'Nothing is stuck — you are all clear.',
+  'Dobara naya karo':'Mark as new again',
+  'Dekh liya mark ho gaya':'Marked as seen',
+  'Dobara naya mark ho gaya':'Marked as new again',
+  'Sab notification dekh liye':'All notifications marked as seen',
+  'Kuch naya nahi tha':'There was nothing new',
+  'Order abhi tak process me hai — billing nahi hui. ASM ko nudge karo.':
+    'This order is still in process — it was never billed. Nudge your ASM.',
+  'Poora PO invoice nahi hua. Baaki units ke liye distributor se follow-up karo.':
+    'The whole PO was not invoiced. Follow up with the distributor for the rest.',
+  'Poora order invoice ho gaya — kuch karna nahi hai.':
+    'The whole order was invoiced — nothing to do.',
+  'Naye outlet ka code abhi tak nahi bana. ASM se follow-up karo.':
+    'This new outlet still has no code. Follow up with your ASM.',
+  'POSM requirement abhi tak aage nahi badha. ASM se follow-up karo.':
+    'This POSM requirement has not moved. Follow up with your ASM.',
+  'Kitne din se':'Pending for',
+  'Aakhri note':'Last note',
+  'Kholne ki date':'Opened on',
+  'Maanga':'Requested on',
+  'Tracker me status update karo':'Update the status in Tracker',
+  'PO vs Invoice me poori detail dekho':'See the full detail in PO vs Invoice',
+
+  /* ── PO vs Invoice, expanded ── */
+  'PO me kitna order tha, uske against kitna invoice bana — dono side by side. Kisi bhi order par tap karo, poori detail khul jayegi.':
+    'What the PO ordered against what was actually invoiced, side by side. Tap any order to open its full detail.',
+  'me gap hai':'have a gap',
+  'Poora invoice':'Fully invoiced',
+  'Invoice baaki':'Not invoiced yet',
+  'Order — jaisa punch hua':'Order — as it was punched',
+  'Invoice — jo actually bana':'Invoice — what was actually raised',
+  'Invoice abhi nahi bana':'No invoice yet',
+  'Is order par abhi tak billing mark nahi hui. Orders tab me billing mark karoge to poori invoice detail yahan aa jayegi.':
+    'Billing has not been marked on this order yet. Mark it in the Orders tab and the full invoice detail will appear here.',
+  'PO ke average unit rate se nikala hua':'Worked out from the PO average unit rate',
+  'Bina invoice ka value':'Value not invoiced',
+  'Partial ka reason':'Reason for the partial',
+  'Billing mark hua':'Billing marked on',
+  'Koi gap nahi':'No gap',
+  'units short':'units short',
+  'Is order ki SKU lines abhi local me nahi hain — Sync karo.':
+    'The SKU lines of this order are not on the device yet — run a Sync.',
+  'Partial billing me per-SKU invoiced qty proportion se nikali gayi hai — exact SKU-wise invoice distributor ke paas hai.':
+    'On a partial bill the per-SKU invoiced quantity is a proportional split — the exact SKU-wise invoice sits with the distributor.',
+  'Orders tab me kholo':'Open in the Orders tab',
+
+  /* ── leftovers the end-to-end English sweep found on other screens ── */
+  'HOD ne approve kiya':'The HOD approved it',
+  'HOD ne dekha':'The HOD looked at it',
+  'Approved — Master_PJP me chala gaya':'Approved — it has gone into Master_PJP',
+  'EOD save karke din close karo — tabhi report ki image aur WhatsApp / mail / Excel access milega.':
+    'Save the EOD and close the day — the report image and the WhatsApp / mail / Excel options unlock then.',
+  'Niche Next store dabao — Field tab khul jayega.':'Tap Next store below — it opens the Field tab.',
+  'Is PJP ka status:':'This PJP is:',
+  'Change karna ho to HOD se baat karo.':'Talk to your HOD if it needs changing.',
+
+  /* the My data screen — one line per download, saying what is inside it */
+  'Order summary (lines ke saath)':'Order summary (with lines)',
+  'Beat coverage (din-wise)':'Beat coverage (day by day)',
+  'Beat coverage (beat-wise total)':'Beat coverage (total per beat)',
+  'Aapke punch kiye har order — store, distributor, SKU, units, MRP value, NSV, billing status aur photo link. SKU lines alag tab me.':
+    'Every order you punched — store, distributor, SKU, units, MRP value, NSV, billing status and photo link. The SKU lines are on their own tab.',
+  'Har band kiye din ka row — target vs done (SC / TC / PC, NSO, POSM), MSL aur Non-MSL lines, SKU, units, MRP value, NSV, day-end time aur us din ka photo folder.':
+    'One row per closed day — target vs done (SC / TC / PC, NSO, POSM), MSL and non-MSL lines, SKU, units, MRP value, NSV, the day-end time and that day’s photo folder.',
+  'Roz ka subah ka plan — attendance, working-with, station, town/beat, focus, PJP kya kehta tha, off-PJP, target, aur us din kitna kaam hua. Login time aur day start ke saath.':
+    'Each morning’s plan — attendance, working-with, station, town/beat, focus, what the PJP said, off-PJP, target, and how much work the day actually produced. With the login time and day start.',
+  'Har din ka ek row — Present / Absent / Leave / Weekly off / Holiday / Meeting, time ke saath.':
+    'One row per day — Present / Absent / Leave / Weekly off / Holiday / Meeting, with the time.',
+  'Har din ka roll-up — us din kitni activity hui aur kitne order bane.':
+    'One roll-up per day — how much activity there was and how many orders came out of it.',
+  'Wo saari visits jinme order nahi mila — reason, beat aur photo link ke saath. Failed visit par koi PO nahi banta.':
+    'Every visit that produced no order — with the reason, the beat and the photo link. A failed visit never creates a PO.',
+  'Har plan kiye din ka ek row — PJP ne kya kaha tha (working-with, state/town/beat, station, week, focus), aap actually kahan gaye, coverage ka verdict (Covered / Different beat / Not covered), aur us din kitna kaam hua.':
+    'One row per planned day — what the PJP said (working-with, state/town/beat, station, week, focus), where you actually went, the coverage verdict (Covered / Different beat / Not covered), and how much work the day produced.',
+  'Har beat ka ek row — kitne din plan the, kitne din actually kaam hua, coverage %, aur us beat se kitna business. Kaunsa beat chhoot raha hai, ye isme dikhta hai.':
+    'One row per beat — days planned, days actually worked, coverage %, and the business that beat produced. This is where a beat you keep missing shows up.',
+  'Primary order — distributor ko kya lena hai':'Primary order — what the distributor needs to buy',
+  'Jin SKU ka order mila hai par distributor ke paas order se kam stock hai — kitna order hua, distributor ke paas kitna hai, aur kitna primary order karna padega. Stock live padha jata hai, isliye download se pehle thoda time lagta hai.':
+    'SKUs you booked orders for where the distributor is holding less than that — how much was ordered, how much they have, and how much primary order is needed. Stock is read live, so the download takes a moment to start.',
+  'Aapke khole hue shop — id, type, state/town/beat, distributor code aur naam, address, pincode, category, owner, day sale, monthly turnover, photo link aur tracker status.':
+    'The shops you opened — id, type, state/town/beat, distributor code and name, address, pincode, category, owner, day sale, monthly turnover, photo link and tracker status.',
+  'Store-wise POSM check — client id, store code, element, type, location, brand, asset type, install period, dominance, condition, visibility, action aur photo link.':
+    'The POSM check store by store — client id, store code, element, type, location, brand, asset type, install period, dominance, condition, visibility, action and photo link.',
+  'Kis store ko kaunsa POSM chahiye — element, type, brand, qty, needed-by, photo link aur status.':
+    'Which store needs which POSM — element, type, brand, qty, needed-by, photo link and status.',
+  'Har claim kiye din ka alag row — day type, city, DA, TA, lodging, nights, us din ka total, HOD deduction aur net.':
+    'One row per claimed day — day type, city, DA, TA, lodging, nights, that day’s total, the HOD deduction and the net.',
+  'Approved PJP se hatt kar kaam karne ki request — PJP kya kehta tha, aap ne kya maanga, aur HOD ka decision.':
+    'Requests to work away from the approved PJP — what the PJP said, what you asked for, and the HOD’s decision.',
+  'Store ya distributor stock par aapke likhe note.':'Notes you wrote against store or distributor stock.',
+  'Aapki li hui har photo ka row — module, store, slot, filename, photo ka link aur uske shop folder ka link.':
+    'One row per photo you took — module, store, slot, filename, the link to the photo and the link to its shop folder.'
 };
 
 /* ═══════════════ STORE — cache + offline queue ═══════════════ */
@@ -5959,7 +6078,9 @@ var Pjp = {
       (Pjp.winOpen() && !locked ? '<div class="banner w" style="margin-top:10px"><span>!</span><div><b>PJP window khuli hai (27 se 1 tarikh)</b><br>' +
         '<span style="font-weight:500">' + esc(monthName(Pjp.winMonth())) + ' ka plan abhi bhar ke HOD ko bhej do.</span></div></div>' : '') +
       (locked ? '<div class="banner g" style="margin-top:10px"><span></span><div><b>' + esc(monthName(Pjp.month)) + ' approve ho gaya</b><br>' +
-        '<span style="font-weight:500">Ab is month me change nahi hoga. Agli PJP <b>27</b> tarikh se khulegi.</span></div></div>' : '') +
+        /* no <b> inside a translatable sentence — I18n.tr only ever sees the text BETWEEN tags, so
+           a tag in the middle splits one phrase into three the dictionary cannot match */
+        '<span style="font-weight:500">Ab is month me change nahi hoga — agli PJP 27 tarikh se khulegi.</span></div></div>' : '') +
       (part ? '<div class="banner r" style="margin-top:10px"><span>!</span><div><b>' + rejD.length +
         ' din reject hue hain</b><br><span style="font-weight:500">' +
         rejD.map(function (k) { return dmy(k); }).join(', ') +
@@ -5978,7 +6099,11 @@ var Pjp = {
     if (c.miss.length === 0 && !locked && !part)
       h += '<div class="banner g"><span></span><div>Poora month plan ho gaya — ab HOD ko bhej sakte ho.</div></div>';
     if (locked)
-      h += '<div class="banner b"><span></span><div>Ye PJP <b>' + esc(dr.Status) + '</b> hai' + (dr.RejectReason ? ' — ' + esc(dr.RejectReason) : '') + '. Change karna ho to HOD se baat karo.</div></div>';
+      /* the status is a VALUE, so it goes at the end — a sentence with a value in the middle is
+         three text runs, and the dictionary can only translate whole ones */
+      h += '<div class="banner b"><span></span><div>Is PJP ka status: <b>' + esc(dr.Status) + '</b>' +
+        (dr.RejectReason ? ' — ' + esc(dr.RejectReason) : '') +
+        '<br><span style="font-weight:500">Change karna ho to HOD se baat karo.</span></div></div>';
 
     /* the master's days are loaded on their own now (see Pjp.load) — read once for the whole list */
     var md = Pjp.masterDays(), mdN = Object.keys(md).length;
@@ -10528,7 +10653,7 @@ var Posm = {
     if (!Posm.store) {
       h += '<div class="card"><h3><span class="ic"></span>Store</h3>' +
         '<div class="sub">Field tab me store ka order/visit save karo — wahi store yahan aa jayega. ' +
-        'Niche <b>Next store</b> dabao — Field tab khul jayega.</div></div>';
+        'Niche Next store dabao — Field tab khul jayega.</div></div>';
     } else {
       h += '<div class="banner b"><span></span><div><b>' + esc(Posm.store.StoreName) + '</b><br><span style="font-weight:500">' +
         esc(Posm.store.City || '') + ' · ' + esc(Posm.store.CompanyCode || '') + '</span></div></div>';
@@ -11228,8 +11353,9 @@ var Trk = {
     h += '<div class="sec-title" style="margin-top:12px">Invoice — jo actually bana</div>';
     if (!r.type && r.status !== 'Billing Done') {
       h += '<div class="banner b"><span></span><div><b>Invoice abhi nahi bana</b><br>' +
-        '<span style="font-weight:500">Order abhi "' + esc(o.Status || '—') + '" par hai. Orders tab me ' +
-        'billing mark karoge to poori detail yahan aa jayegi.</span></div></div>';
+        '<span style="font-weight:500">Is order par abhi tak billing mark nahi hui. Orders tab me ' +
+        'billing mark karoge to poori invoice detail yahan aa jayegi.</span></div></div>' +
+        '<table class="ap-t"><tr><td>Order status</td><td><b>' + esc(o.Status || '—') + '</b></td></tr></table>';
     } else {
       var pct = r.poUnits ? Math.round(r.billed / r.poUnits * 100) : 0;
       var unitVal = r.poUnits ? num(o.TotValue) / r.poUnits : 0;
@@ -11279,21 +11405,25 @@ var Trk = {
   }
 };
 
-/* ═══════════════ NOTIFICATION CENTRE — everything that is asking for attention ═══════════════
-   Three screens already answer "what did I ask for and what came back" (Approvals), "what am I
-   chasing" (Tracker) and "what is due today" (the hero card). None of them ever SAYS anything: they
-   all wait to be opened. So the things with nobody to raise them — an order sitting at "Order in
-   Process" for ten days, a POSM requirement the ASM never moved, a new outlet with no code, a PO
-   half invoiced, the PJP window about to shut — were invisible until somebody went looking.
+/* ═══════════════ NOTIFICATION CENTRE — the work nobody is chasing ═══════════════
+   The one thing this screen is NOT is a second copy of Approvals. Approvals is the record of things
+   the rep ASKED FOR — a PJP, a plan change, a claim — each waiting on somebody's yes or no, each
+   already carrying its own timeline and its own red badge. Repeating those here would double every
+   number in the app and teach the reader to ignore both screens.
 
-   This is that missing voice. Every line is DERIVED from data the app already holds, so there is no
-   new sheet, no push service and nothing to keep in sync: open the tab and the alerts are recomputed
-   from SecOrders / NewStores / PosmRequirement / PjpDraft / Deviation / TaDa exactly as they stand.
-   The only stored state is which ids the reader has already seen, in localStorage per employee — a
-   read receipt is personal, and it must survive a sync that rewrites every row underneath it.
+   What has nobody at all is the other half of the day: an order that has sat at "Order in Process"
+   for three weeks, a PO the distributor only half invoiced, a new outlet with no code, a POSM
+   requirement the ASM never moved. Nothing in the app ever raises those — the Tracker holds them,
+   but the Tracker waits to be opened, and a rep with sixty rows on it does not spot the four that
+   have gone quiet. That is this screen, and only that:
 
-   HOD-pushed Notify rows are folded in as well, and marking one read here closes it on the sheet
-   too, so this screen and the Approvals feed can never disagree about what has been seen. */
+       Approvals  → what I asked for, and what came back
+       Tracker    → everything I am following up, all of it
+       Notification → the handful that have been stuck too long, loudest first
+
+   Every line is DERIVED from data the app already holds, so there is no new sheet and nothing to
+   keep in sync. The only stored state is which ids the reader has already seen, in localStorage per
+   employee — a read receipt is personal, and it has to survive a sync that rewrites every row. */
 var Notif = {
   kindF:'all', filter:'unread', open:{},
 
@@ -11301,24 +11431,19 @@ var Notif = {
   TAT_DAYS:7,        /* an order still at "Order in Process" this long needs an ASM nudge */
   NS_DAYS:7,         /* a new outlet with no code after a week */
   PQ_DAYS:7,         /* a POSM requirement the ASM has not moved */
-  DEV_DAYS:1,        /* a plan change is a SAME-DAY decision — a day old is already late */
-  PJP_DAYS:2,
-  FRESH_DAYS:30,     /* a decision older than this is history, not news */
+  FRESH_DAYS:30,     /* an invoice older than this is history, not news */
 
-  KINDS:[['TAT', 'TAT — order atka hai'], ['Billing', 'Billing / invoice'],
-         ['New outlet', 'Naya outlet'], ['POSM', 'POSM'], ['PJP', 'PJP'],
-         ['Plan change', 'Plan change'], ['TA/DA', 'TA/DA'], ['Update', 'HOD update']],
-  KCLS:{ 'TAT':'k-ord', 'Billing':'k-ord', 'New outlet':'k-plan', 'POSM':'k-plan',
-         'PJP':'k-pjp', 'Plan change':'k-plan', 'TA/DA':'k-tada', 'Update':'k-pjp' },
+  KINDS:[['TAT', 'Atke hue order'], ['Billing', 'Billing aur invoice'],
+         ['New outlet', 'Naye outlet'], ['POSM', 'POSM']],
+  KCLS:{ 'TAT':'k-ord', 'Billing':'k-tada', 'New outlet':'k-plan', 'POSM':'k-pjp' },
   kcls: function (k) { return Notif.KCLS[k] || 'k-pjp'; },
-  /* how loud, not what kind — red is "you are late", amber is "look at this", the rest is news */
-  SEV:{ bad:['Zaroori', 'p-bad'], warn:['Dekho', 'p-warn'], ok:['Ho gaya', 'p-ok'],
-        info:['Update', 'p-blue'] },
+  /* how loud, not what kind — red is "you are late", amber is "look at this", green is news */
+  SEV:{ bad:['Zaroori', 'p-bad'], warn:['Dhyan do', 'p-warn'], ok:['Ho gaya', 'p-ok'] },
   /* 1-based on purpose: a 0 here would be swallowed by the `|| fallback` in the sort below, and the
      loudest alerts would quietly sort to the bottom of the list */
-  RANK:{ bad:1, warn:2, info:3, ok:4 },
-  /* only red and amber are WORK — an approval that came through is news, not a to-do */
-  todo: function (o) { return !o.read && (o.sev === 'bad' || o.sev === 'warn'); },
+  RANK:{ bad:1, warn:2, ok:3 },
+  /* only red and amber are WORK — an invoice that came through is news, not a to-do */
+  todo: function (o) { return !o.read && o.sev !== 'ok'; },
 
   /* ── read receipts, per employee, on this device ──
      Keyed by employee code because a shared phone in a market is normal, and one rep dismissing his
@@ -11327,10 +11452,19 @@ var Notif = {
   read: function () { return Store.get(Notif.rkey(), {}) || {}; },
   days: function (t) { return t ? Math.floor((Date.now() - t) / 86400000) : 0; },
   fresh: function (t) { return !!t && Notif.days(t) <= Notif.FRESH_DAYS; },
+  /* "20 din pehle" — the dictionary turns the whole phrase into "20 days ago" in one step, which is
+     why the number and the words are never translated separately */
+  ago: function (t) {
+    var d = Notif.days(t);
+    if (!t) return '';
+    return d <= 0 ? 'aaj hi' : d === 1 ? 'ek din pehle' : d + ' din pehle';
+  },
 
   /* ── the feed ──
      One pass per source, each pushing the SAME shape: id (stable, so a read receipt sticks), kind,
-     severity, one-line title, one-line summary, the rows behind it, and where to go about it. */
+     severity, the subject line, one static sentence saying what to do, and the rows behind it.
+     Every sentence is whole and fixed — numbers live in `sub` and in the rows, never spliced into
+     the middle of a phrase, because a phrase cut in half cannot be translated. */
   list: function () {
     var rd = Notif.read(), out = [];
     var add = function (o) { o.read = !!rd[o.id]; o.t = o.t || 0; out.push(o); };
@@ -11341,9 +11475,11 @@ var Notif = {
       var t = Appr.ts(o.Ts) || Appr.ts(o.Date), d = Notif.days(t);
       if (d <= Notif.TAT_DAYS) return;
       add({ id:'tat_' + Appr.jid(o.PoNumber), kind:'TAT', sev:d > Notif.TAT_DAYS * 2 ? 'bad' : 'warn', t:t,
-        title:(o.StoreName || 'Order') + ' — ' + d + ' din se pending',
-        sum:'PO abhi tak "Order in Process" hai — ' + num(o.TotUnits) + ' units · ' + inr(o.TotValue) +
-          '. ASM ko nudge karo.',
+        title:o.StoreName || 'Order',
+        sub:String(o.PoNumber || '') + ' · ' + num(o.TotUnits) + ' units · ' + inr(o.TotValue),
+        /* no double quotes in any translatable sentence: esc() turns them into &quot; and the
+           dictionary key would never match the text that reaches the screen */
+        sum:'Order abhi tak process me hai — billing nahi hui. ASM ko nudge karo.',
         rows:[['PO', String(o.PoNumber || '—')], ['Store', o.StoreName || '—'],
               ['Distributor', o.DbName || '—'], ['Order date', dmy(o.Date)],
               ['Kitne din se', d + ' din'],
@@ -11361,9 +11497,9 @@ var Notif = {
       var t = Appr.ts(o.StatusAt) || Appr.ts(o.DeliveredAt) || Appr.ts(o.Ts) || Appr.ts(o.Date);
       if (String(o.BillingType || '') === 'Partial' && po - billed > 0) {
         add({ id:'gap_' + Appr.jid(o.PoNumber), kind:'Billing', sev:'warn', t:t,
-          title:(o.StoreName || 'Order') + ' — ' + (po - billed) + ' units invoice nahi hue',
-          sum:'Partial billing: ' + billed + ' / ' + po + ' units bane' +
-            (o.BillingRemark ? ' — ' + o.BillingRemark : ''),
+          title:o.StoreName || 'Order',
+          sub:String(o.PoNumber || '') + ' · invoice ' + billed + ' / ' + po + ' units',
+          sum:'Poora PO invoice nahi hua. Baaki units ke liye distributor se follow-up karo.',
           rows:[['PO', String(o.PoNumber || '—')], ['Store', o.StoreName || '—'],
                 ['Distributor', o.DbName || '—'],
                 ['PO units', String(po)], ['Invoiced units', String(billed)],
@@ -11373,8 +11509,9 @@ var Notif = {
           go:['trk', 'poi', 'PO vs Invoice me poori detail dekho'] });
       } else if (String(o.Status || '') === 'Billing Done' && Notif.fresh(t)) {
         add({ id:'bil_' + Appr.jid(o.PoNumber), kind:'Billing', sev:'ok', t:t,
-          title:(o.StoreName || 'Order') + ' — invoice ban gaya',
-          sum:'Poora order invoice ho gaya — ' + billed + ' units · ' + inr(o.TotValue),
+          title:o.StoreName || 'Order',
+          sub:String(o.PoNumber || '') + ' · ' + billed + ' units · ' + inr(o.TotValue),
+          sum:'Poora order invoice ho gaya — kuch karna nahi hai.',
           rows:[['PO', String(o.PoNumber || '—')], ['Store', o.StoreName || '—'],
                 ['Distributor', o.DbName || '—'], ['Order date', dmy(o.Date)],
                 ['Invoiced units', String(billed)], ['MRP value', inr(o.TotValue)],
@@ -11390,7 +11527,8 @@ var Notif = {
       var t = Appr.ts(r.Ts) || Appr.ts(r.Date), d = Notif.days(t);
       if (d <= Notif.NS_DAYS) return;
       add({ id:'ns_' + Appr.jid(r.StoreId), kind:'New outlet', sev:d > Notif.NS_DAYS * 2 ? 'bad' : 'warn', t:t,
-        title:(r.StoreName || 'Naya outlet') + ' — ' + d + ' din se ' + st,
+        title:r.StoreName || 'Naya outlet',
+        sub:(r.Town || '—') + (r.Beat ? ' / ' + r.Beat : '') + ' · ' + st,
         sum:'Naye outlet ka code abhi tak nahi bana. ASM se follow-up karo.',
         rows:[['Store', r.StoreName || '—'], ['Store id', String(r.StoreId || '—')],
               ['Town / beat', (r.Town || '—') + (r.Beat ? ' / ' + r.Beat : '')],
@@ -11407,8 +11545,9 @@ var Notif = {
       var t = Appr.ts(r.Ts) || Appr.ts(r.Date), d = Notif.days(t);
       if (d <= Notif.PQ_DAYS) return;
       add({ id:'pq_' + Appr.jid(r.Id), kind:'POSM', sev:d > Notif.PQ_DAYS * 2 ? 'bad' : 'warn', t:t,
-        title:(r.StoreName || 'POSM') + ' — ' + d + ' din se ' + st,
-        sum:(r.Element || 'POSM') + ' ka requirement abhi tak ' + st + ' hai.',
+        title:r.StoreName || 'POSM',
+        sub:(r.Element || 'POSM') + ' · ' + st,
+        sum:'POSM requirement abhi tak aage nahi badha. ASM se follow-up karo.',
         rows:[['Store', r.StoreName || '—'], ['Element', r.Element || '—'],
               ['Qty', num(r.Qty) ? String(num(r.Qty)) : '—'], ['City', r.City || '—'],
               ['Kab tak chahiye', r.NeededBy ? dmy(r.NeededBy) : '—'],
@@ -11417,127 +11556,11 @@ var Notif = {
         go:['trk', 'pq', 'Tracker me status update karo'] });
     });
 
-    /* ══ 5. PJP — the window, and whatever the HOD did with the plan ══ */
-    try {
-      if (!Auth.isAdmin() && Pjp.winOpen() && !Pjp.approvedFor(Pjp.winMonth())) {
-        var wm = Pjp.winMonth();
-        add({ id:'pjpwin_' + wm, kind:'PJP', sev:'bad', t:Date.now(),
-          title:'PJP window khula hai — ' + (monthName(wm) || wm),
-          sum:'1 tareekh tak plan bhejna hai. Approve nahi hua to Field tab band rahega.',
-          rows:[['Month', monthName(wm) || wm], ['Window', '27 se 1 tareekh tak'],
-                ['Abhi ka status', 'Approve nahi hua']],
-          go:['pjp', '', 'PJP tab kholo'] });
-      }
-    } catch (e) {}
-    DB.mine('PjpDraft').forEach(function (d) {
-      var st = Appr.norm(d.Status), t = Appr.ts(d.HodAt) || Appr.ts(d.UpdatedAt) || Appr.ts(d.SubmittedAt);
-      var sent = Appr.ts(d.SubmittedAt);
-      if (st === 'rejected' || st === 'partial') {
-        var nrej = (Admin.rejDays(d) || []).length;
-        add({ id:'pjpd_' + Appr.jid(d.Key) + '_' + (t || 0), kind:'PJP', sev:'bad', t:t,
-          title:'PJP ' + (st === 'partial' ? 'me kuch din reject hue' : 'reject hua') +
-            ' — ' + (monthName(d.Month) || d.Month || ''),
-          sum:(st === 'partial' ? nrej + ' din theek karke dobara bhejo' : 'Dusra plan banake bhejo') +
-            (d.RejectReason ? ' — ' + d.RejectReason : ''),
-          rows:[['Month', monthName(d.Month) || d.Month || '—'],
-                ['Kisne', (d.HodBy || '—') + (d.HodRole ? ' (' + d.HodRole + ')' : '')],
-                ['Kab', Appr.when(t) || '—'],
-                ['Reason', d.RejectReason || '—'],
-                ['Reject hue din', nrej ? String(nrej) : '—']],
-          go:['pjp', '', 'PJP tab me theek karo'] });
-      } else if (st === 'approved' && Notif.fresh(t)) {
-        add({ id:'pjpa_' + Appr.jid(d.Key) + '_' + (t || 0), kind:'PJP', sev:'ok', t:t,
-          title:'PJP approve ho gaya — ' + (monthName(d.Month) || d.Month || ''),
-          sum:'Plan Master_PJP me chala gaya — Plan tab me roz dikhega.',
-          rows:[['Month', monthName(d.Month) || d.Month || '—'],
-                ['Kisne approve kiya', (d.HodBy || '—') + (d.HodRole ? ' (' + d.HodRole + ')' : '')],
-                ['Kab', Appr.when(t) || '—'],
-                ['Field din bhare', Appr.cover(d.Coverage) || '—']],
-          go:['plan', '', 'Plan tab kholo'] });
-      } else if (st === 'pending' && Notif.days(sent) > Notif.PJP_DAYS) {
-        add({ id:'pjpw_' + Appr.jid(d.Key), kind:'PJP', sev:'warn', t:sent,
-          title:'PJP ' + Notif.days(sent) + ' din se HOD ke paas hai',
-          sum:(monthName(d.Month) || d.Month || '') + ' ka plan abhi tak decide nahi hua — HOD ko yaad dilao.',
-          rows:[['Month', monthName(d.Month) || d.Month || '—'],
-                ['Bheja', Appr.when(sent) || '—'],
-                ['Pending', Appr.gap(Date.now() - sent)]],
-          go:['appr', '', 'Approvals me dekho'] });
-      }
-    });
-
-    /* ══ 6. PLAN CHANGES — a same-day decision, so a day of silence is already a problem ══ */
-    DB.mine('Deviation').forEach(function (d) {
-      var st = Appr.norm(d.Status), t = Appr.ts(d.HodAt) || Appr.ts(d.UpdatedAt) || Appr.ts(d.Ts);
-      var sent = Appr.ts(d.Ts) || Appr.ts(d.Date);
-      var want = (d.NewTown || '—') + ' / ' + (d.NewBeat || '—');
-      if (st === 'pending' && Notif.days(sent) >= Notif.DEV_DAYS) {
-        add({ id:'devw_' + Appr.jid(d.Id), kind:'Plan change', sev:'warn', t:sent,
-          title:'Plan change ' + dmy(d.Date) + ' — abhi tak decide nahi hua',
-          sum:'Maanga tha ' + want + '. Jab tak approve nahi hota, PJP wala beat hi chalega.',
-          rows:[['Date', dmy(d.Date)], ['PJP me tha', (d.PlannedTown || '—') + ' / ' + (d.PlannedBeat || '—')],
-                ['Aap ne maanga', want], ['Reason', d.Reason || '—'],
-                ['Bheja', Appr.when(sent) || '—'], ['Pending', Appr.gap(Date.now() - sent)]],
-          go:['appr', '', 'Approvals me dekho'] });
-      } else if ((st === 'approved' || st === 'rejected') && Notif.fresh(t)) {
-        add({ id:'dev_' + Appr.jid(d.Id) + '_' + (t || 0), kind:'Plan change',
-          sev:st === 'approved' ? 'ok' : 'bad', t:t,
-          title:'Plan change ' + dmy(d.Date) + ' — ' + (st === 'approved' ? 'approve' : 'reject') + ' ho gaya',
-          sum:st === 'approved' ? want + ' par kaam kar sakte ho.'
-            : 'Ye beat dobara request nahi kar sakte — koi dusra beat chuno.' +
-              (d.HodRemarks ? ' ' + d.HodRemarks : ''),
-          rows:[['Date', dmy(d.Date)], ['Aap ne maanga', want],
-                ['Kisne', (d.HodBy || '—') + (d.HodRole ? ' (' + d.HodRole + ')' : '')],
-                ['Kab', Appr.when(t) || '—'], ['HOD ka message', d.HodRemarks || '—']],
-          go:['plan', '', 'Plan tab kholo'] });
-      }
-    });
-
-    /* ══ 7. TA/DA — a deduction is the rep's move, an approval is news ══ */
-    DB.mine('TaDa').forEach(function (r) {
-      var st = Appr.norm(r.Status), t = Appr.ts(r.HodAt) || Appr.ts(r.UpdatedAt);
-      var mo = monthName(r.Month) || r.Month || '';
-      if (st === 'partial' || st === 'rejected') {
-        add({ id:'tada_' + Appr.jid(r.Id) + '_' + (t || 0), kind:'TA/DA', sev:'bad', t:t,
-          title:'TA/DA ' + mo + ' — ' + (st === 'rejected' ? 'reject hua' : 'deduction ke saath wapas aaya'),
-          sum:'Claim ' + inr(r.Total) + (num(r.DeductTotal) ? ' · deduction ' + inr(r.DeductTotal) : '') +
-            ' — theek karke dobara bhejo.',
-          rows:[['Month', mo || '—'], ['Claim', inr(r.Total)],
-                ['Deduction', num(r.DeductTotal) ? '− ' + inr(r.DeductTotal) : '—'],
-                ['Net payable', inr(r.NetTotal || (num(r.Total) - num(r.DeductTotal)))],
-                ['Kisne', (r.HodBy || '—') + (r.HodRole ? ' (' + r.HodRole + ')' : '')],
-                ['Kab', Appr.when(t) || '—'], ['HOD ka message', r.HodRemarks || '—']],
-          go:['tada', '', 'TA/DA tab me theek karo'] });
-      } else if (st === 'approved' && Notif.fresh(t)) {
-        add({ id:'tadaa_' + Appr.jid(r.Id) + '_' + (t || 0), kind:'TA/DA', sev:'ok', t:t,
-          title:'TA/DA ' + mo + ' approve ho gaya',
-          sum:'Net payable ' + inr(r.NetTotal || r.Total) + '.',
-          rows:[['Month', mo || '—'], ['Claim', inr(r.Total)],
-                ['Deduction', num(r.DeductTotal) ? '− ' + inr(r.DeductTotal) : '—'],
-                ['Net payable', inr(r.NetTotal || (num(r.Total) - num(r.DeductTotal)))],
-                ['Kisne approve kiya', (r.HodBy || '—') + (r.HodRole ? ' (' + r.HodRole + ')' : '')],
-                ['Kab', Appr.when(t) || '—']],
-          go:['appr', '', 'Approvals me dekho'] });
-      }
-    });
-
-    /* ══ 8. whatever the HOD pushed by hand ══ */
-    DB.mine('Notify').forEach(function (n) {
-      var t = Appr.ts(n.Ts), shut = String(n.Status || '').toLowerCase() === 'closed';
-      add({ id:'nt_' + Appr.jid(n.Id), kind:'Update', sev:shut ? 'info' : 'warn', t:t,
-        title:n.Title || 'Update',
-        sum:String(n.Detail || '').split('\n')[0] || 'HOD ne kuch update kiya hai.',
-        rows:[['Kya badla', n.Detail || '—'], ['Kisne', n.By || '—'], ['Kab', Appr.when(t) || '—']],
-        sheetKey:n.Id, sheetRead:shut,
-        go:['appr', '', 'Approvals me dekho'] });
-    });
-
-    /* a Notify row already closed on the sheet is read everywhere, even on a fresh device */
-    out.forEach(function (o) { if (o.sheetRead) o.read = true; });
-    /* unread first, then loudest, then newest — the order somebody scans a notification list in */
+    /* unread first, then loudest, then oldest — the thing stuck the longest is the thing to chase */
     return out.sort(function (a, b) {
       return (a.read ? 1 : 0) - (b.read ? 1 : 0) ||
              (Notif.RANK[a.sev] || 9) - (Notif.RANK[b.sev] || 9) ||
-             (b.t || 0) - (a.t || 0);
+             (a.sev === 'ok' ? (b.t || 0) - (a.t || 0) : (a.t || 0) - (b.t || 0));
     });
   },
 
@@ -11549,8 +11572,8 @@ var Notif = {
   html: function () {
     var all = Notif.list();
     var h = UI.head('', 'Notifications',
-      'Har wo cheez jo aapka dhyaan maang rahi hai — atke hue order, POSM, naye outlet, ' +
-      'PJP ka window aur HOD ke update. Kisi bhi card par tap karke detail dekho.');
+      'Wo kaam jo atak gaya hai aur koi uska peecha nahi kar raha — order, billing, naye outlet aur POSM. ' +
+      'Aap ne jo request bheji hai wo Approvals me hai; yahan sirf wahi hai jo chup-chaap ruka pada hai.');
 
     var un = all.filter(function (o) { return !o.read; }).length;
     var todo = all.filter(Notif.todo).length;
@@ -11588,7 +11611,7 @@ var Notif = {
       return Notif.filter === 'all' || (Notif.filter === 'unread' ? !o.read : o.read); });
     if (!show.length) return h + '<div class="card">' +
       UI.empty('', all.length ? 'Is filter me kuch nahi hai'
-        : 'Sab kuch theek hai — koi notification nahi.') + '</div>';
+        : 'Kuch bhi atka hua nahi hai — sab clear.') + '</div>';
 
     h += '<div class="sec-title">' + show.length + ' notification' + (show.length > 1 ? 's' : '') + '</div>';
     h += show.slice(0, 80).map(Notif.card).join('');
@@ -11599,18 +11622,17 @@ var Notif = {
   },
 
   card: function (o) {
-    var op = !!Notif.open[o.id], sev = Notif.SEV[o.sev] || Notif.SEV.info;
+    var op = !!Notif.open[o.id], sev = Notif.SEV[o.sev] || Notif.SEV.warn;
     var h = '<div class="card ap ' + Notif.kcls(o.kind) + (op ? ' op' : '') +
         '" onclick="Notif.toggle(\'' + Appr.q(o.id) + '\')">' +
       '<div class="ap-h"><div class="m">' +
-        /* a notification's TITLE is the message — it wraps. Approvals can clip its titles because
-           "PJP — Aug 2026" says everything; "Sharma Store — 20 din se pending" clipped to an
-           ellipsis says nothing at all. */
+        /* a notification's TITLE is the subject — it wraps rather than clipping to an ellipsis */
         '<div class="t" style="white-space:normal;overflow:visible;line-height:1.35">' +
           (o.read ? '' : '<span class="pill p-open" style="margin-right:6px">Naya</span>') +
           esc(o.title) + '</div>' +
-        '<div class="s"><span class="pill k-pill ' + Notif.kcls(o.kind) + '">' + esc(o.kind) + '</span>' +
-          (o.t ? ' · ' + esc(Appr.when(o.t)) : '') + '</div>' +
+        '<div class="s"><span class="pill k-pill ' + Notif.kcls(o.kind) + '">' +
+          esc(Notif.lbl(o.kind)) + '</span>' + (o.t ? ' · ' + esc(Notif.ago(o.t)) : '') + '</div>' +
+        (o.sub ? '<div class="s">' + esc(o.sub) + '</div>' : '') +
         (o.sum ? '<div class="sum">' + esc(o.sum) + '</div>' : '') +
       '</div><span class="pill ' + sev[1] + '">' + sev[0] + '</span>' +
       '<span class="ap-x">' + (op ? '▴' : '▾') + '</span></div>';
@@ -11625,6 +11647,11 @@ var Notif = {
     }
     return h + '</div>';
   },
+  /* the reader-facing name of a kind; the id stays English so the filter never depends on language */
+  lbl: function (k) {
+    var f = Notif.KINDS.filter(function (x) { return x[0] === k; })[0];
+    return f ? f[1] : k;
+  },
 
   /* opening a notification IS reading it — nobody taps a card and then hunts for a "mark read" button */
   toggle: function (id) {
@@ -11632,30 +11659,21 @@ var Notif = {
     if (Notif.open[id]) Notif.see(id, 1, true);
     else render();
   },
-  /* on = 1 read, 0 back to unread. A Notify row is closed on the SHEET too, so the Approvals feed
-     and this screen always agree about what has been seen. */
+  /* on = 1 read, 0 back to unread */
   see: function (id, on, quiet) {
     var m = Notif.read();
     if (on) m[id] = Date.now(); else delete m[id];
     Store.set(Notif.rkey(), m);
     Nav._c = null;
-    var it = Notif.list().filter(function (x) { return x.id === id; })[0];
-    if (it && it.sheetKey && on && !it.sheetRead) {
-      DB.save('Notify', { Id:it.sheetKey, Status:'Closed' }, { quiet:true }).then(function () { render(); });
-    }
     render();
-    if (!quiet) toast(on ? 'Dekh liya mark ho gaya' : 'Naya mark ho gaya');
+    if (!quiet) toast(on ? 'Dekh liya mark ho gaya' : 'Dobara naya mark ho gaya');
   },
   markAll: function () {
-    var m = Notif.read(), list = Notif.list(), n = 0;
-    list.forEach(function (o) {
-      if (o.read) return;
-      m[o.id] = Date.now(); n++;
-      if (o.sheetKey && !o.sheetRead) DB.save('Notify', { Id:o.sheetKey, Status:'Closed' }, { quiet:true });
-    });
+    var m = Notif.read(), n = 0;
+    Notif.list().forEach(function (o) { if (!o.read) { m[o.id] = Date.now(); n++; } });
     Store.set(Notif.rkey(), m);
     Nav._c = null; render();
-    toast(n ? n + ' notification dekh liye' : 'Kuch naya nahi tha');
+    toast(n ? 'Sab notification dekh liye' : 'Kuch naya nahi tha');
   },
   jump: function (v, k) {
     if (k && v === 'trk') Trk.kind = k;
