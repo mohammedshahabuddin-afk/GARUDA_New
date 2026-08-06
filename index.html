@@ -449,6 +449,50 @@ td.num,th.num{text-align:right}
 /* the fade must not eat the last chip when everything already fits */
 .chips.fit{-webkit-mask-image:none;mask-image:none}
 
+/* ══ SCREEN NAVIGATION — two levels, and they must not look like each other ══
+   A row of raised buttons reads as "six things to DO". Navigation is not an action: it is a statement
+   of where you are. So neither level is a button any more.
+     .hnav  the PRIMARY level (Dashboard · Tracker · Approvals) — text on a hairline rule, the current
+            one carrying a solid underline. This is the strongest, quietest way to say "you are here".
+            NOT `.tnav`: that name already belongs to the Tracker's own strip, which spreads to fill
+            when its tabs fit — and the Tracker now renders INSIDE this screen, so the two nav rows
+            appear together and must stay visually and structurally separate.
+     .snav  the SECONDARY level inside Dashboard — a soft filled pill, deliberately a different SHAPE
+            from the underline above it, so two stacked rows can never be mistaken for one. */
+.hnav{display:flex;gap:2px;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  border-bottom:1px solid var(--line);scrollbar-width:none;
+  -webkit-mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 20px),transparent 100%);
+  mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 20px),transparent 100%)}
+.hnav.fit{-webkit-mask-image:none;mask-image:none}
+.hnav::-webkit-scrollbar{display:none}
+.hnav button{flex:0 0 auto;border:0;background:0;cursor:pointer;position:relative;
+  padding:11px 15px 12px;font-family:inherit;font-size:14px;font-weight:600;letter-spacing:-.01em;
+  color:var(--ink-3);transition:color .15s;display:inline-flex;align-items:center;gap:7px;
+  white-space:nowrap}
+.hnav button:hover{color:var(--ink-2)}
+.hnav button.on{color:var(--blue);font-weight:800}
+/* the underline sits ON the hairline, not under it, so the rule looks continuous */
+.hnav button.on:after{content:'';position:absolute;left:13px;right:13px;bottom:-1px;height:2.5px;
+  border-radius:2px 2px 0 0;background:var(--blue)}
+.hnav button:active{color:var(--blue-d)}
+
+.snav{display:flex;gap:4px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:12px 0 2px;
+  scrollbar-width:none}
+.snav::-webkit-scrollbar{display:none}
+.snav button{flex:0 0 auto;border:0;cursor:pointer;background:0;font-family:inherit;
+  padding:7px 13px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--ink-2);
+  transition:background .15s,color .15s;white-space:nowrap}
+.snav button:hover{background:#eef1f6}
+.snav button.on{background:var(--blue-l);color:var(--blue);font-weight:800}
+/* the red count rides the tab itself rather than floating in the corner of a button */
+.hnav .badge,.snav .badge{position:static;min-width:18px;height:18px;padding:0 5px;font-size:10.5px;
+  line-height:18px;border-radius:9px;display:inline-block;text-align:center;box-shadow:none;margin:0}
+@media(max-width:520px){
+  .hnav button{padding:10px 12px 11px;font-size:13.5px}
+  .hnav button.on:after{left:10px;right:10px}
+  .snav button{padding:6px 11px;font-size:12px}
+}
+
 /* ── segmented control + locked field + focus box: the previous app's Plan layout ── */
 /* ── dashboard: tiny SVG charts, plan-vs-achieved bars, share rows ── */
 .cht{width:100%;height:132px;display:block}
@@ -5177,26 +5221,36 @@ var Home = {
       '</div>';
 
     h += Bypass.strip();
-    /* the day's four steps, RIGHT HERE — this is what the rep came to look at. It used to be the very
-       last block on a very long screen. */
-    h += Home.todayHtml();
 
-    /* ── the analysis views, plus Tracker and Approvals ──
-       Tracker and Approvals were tabs of their own; they are both "where does my stuff stand", which is
-       what this screen is for. The Approvals chip carries the same red count the tab used to. */
-    var TV = [['dash', 'Dashboard'], ['calls', 'Calls & stores'], ['ord', 'Order vs delivery'],
-              ['team', 'Team'], ['trk', 'Tracker'], ['appr', 'Approvals']];
-    /* neither of those two is measured over a period, so the date selector and the KPI strip below it
-       would be answering a question they do not ask */
-    var own = Home.view === 'trk' || Home.view === 'appr';
-    h += '<div class="card" style="padding:10px"><div class="chips" id="hm_chips">' +
+    /* ══ TWO LEVELS OF NAVIGATION ══
+       Level 1 — Dashboard · Tracker · Approvals: three genuinely different screens.
+       Level 2 — only inside Dashboard: Overview · Calls & Stores · Order v/s Delivery · Me v/s Team,
+                 which are four cuts of the SAME period, which is why the date selector belongs with
+                 them and not with the level above.
+       "Today's work" used to sit above all of this. It is gone: the hero card already names the ONE
+       next action, and a four-line checklist under it repeated that in a weaker form while pushing
+       the actual dashboard below the fold. */
+    var TV = [['dash', 'Dashboard'], ['trk', 'Tracker'], ['appr', 'Approvals']];
+    var SV = [['overview', 'Overview'], ['calls', 'Calls & Stores'],
+              ['ord', 'Order v/s Delivery'], ['team', 'Me v/s Team']];
+    var top = Home.top(), sub = Home.sub();
+    /* Tracker and Approvals are not measured over a period, and neither is the team table, so the date
+       selector and the KPI strip would be answering a question none of them asks */
+    var own = top !== 'dash';
+    h += '<div class="card" style="padding:0 12px 12px"><div class="hnav" id="hm_chips">' +
       TV.map(function (x) {
         var n = x[0] === 'appr' ? Nav.counts().appr : 0;
-        return '<button class="btn ' + (Home.view === x[0] ? '' : 'ghost') + ' sm"' +
-          (Home.view === x[0] ? ' data-on="1"' : '') + ' onclick="Home.go(\'' + x[0] + '\')">' +
-          esc(x[1]) + (n ? ' <span class="badge">' + (n > 99 ? '99+' : n) + '</span>' : '') + '</button>';
+        return '<button class="' + (top === x[0] ? 'on' : '') + '"' +
+          (top === x[0] ? ' data-on="1"' : '') + ' onclick="Home.go(\'' + x[0] + '\')">' +
+          esc(x[1]) + (n ? '<span class="badge">' + (n > 99 ? '99+' : n) + '</span>' : '') + '</button>';
       }).join('') + '</div>' + (own ? '' :
-      '<div class="seg" style="margin-top:8px">' +
+      '<div class="snav" id="hm_sub">' +
+        SV.map(function (x) {
+          return '<button class="' + (sub === x[0] ? 'on' : '') + '"' +
+            (sub === x[0] ? ' data-on="1"' : '') + ' onclick="Home.go(\'' + x[0] + '\')">' +
+            esc(x[1]) + '</button>'; }).join('') + '</div>' +
+      (sub === 'team' ? '' :
+      '<div class="seg" style="margin-top:10px">' +
         [['D', 'Today'], ['W', 'Days'], ['M', 'Month']].map(function (p) {
           return '<button class="' + (Home.per === p[0] ? 'on' : '') + '" onclick="Home.setPer(\'' + p[0] + '\')">' +
             esc(p[1]) + '</button>'; }).join('') + '</div>' +
@@ -5217,12 +5271,12 @@ var Home = {
             return '<option value="' + m + '"' + (Home.mon() === m ? ' selected' : '') + '>' +
               esc(Home.monLbl(m)) + '</option>'; }).join('') + '</select></div>' : '') +
       '<div class="hint" style="margin-top:8px">' + esc(Home.rangeLbl()) + ' · GARUDA ' +
-      esc(monthName(Home.start()).split(' ')[0]) + ' se chalu</div>') + '</div>';
+      esc(monthName(Home.start()).split(' ')[0]) + ' se chalu</div>')) + '</div>';
 
     /* the two screens that came in from their own tabs — they build themselves whole */
-    if (Home.view === 'trk') return h + Trk.html();
-    if (Home.view === 'appr') return h + Appr.html();
-    if (Home.view === 'team') return h + Home.teamHtml();
+    if (top === 'trk') return h + Trk.html();
+    if (top === 'appr') return h + Appr.html();
+    if (sub === 'team') return h + Home.teamHtml();
 
     var A = Home.agg();
     /* the four numbers a salesman is judged on, each with its own denominator */
@@ -5234,18 +5288,32 @@ var Home = {
       UI.kpi((dlv ? Math.round(A.billed / dlv * 100) : 0) + '%', 'Billed %', A.billed === dlv && dlv ? 'g' : 'w') +
       '</div>';
 
-    if (Home.view === 'dash') h += Home.dashHtml(A, plan);
-    if (Home.view === 'calls') h += Home.callsHtml(A);
-    if (Home.view === 'ord') h += Home.ordHtml(A);
+    if (sub === 'overview') h += Home.dashHtml(A, plan);
+    if (sub === 'calls') h += Home.callsHtml(A);
+    if (sub === 'ord') h += Home.ordHtml(A);
     return h;
   },
   after: function () {
-    var s = $('hm_chips'); if (!s) return;
-    s.classList.toggle('fit', s.scrollWidth <= s.clientWidth + 2);
-    /* centre the active chip HORIZONTALLY only. scrollIntoView moves the nearest scrollable
-       ancestor on BOTH axes, which meant the page jumped to the chip row on every re-render. */
-    var on = s.querySelector('[data-on="1"]');
-    if (on) s.scrollLeft = Math.max(0, on.offsetLeft - (s.clientWidth - on.offsetWidth) / 2);
+    /* keep the CURRENT item of each row in view, horizontally only. scrollIntoView moves the nearest
+       scrollable ancestor on BOTH axes, which used to drag the page down to the nav on every render. */
+    ['hm_chips', 'hm_sub'].forEach(function (id) {
+      var s = $(id); if (!s) return;
+      s.classList.toggle('fit', s.scrollWidth <= s.clientWidth + 2);
+      var on = s.querySelector('[data-on="1"]');
+      if (on) s.scrollLeft = Math.max(0, on.offsetLeft - (s.clientWidth - on.offsetWidth) / 2);
+    });
+  },
+  /* ── one `view`, two levels read out of it ──
+     Home.view still holds a single value, so every existing link (Router.go('appr'), the dashboard's
+     own deep-links) keeps working untouched. top() says which primary tab that value belongs to and
+     sub() which dashboard cut, defaulting to Overview. 'dash' is accepted as an alias for 'overview'
+     because older links and the saved default both use it. */
+  TOPS:{ trk:'trk', appr:'appr' },
+  SUBS:{ overview:1, calls:1, ord:1, team:1 },
+  top: function () { return Home.TOPS[Home.view] || 'dash'; },
+  sub: function () {
+    if (Home.TOPS[Home.view]) return '';
+    return Home.SUBS[Home.view] ? Home.view : 'overview';
   },
   go: function (v) { Home.view = v; render(); Home.after(); },
   setPer: function (p) { Home.per = p; render(); },
@@ -5317,40 +5385,9 @@ var Home = {
 
     return h;
   },
-  /* ── the day, as four steps ──
-     Computes its own numbers so it can be rendered near the TOP of the screen, before the period
-     switcher and the aggregates exist. The step the rep is on is highlighted, and it is the only
-     row carrying a button — a checklist that does not also get you there is just a report. */
-  todayHtml: function () {
-    var t = today(), A = Home.agg(), plan = DB.find('DayPlan', DB.me.code + '_' + t);
-    var started = !!(plan && Plan.started(plan));
-    var visits = (A.byDay[t] || {}).tc || 0;
-    var steps = [
-      ['1', 'Din shuru (plan bhejo)', started,
-        started ? 'Shuru: ' + (plan.NotifiedAt || '')
-                : (plan && plan.PlanAt ? 'Save ho gaya — WhatsApp bhejna baaki' : 'Pending'), 'plan'],
-      ['2', 'Field visits', visits > 0, visits + ' store', 'field'],
-      ['3', 'POSM', A.posm > 0, A.posm + ' audit', 'posm'],
-      ['4', 'EOD close', Gate.locked(), Gate.locked() ? 'Done' : 'Pending', 'eod']
-    ];
-    /* the first unfinished step is the live one */
-    var live = -1;
-    for (var i = 0; i < steps.length; i++) if (!steps[i][2]) { live = i; break; }
-    var done = steps.filter(function (x) { return x[2]; }).length;
-    return '<div class="sec-title">Aaj ka kaam · ' + done + '/4</div><div class="card">' +
-      steps.map(function (x, i) { return Home.step(x[0], x[1], x[2], x[3], x[4], i === live); }).join('') +
-      '</div>';
-  },
-  step: function (n, t, done, s, go, live) {
-    return '<div class="lrow"' + (live ? ' style="background:var(--blue-l);border-radius:10px;' +
-        'padding-left:8px;padding-right:8px;border-bottom-color:transparent"' : '') + '>' +
-      '<span class="pill ' + (done ? 'p-ok' : live ? 'p-blue' : 'p-grey') + '">' +
-        (done ? 'OK' : n) + '</span>' +
-      '<div class="m"><div class="t">' + esc(t) + '</div><div class="s">' + esc(s) + '</div></div>' +
-      (live && go ? '<button class="btn ghost xs" style="flex:0 0 auto" onclick="Router.go(\'' + go +
-        '\')">' + esc(I18n.s('Chalo')) + '</button>' : '') +
-      '</div>';
-  },
+  /* Home.todayHtml / Home.step are gone with the "Aaj ka kaam" checklist. The hero card above
+     already names the ONE next action and links to it; a four-row restatement of the same thing
+     only pushed the dashboard below the fold. */
   excel: function () { return Rep.orders(Home.mon()); },
 
   /* ── 2. CALLS & STORES ── */
@@ -5570,11 +5607,11 @@ var Team = {
       } else {
         Team.cache[k] = { rows:Team.flat(res.rows || []), at:Date.now() };
       }
-      if (Router.cur === 'home' && Home.view === 'team') render();
+      if (Router.cur === 'home' && Home.sub() === 'team') render();
     }, function () {
       Team.busy = '';
       Team.cache[k] = { err:'Internet nahi mila — refresh karke dobara try karo' };
-      if (Router.cur === 'home' && Home.view === 'team') render();
+      if (Router.cur === 'home' && Home.sub() === 'team') render();
     });
   },
   /* admin / HOD path — the SAME shape the endpoint returns, computed locally because they already
@@ -14892,4 +14929,3 @@ var Admin = {
 </script>
 </body>
 </html>
-
