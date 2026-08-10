@@ -2937,11 +2937,22 @@ I18n.D.en = I18n.EN = {
   'Har SKU ke saamne jitna distributor ne diya hai wo likho — box order ki qty se bhara hua hai, jo line poori mili hai use haath mat lagao.':
     'Against every SKU, write how much the distributor actually supplied — the box already starts at the ordered quantity, leave a line untouched if it arrived in full.',
   'Kyun kam mila?':'Why less than ordered?',
-  'Save karo aur HOD ko bhejo':'Save and send to HOD',
   'Kam se kam ek SKU ka supplied qty bharo — sab zero hai':'Fill in the supplied qty for at least one SKU — everything is zero',
   'Kyun kam mila — reason likhna zaroori hai':'Why less than ordered — a reason is required',
-  'Save ho gaya — HOD ke paas approval ke liye chala gaya':'Saved — sent to the HOD for approval',
-  'Billing Done — poora order':'Billing Done — the full order'
+  'Billing Done — poora order':'Billing Done — the full order',
+  /* ── Partial Order: no approval needed (this round's change) ── */
+  'Save karo':'Save',
+  'Koi approval nahi chahiye — save karne par HOD ko dikh jayega (Notifications aur PO vs Invoice me), zaroorat pade to wo khud check kar lega.':
+    'No approval needed — once saved, the HOD will see it (in Notifications and PO vs Invoice); they can check it themselves if needed.',
+  'Save ho gaya — HOD ko dikh jayega':'Saved — the HOD will see it',
+  'Recorded — approval nahi chahiye':'Recorded — no approval needed',
+  'HOD ko dikh jayega — koi approve/reject nahi karna, sirf record hai. Kuch galat lage to HOD khud dekh lega.':
+    'The HOD will see this — nothing to approve or reject, it is just a record. If something looks off, the HOD can look into it themselves.',
+  'PO me kitna order tha, uske against kitna mila — dono side by side. Ye screen sirf dikhane ke liye hai; Partial Order seedha record ho jaata hai, Full invoice HOD approve karta hai.':
+    'How much was ordered against the PO, and how much actually came — side by side. This screen is read-only; a Partial Order is recorded directly, a Full invoice is approved by the HOD.',
+  'Sirf record ke liye — koi approval nahi chahiye. Kuch galat lage to seedha rep se ya PO vs Invoice screen se cross-check kar lo.':
+    'Just a record — no approval needed. If something looks off, cross-check directly with the rep or on the PO vs Invoice screen.',
+  'Order tab kholo':'Open the order tab'
 };
 
 /* ═══════════════ STORE — cache + offline queue ═══════════════ */
@@ -11160,7 +11171,12 @@ var Sec = {
     Sec.lines(o).forEach(function (l) { m[String(l.Sku)] = num(l.Units); });
     return m;
   },
-  setBilling: function (po, type, per, remark) {
+  /* `skipApproval` — a Partial Order recorded from the Tracker is a FACT the rep is logging, not an
+     ask: no HOD decision is due on it, so it never enters the InvoiceStatus/Approvals pipeline (it
+     still shows up in PO vs Invoice and, for admin/HOD, in Notifications + Data Lookup — just with
+     nothing to approve). Full billing (the 'Billing Done' path) is unchanged and still raises a
+     Pending invoice for the HOD to sign off. */
+  setBilling: function (po, type, per, remark, skipApproval) {
     var o = DB.find('SecOrders', po); if (!o) return Promise.resolve();
     var lines = Sec.lines(o);
     var map = (type === 'Full') ? Sec.fullMap(o) : (per || {});
@@ -11180,8 +11196,10 @@ var Sec = {
       BillingRemark:type === 'Full' ? '' : String(remark || ''),
       InvoiceNo:o.InvoiceNo || Sec.invNo(po),
       InvoiceAt:now,
-      /* a re-raised invoice is a NEW claim on the HOD's attention */
-      InvoiceStatus:'Pending', InvoiceHodBy:'', InvoiceHodRole:'', InvoiceHodAt:'', InvoiceRemarks:''
+      /* a re-raised invoice is a NEW claim on the HOD's attention — unless this save is explicitly
+         a no-approval record, in which case there is no claim to raise at all */
+      InvoiceStatus:skipApproval ? '' : 'Pending',
+      InvoiceHodBy:'', InvoiceHodRole:'', InvoiceHodAt:'', InvoiceRemarks:''
     }), { quiet:true });
   },
   share: function (po) {
@@ -12001,11 +12019,14 @@ var Trk = {
       /* billingHtml decides for itself what (if anything) to show — an invoice history if one
          exists, and the ordered-vs-supplied table only while the status is Partial Order */
       (k === 'ord' ? Trk.billingHtml(r, id, q) : '') +
+      /* the generic follow-up note is redundant once a Partial Order's own "Kyun kam mila" reason is
+         being captured right above it — one reason box, not two asking the same question */
+      (r.st === 'Partial Order' ? '' :
       '<label class="f">Note — ASM ne kya kaha</label>' +
       '<div style="display:flex;gap:6px;align-items:center">' +
       '<input class="in" style="flex:1 1 0;min-width:0" id="tk_n_' + id + '" value="' + esc(r.note) + '" placeholder="Follow-up note">' +
       '<button class="btn ghost sm" style="flex:0 0 auto" onclick="Trk.setNote(\'' + q + '\',\'' + id + '\',this)">Save</button></div>' +
-      (r.at ? '<div class="hint" style="margin-top:6px">Updated ' + esc(Appr.when(r.at)) + '</div>' : '') +
+      (r.at ? '<div class="hint" style="margin-top:6px">Updated ' + esc(Appr.when(r.at)) + '</div>' : '')) +
       '</div>';
     return h;
   },
@@ -12027,10 +12048,14 @@ var Trk = {
     var h = '';
 
     /* the invoice as it stands, and where it has got to — shown whenever one exists, whatever the
-       order's CURRENT status is; moving the status on does not erase the invoice's own history */
+       order's CURRENT status is; moving the status on does not erase the invoice's own history.
+       A Partial Order save is recorded with no InvoiceStatus at all (see Sec.setBilling's
+       skipApproval) — no HOD decision is due on it, so it never reads "pending"/"approved". */
     if (r.billType) {
-      var pill = /approved/i.test(st) ? 'p-ok' : /reject/i.test(st) ? 'p-bad' : 'p-warn';
-      var word = /approved/i.test(st) ? 'Invoice approved'
+      var noApproval = r.billType === 'Partial' && !st;
+      var pill = noApproval ? 'p-grey' : /approved/i.test(st) ? 'p-ok' : /reject/i.test(st) ? 'p-bad' : 'p-warn';
+      var word = noApproval ? 'Recorded — approval nahi chahiye'
+               : /approved/i.test(st) ? 'Invoice approved'
                : /reject/i.test(st) ? 'Invoice reject hua' : 'Invoice HOD ke paas hai';
       h += '<div style="margin:10px 0;padding-top:10px;border-top:1px dashed var(--line)">' +
         '<div class="lrow" style="padding:0 0 8px"><div class="m">' +
@@ -12038,6 +12063,8 @@ var Trk = {
         '<div class="s">' + num(o.BilledUnits) + ' / ' + r.units + ' units · ' +
           inr(o.BilledValue) + ' · ' + esc(o.BillingType || '') + '</div></div>' +
         '<span class="pill ' + pill + '">' + word + '</span></div>' +
+        (noApproval ? '<div class="hint" style="margin-bottom:0">HOD ko dikh jayega — koi approve/' +
+          'reject nahi karna, sirf record hai. Kuch galat lage to HOD khud dekh lega.</div>' : '') +
         (o.InvoiceRemarks ? '<div class="banner ' + (/reject/i.test(st) ? 'r' : 'b') +
           '" style="margin-bottom:0"><span></span><div><b>HOD ka message</b><br>' +
           '<span style="font-weight:500">' + esc(o.InvoiceRemarks) + '</span></div></div>' : '') +
@@ -12080,7 +12107,9 @@ var Trk = {
         '" placeholder="e.g. distributor ke paas itna hi stock tha">' +
       '<div class="btns" style="margin-top:8px"><button class="btn ok sm" ' +
         'onclick="Trk.saveBilling(\'' + q + '\',\'' + id + '\',' + lines.length + ',this)">' +
-        'Save karo aur HOD ko bhejo</button></div>' +
+        'Save karo</button></div>' +
+      '<div class="hint" style="margin-top:6px">Koi approval nahi chahiye — save karne par HOD ko dikh ' +
+        'jayega (Notifications aur PO vs Invoice me), zaroorat pade to wo khud check kar lega.</div>' +
       '</div>';
     return h;
   },
@@ -12112,10 +12141,11 @@ var Trk = {
     if (tot <= 0) return toast('Kam se kam ek SKU ka supplied qty bharo — sab zero hai');
     if (!rm) return toast('Kyun kam mila — reason likhna zaroori hai');
     Busy.run('tkbill_' + id, el, 'Save ho raha hai…', function () {
-      return Sec.setBilling(key, 'Partial', per, rm).then(function () {
+      /* skipApproval = true — this is a record, not a request; no InvoiceStatus, no Approvals entry */
+      return Sec.setBilling(key, 'Partial', per, rm, true).then(function () {
         Log.add('Tracker', 'Partial supply', key, tot + ' / ' + num(o.TotUnits) + ' units — ' + rm);
         render();
-        toast('Save ho gaya — HOD ke paas approval ke liye chala gaya', 3800);
+        toast('Save ho gaya — HOD ko dikh jayega', 3800);
       });
     });
   },
@@ -12180,8 +12210,8 @@ var Trk = {
   },
   poiHtml: function () {
     var rows = Trk.poiRows();
-    var h = UI.head('', 'Tracker', 'PO me kitna order tha, uske against kitna invoice bana — dono side by side. ' +
-      'Ye screen sirf dikhane ke liye hai; invoice Orders tab me banta hai aur HOD approve karta hai.');
+    var h = UI.head('', 'Tracker', 'PO me kitna order tha, uske against kitna mila — dono side by side. ' +
+      'Ye screen sirf dikhane ke liye hai; Partial Order seedha record ho jaata hai, Full invoice HOD approve karta hai.');
     var totPo = 0, totBill = 0, gaps = 0, pend = 0;
     rows.forEach(function (r) {
       totPo += r.poUnits; totBill += r.billed;
@@ -12223,7 +12253,7 @@ var Trk = {
           (r.type ? ' · ' + esc(r.type) : '') + '</div>' +
         '<div class="sum">PO ' + r.poUnits + ' units · invoice ' + r.billed + ' units' +
           (r.poUnits ? ' · ' + Math.round(r.billed / r.poUnits * 100) + '%' : '') +
-          (r.inv ? ' · ' + Trk.invWord(r.inv) : '') + '</div>' +
+          (r.type ? ' · ' + Trk.invWord(r.inv, r.type) : '') + '</div>' +
       '</div>' + pill + '<span class="ap-x">' + (op ? '▴' : '▾') + '</span></div>';
     if (op) h += '<div onclick="event.stopPropagation()">' + Trk.poiDetail(r) + '</div>';
     return h + '</div>';
@@ -12267,7 +12297,7 @@ var Trk = {
       h += '<table class="ap-t">' +
         '<tr><td>Invoice number</td><td><b>' + esc(o.InvoiceNo || Sec.invNo(r.po)) + '</b></td></tr>' +
         '<tr><td>Invoice type</td><td><b>' + esc(r.type || 'Full') + '</b></td></tr>' +
-        '<tr><td>Approval</td><td><b>' + esc(Trk.invWord(r.inv)) + '</b>' +
+        '<tr><td>Approval</td><td><b>' + esc(Trk.invWord(r.inv, r.type)) + '</b>' +
           (o.InvoiceHodBy ? '<div class="hint">' + esc(o.InvoiceHodBy) +
             (o.InvoiceHodAt ? ' · ' + esc(Appr.when(o.InvoiceHodAt)) : '') + '</div>' : '') +
           '</td></tr>' +
@@ -12329,11 +12359,15 @@ var Trk = {
     return h;
   },
   /* one word for where an invoice has got to — used on the card, in the detail and nowhere else */
-  invWord: function (st) {
+  /* `type` (BillingType) tells the difference between "nothing recorded yet" and "recorded, no
+     approval needed" — both have a blank InvoiceStatus, and used to read identically as "Invoice
+     nahi bana" even for a Partial Order that HAD been saved. */
+  invWord: function (st, type) {
     var x = String(st || '');
-    return /approved/i.test(x) ? 'Approved'
-         : /reject/i.test(x) ? 'Reject hua'
-         : x ? 'HOD ke paas' : 'Invoice nahi bana';
+    if (/approved/i.test(x)) return 'Approved';
+    if (/reject/i.test(x)) return 'Reject hua';
+    if (x) return 'HOD ke paas';
+    return type ? 'Recorded' : 'Invoice nahi bana';
   }
 };
 
@@ -13899,10 +13933,10 @@ var Appr = {
   /* Store openings and POSM requirements are NOT approvals any more — the rep opens the outlet, asks
      his ASM himself and records the stage in the Tracker tab. They deliberately do not appear here. */
   KINDS:[['PJP', 'PJP'], ['Plan change', 'Plan change'],
-         ['Order', 'Orders'], ['Invoice', 'Invoice'], ['TA/DA', 'TA/DA']],
+         ['Order', 'Orders'], ['Invoice', 'Invoice'], ['Partial supply', 'Partial supply'], ['TA/DA', 'TA/DA']],
   /* one flat pastel tag per TYPE — never red/green, those are reserved for pass/fail elsewhere */
   KCLS:{ 'PJP':'k-pjp', 'Plan change':'k-plan', 'Order':'k-ord', 'Invoice':'k-ord',
-         'TA/DA':'k-tada' },
+         'Partial supply':'k-ord', 'TA/DA':'k-tada' },
   kcls: function (k) { return Appr.KCLS[k] || 'k-pjp'; },
 
   ts: function (v) {
@@ -13946,7 +13980,9 @@ var Appr = {
   },
   LBL:{ approved:['Approved','p-ok'], rejected:['Rejected','p-bad'],
         pending:['HOD ke paas','p-warn'], draft:['Bheja nahi','p-grey'],
-        partial:['Partly rejected','p-bad'], open:['Naya','p-open'], closed:['Dekh liya','p-closed'] },
+        partial:['Partly rejected','p-bad'], open:['Naya','p-open'], closed:['Dekh liya','p-closed'],
+        /* a Partial Order supply — recorded, nothing pending, nobody decides it */
+        recorded:['Recorded','p-grey'] },
   /* Coverage is "done/need"; guard against the old rows where Sheets read "9/9" as a date */
   cover: function (v) { var s = String(v || '').trim(); return /^\d+\s*\/\s*\d+$/.test(s) ? s : ''; },
   /* row keys go straight into an inline onclick — keep them attribute-safe */
@@ -14112,6 +14148,32 @@ var Appr = {
         tip:st === 'rejected' ? 'Orders tab me invoice theek karke dobara bhejo.' : '' });
     });
 
+    /* ══ PARTIAL SUPPLY — informational only, no approval needed ══
+       The rep records what the distributor actually supplied on an order marked 'Partial Order'
+       (Trk.saveBilling, skipApproval:true — never sets InvoiceStatus, so it never lands in the
+       Invoice block above). This is FYI for the HOD, not a decision: shown to admin/HOD only, next
+       to the Orders/Invoice feed it already reads, with the reason right there to cross-check —
+       and the same rows are browsable later in the Admin Data tab's Data Lookup (Orders category). */
+    if (admin) DB.rows('SecOrders').filter(function (o) {
+      return o.BillingType === 'Partial' && !o.InvoiceStatus;
+    }).forEach(function (o) {
+      var po2 = num(o.TotUnits), bi2 = num(o.BilledUnits), gap2 = po2 - bi2;
+      out.push({ id:'psup_' + Appr.jid(o.PoNumber), icon:'', kind:'Partial supply', go:'trk',
+        status:'recorded', act:'psup', key:o.PoNumber,
+        title:'Partial supply — ' + (o.StoreName || ''),
+        emp:o.EmpName || '',
+        sent:o.InvoiceAt || o.StatusAt || '', sentAlt:o.Ts || o.Date || '',
+        done:'', by:'', role:'', note:'',
+        rows:[['PO', o.PoNumber || '—'], ['Store', o.StoreName || '—'], ['Distributor', o.DbName || '—'],
+              ['Ordered units', String(po2)], ['Supplied units', String(bi2)],
+              ['Gap', gap2 > 0 ? gap2 + ' units short' : 'Koi gap nahi'],
+              ['Supplied value', inr(o.BilledValue)], ['Order value', inr(o.TotValue)],
+              ['Reason', o.BillingRemark || '—']],
+        sum:bi2 + ' / ' + po2 + ' units · ' + inr(o.BilledValue) +
+          (gap2 > 0 ? ' · ' + gap2 + ' units short' : ''),
+        tip:'' });
+    });
+
     pick('TaDa').forEach(function (r) {
       out.push({ id:'tada_' + Appr.jid(r.Id), icon:'', kind:'TA/DA', go:'home', status:Appr.norm(r.Status),
         title:'TA/DA — ' + (monthName(r.Month) || r.Month || dmy(r.Date)),
@@ -14225,6 +14287,20 @@ var Appr = {
         h += '<div class="btns"><button class="btn ' + (o.status === 'closed' ? 'ghost' : 'ok') + ' sm" ' +
           'onclick="event.stopPropagation();Appr.closeNotify(\'' + o.id + '\')">' +
           (o.status === 'closed' ? 'Dekh liya' : 'Dekh liya \u2014 band karo') + '</button></div>';
+      }
+      return h + '</div>';
+    }
+
+    /* a Partial Order record: no timeline, no decision — just the facts, the reason, and a way to
+       jump to the order itself. Kept as its own short branch for the same reason 'notify' is. */
+    if (o.act === 'psup') {
+      if (op) {
+        h += '<table class="ap-t">' + o.rows.map(function (r) {
+          return '<tr><td>' + esc(r[0]) + '</td><td><b>' + esc(r[1]) + '</b></td></tr>'; }).join('') + '</table>';
+        h += '<div class="hint" style="margin-top:8px">Sirf record ke liye — koi approval nahi chahiye. ' +
+          'Kuch galat lage to seedha rep se ya PO vs Invoice screen se cross-check kar lo.</div>';
+        h += '<div class="btns"><button class="btn ghost sm" onclick="event.stopPropagation();Router.go(\'' +
+          o.go + '\')">Order tab kholo</button></div>';
       }
       return h + '</div>';
     }
@@ -14432,6 +14508,8 @@ var Appr = {
                     needs nothing from them, so it is not counted anywhere. */
   todo: function (o) {
     if (o.act === 'notify') return !Auth.isAdmin() && o.status === 'open';
+    /* a Partial Order record is a fact, not an ask — it never needs anyone's action */
+    if (o.act === 'psup') return false;
     return Auth.isAdmin() ? o.status === 'pending' : (o.status === 'rejected' || o.status === 'partial');
   },
   /* ── the SECOND filter axis: is this FINISHED, for the person looking ──
@@ -14446,6 +14524,9 @@ var Appr = {
      A draft he never sent, and an unread notification, are open for the same reason. */
   openClosed: function (o) {
     if (o.act === 'notify') return o.status === 'closed' ? 'closed' : 'open';
+    /* always visible under Open — there is nothing to decide, but it should stay easy to find, not
+       get lost the moment it is filed */
+    if (o.act === 'psup') return 'open';
     if (Auth.isAdmin()) return o.status === 'pending' ? 'open' : 'closed';
     return (o.status === 'pending' || o.status === 'partial' || o.status === 'draft' ||
             o.status === 'rejected') ? 'open' : 'closed';
@@ -15515,9 +15596,14 @@ var Admin = {
       : (r.StoreName || '') + ' · ' + (r.Element || '—');
     var stCls = /approv|done|ok/i.test(r.Status || '') ? 'p-ok' :
       /reject|cancel|drop/i.test(r.Status || '') ? 'p-bad' : 'p-warn';
+    /* a Partial Order supply is not the row's Status (that stays 'Partial Order') — it needs its own
+       line so the HOD can see, without opening the row, that a supply was recorded and why */
+    var billBit = (tab === 'SecOrders' && r.BillingType === 'Partial')
+      ? '<div class="s">Partial supply — ' + num(r.BilledUnits) + ' / ' + num(r.TotUnits) + ' units' +
+        (r.BillingRemark ? ' · ' + esc(r.BillingRemark) : '') + '</div>' : '';
     return '<div class="card"><div class="lrow" style="padding-top:0"><div class="m">' +
       '<div class="t">' + dmy(r.Date || (r.Month + '-01')) + '</div>' +
-      '<div class="s">' + esc(sub) + '</div></div>' +
+      '<div class="s">' + esc(sub) + '</div>' + billBit + '</div>' +
       '<span class="pill ' + stCls + '">' + esc(r.Status || '—') + '</span></div>' +
       '<div class="btns" style="margin-top:0"><button class="btn ghost sm" onclick="Admin.lkOpen(\'' +
       esc(String(key)) + '\')">Kholo aur edit karo</button></div></div>';
@@ -15534,6 +15620,14 @@ var Admin = {
     });
     var h = '<div class="card"><div class="hint" style="margin-bottom:8px">' + esc(row.EmpName || '') +
       ' (' + esc(row.EmpCode || '') + ') — save karne par ye SAME row overwrite hoga, nayi row nahi banegi.</div>';
+    /* billing/invoice fields are deliberately NOT in the editable list below (they are kept in step
+       by Sec.setBilling, not by hand) — shown here read-only so the HOD still sees the full picture */
+    if (tab === 'SecOrders' && row.BillingType) {
+      h += '<div class="banner b" style="margin-bottom:10px"><span></span><div>' +
+        '<b>Billing — ' + esc(row.BillingType) + (row.InvoiceStatus ? ' · ' + esc(row.InvoiceStatus) : ' · Recorded') + '</b><br>' +
+        '<span style="font-weight:500">' + num(row.BilledUnits) + ' / ' + num(row.TotUnits) + ' units · ' +
+        inr(row.BilledValue) + (row.BillingRemark ? ' · ' + esc(row.BillingRemark) : '') + '</span></div></div>';
+    }
     h += fields.map(function (c) {
       var num2 = c[2] === 'm' || c[2] === 'n';
       return '<label class="f">' + esc(c[1]) + '</label><input class="in" id="lk_f_' + c[0] + '"' +
