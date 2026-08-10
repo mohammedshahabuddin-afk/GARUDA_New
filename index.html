@@ -2883,10 +2883,14 @@ I18n.D.en = I18n.EN = {
   'aaj tak chahiye:':'needed by today:',
   'kaali line = aaj ka pace':'the black line is today’s pace',
   'L baaki':'L to go',
-  'Baaki':'To go',
+  'Baaki':'BTG',
   'Till date':'Till date',
   'Month target':'Month target',
   'Daily target Master_Config me set hota hai.':'The daily target is set in Master_Config.',
+  'Month target = daily target × ':'Month target = daily target × ',
+  ' working days. Till date target = daily target × ':' working days. Till date target = daily target × ',
+  ' active working days (weekly off, leave aur office holiday count nahi hote — sirf actual working days). ':
+    ' active working days (weekly off, leave and office holidays don’t count — only actual working days). ',
   'On track':'On track',
   'Thoda peeche':'Slightly behind',
   'Peeche chal rahe ho':'Running behind',
@@ -2917,7 +2921,27 @@ I18n.D.en = I18n.EN = {
   'MRP bharo — line':'Fill in the MRP — line',
   'Units bharo — line':'Fill in the units — line',
   'Naya town likho':'Type the new town',
-  'Order liya':'Order taken'
+  'Order liya':'Order taken',
+
+  /* ── new outlet: beautician brands + the units/MRP-value order rework ── */
+  'Kis brand ka beautician available hai':'Which brand has a beautician available',
+  'Beautician available hai to brand names likho':'A beautician is available — write the brand names',
+  'Order liya hai to Haan dabao — brand chuno, units aur MRP value bhar dena, total apne aap ban jayega.':
+    'If an order was taken, tap Yes — pick a brand, fill in units and MRP value and the total adds itself up.',
+  'Units aur MRP value, dono alag-alag total':'Units and MRP value, each totalled separately',
+  'Order outlet create hone ke baad SKU-wise punch hoga — yahan sirf brand-wise units aur MRP value ka total record ho raha hai.':
+    'The order will be placed SKU-wise once this outlet is created — only a brand-wise units and MRP value total is being recorded here.',
+  'MRP value bharo — line':'Fill in the MRP value — line',
+
+  /* ── Tracker: Partial Order ── */
+  'Har SKU ke saamne jitna distributor ne diya hai wo likho — box order ki qty se bhara hua hai, jo line poori mili hai use haath mat lagao.':
+    'Against every SKU, write how much the distributor actually supplied — the box already starts at the ordered quantity, leave a line untouched if it arrived in full.',
+  'Kyun kam mila?':'Why less than ordered?',
+  'Save karo aur HOD ko bhejo':'Save and send to HOD',
+  'Kam se kam ek SKU ka supplied qty bharo — sab zero hai':'Fill in the supplied qty for at least one SKU — everything is zero',
+  'Kyun kam mila — reason likhna zaroori hai':'Why less than ordered — a reason is required',
+  'Save ho gaya — HOD ke paas approval ke liye chala gaya':'Saved — sent to the HOD for approval',
+  'Billing Done — poora order':'Billing Done — the full order'
 };
 
 /* ═══════════════ STORE — cache + offline queue ═══════════════ */
@@ -4595,7 +4619,7 @@ var Card = {
       /* the composed form — "With ME Sales Team — RAHUL", "Leave — medical · back at Monday".
          Translated HERE, not at paint time, so the width used for wrapping is the width of the text
          that actually gets drawn. */
-      ww:I18n.s(Plan.wwFull(r) || ww), field:fld,
+      ww:I18n.s(Plan.wwFull(r, ww)), field:fld,
       /* an off day has no beat: showing the PJP's town next to "Leave" would be a lie */
       town:fld ? (r.Town || (pjp ? pjp.Town : '') || '—') : '—',
       beat:fld ? (r.Beat || (pjp ? pjp.Beat : '') || '—') : '—',
@@ -4848,6 +4872,7 @@ var Card = {
            ['MRP value', 0, a.value, 1],
            ['NSV (₹ Lakh)', 0, a.nsv, 2]],
       status:[['Billing Done', st('Billing Done').length, sum(st('Billing Done'), 'TotValue')],
+              ['Partial Order', st('Partial Order').length, sum(st('Partial Order'), 'TotValue')],
               ['Order in Process', st('Order in Process').length, sum(st('Order in Process'), 'TotValue')],
               ['Cancel Order', st('Cancel Order').length, 0]],
       stores:a.ord.map(function (o) {
@@ -4972,9 +4997,9 @@ var Card = {
 
     /* ── the month to date ──
        The day's table above says how today went. This says where the MONTH stands, which is the
-       question the card is actually forwarded to answer. Three columns: what the month has to end
-       at, what should be done by today, and what is done — so "behind" and "on pace" are visible
-       without anyone doing arithmetic on a phone. */
+       question the card is actually forwarded to answer. Exactly 4 columns, by request: Month
+       target, Achieved till date, BTG (baaki-to-go) and Achievement % — the "till date target"
+       (pace) figure that used to sit here is still in the app/xlsx tables, just not on this image. */
     if (d.mtd && d.mtd.rows && d.mtd.rows.length) {
       var M = d.mtd, v = Tgt.verdict(M.tot);
       sec('TARGET ACHIEVED TILL DATE (₹ LAKH)');
@@ -4986,25 +5011,29 @@ var Card = {
       Card.fnt(g, '800', 10.5);
       put('BRAND', P, y, C.foot);
       put('MONTH', P + iw * .46, y, C.foot, 'right');
-      put('TILL DATE', P + iw * .74, y, C.foot, 'right');
-      put('DONE', W - P, y, C.foot, 'right');
+      put('DONE', P + iw * .66, y, C.foot, 'right');
+      put('BTG', P + iw * .84, y, C.foot, 'right');
+      put('%', W - P, y, C.foot, 'right');
       y += 15;
       M.rows.forEach(function (r) {
         line();
         Card.fnt(g, '400', 12);
         put(r.name, P, y, C.ink);
         put(lakh(r.target), P + iw * .46, y, C.meta, 'right');
-        put(lakh(r.pace), P + iw * .74, y, C.meta, 'right');
         Card.fnt(g, '800', 12);
-        put(lakh(r.got), W - P, y, r.target > 0 && r.got >= r.pace ? C.green : C.ink, 'right');
+        put(lakh(r.got), P + iw * .66, y, r.target > 0 && r.got >= r.pace ? C.green : C.ink, 'right');
+        Card.fnt(g, '400', 12);
+        put(lakh(r.left), P + iw * .84, y, C.meta, 'right');
+        put((r.target > 0 ? r.pct : 0) + '%', W - P, y, C.meta, 'right');
         y += 19;
       });
       line();
       Card.fnt(g, '800', 12);
       put('TOTAL', P, y, C.dark);
       put(lakh(M.tot.target), P + iw * .46, y, C.dark, 'right');
-      put(lakh(M.tot.pace), P + iw * .74, y, C.dark, 'right');
-      put(lakh(M.tot.got), W - P, y, M.tot.got >= M.tot.pace ? C.green : C.red, 'right');
+      put(lakh(M.tot.got), P + iw * .66, y, M.tot.got >= M.tot.pace ? C.green : C.red, 'right');
+      put(lakh(M.tot.left), P + iw * .84, y, C.dark, 'right');
+      put(M.tot.pct + '%', W - P, y, C.dark, 'right');
       y += 19;
     }
 
@@ -6702,25 +6731,29 @@ var Plan = {
         '</select></div>' +
         '<div><label class="f">Remark <span class="req">*</span></label>' +
         '<input class="in" id="pl_rmk" value="' + esc(d.rmk || '') + '" placeholder="Short remark"></div></div>';
+    /* Leave / Sick Leave used to ask BOTH a "Reason" and a "Remark" box — two fields for one fact.
+       Only one is kept: Reason. */
     if (ww === 'Leave' || ww === 'Sick Leave')
       return '<label class="f">Reason <span class="req">*</span></label>' +
-        '<input class="in" id="pl_reason" value="' + esc(d.reason || '') + '" placeholder="Leave ka reason">' +
-        '<label class="f">Remark <span class="req">*</span></label>' +
-        '<input class="in" id="pl_rmk" value="' + esc(d.rmk || '') + '" placeholder="Short remark">';
+        '<input class="in" id="pl_reason" value="' + esc(d.reason || '') + '" placeholder="Leave ka reason">';
     return '';
   },
   /* WwDetail is stored as JSON so a bracket field can be read back exactly as it was typed */
   detail: function (r) {
     try { return JSON.parse((r || Plan.row()).WwDetail || '{}') || {}; } catch (e) { return {}; }
   },
-  /* the one-line human form, used on the WhatsApp card and in messages */
-  wwFull: function (r) {
+  /* the one-line human form, used on the WhatsApp card and in messages.
+     `fallbackWw` is whatever the caller already resolved via Plan.ww()/pjp — without it this used to
+     default straight to 'Self Working' the instant r.WorkingWith was blank (before today's first
+     save), so a Leave/Meeting/Off day showed "Self Working" up top while the bracket below correctly
+     asked for a Leave reason. The two disagreeing on screen was the actual bug the rep saw. */
+  wwFull: function (r, fallbackWw) {
     r = r || Plan.row();
-    var base = Pjp.ww(r.WorkingWith || 'Self Working'), d = Plan.detail(r);
+    var base = Pjp.ww(r.WorkingWith || fallbackWw || 'Self Working'), d = Plan.detail(r);
     if (d.name) return base + ' — ' + d.name;
     if (base === 'Meeting / Activity')
       return base + (d.act ? ' — ' + d.act : '') + (d.dur ? ' (' + d.dur + ')' : '') + (d.rmk ? ' · ' + d.rmk : '');
-    if (/leave/i.test(base)) return base + (d.reason ? ' — ' + d.reason : '') + (d.rmk ? ' · ' + d.rmk : '');
+    if (/leave/i.test(base)) return base + (d.reason ? ' — ' + d.reason : '');
     return base;
   },
 
@@ -6763,10 +6796,17 @@ var Plan = {
     /* ── ONE card, and it is READ-ONLY. This is what the HOD approved; the only way to alter any of it
           — including Working With — is the Change PJP button, which opens a request. ── */
     var left = Plan.left(dev);
+    /* the day-type pill: shown ONCE, right up top, coloured so a Leave/Off/Holiday day cannot be
+       mistaken for a working one at a glance — the ambiguity the readonly "Working With" line alone
+       used to leave (see the wwFull fix above; this is the same fact, made unmissable). */
+    var wwPillCls = !field ? (/leave/i.test(ww) ? 'p-bad' : /meeting|activity/i.test(ww) ? 'p-warn' : 'p-grey') : 'p-blue';
+    var wwPillIc = /leave/i.test(ww) ? '🌴' : /weekly|holiday/i.test(ww) ? '🏖️' : /meeting|activity/i.test(ww) ? '🗣️' : '🏃';
     h += '<div class="card"><div class="c-h"><h3>PJP approved</h3>' +
       '<button class="btn ghost xs" onclick="Plan.changeOpen()"' + (left ? '' : ' disabled') + '>' +
         (left ? 'Change PJP' : 'Change limit over') + '</button></div>' +
-      '<div class="hint">*Approved by HOD — kuch bhi badalna ho to Change PJP dabao, sidha edit nahi hota.' +
+      '<span class="pill ' + wwPillCls + '" style="margin-top:4px">' + wwPillIc + ' ' +
+        esc(Plan.wwFull(r, ww)) + '</span>' +
+      '<div class="hint" style="margin-top:8px">*Approved by HOD — kuch bhi badalna ho to Change PJP dabao, sidha edit nahi hota.' +
       (dev && num(dev.TryCount) ? ' Aaj ' + num(dev.TryCount) + '/' + Plan.MAXCHG + ' change ho chuke hain' +
         (left ? ' — ' + left + ' bacha hai.' : ' — limit poori.') : '') + '</div>';
 
@@ -6800,7 +6840,7 @@ var Plan = {
     /* Working With is part of the approved plan, so it is displayed, not offered as a dropdown. The
        hidden input keeps Plan.save reading from ONE place whichever way the value was chosen. */
     h += '<label class="f" style="margin-top:14px">Working With</label>' +
-      '<input class="in lk" readonly value="' + esc(Plan.wwFull(r) || ww) + '">' +
+      '<input class="in lk" readonly value="' + esc(Plan.wwFull(r, ww)) + '">' +
       '<input type="hidden" id="pl_ww" value="' + esc(ww) + '">' +
       /* the ONE place that used to render Meeting-type/duration, Remark, Leave-reason etc. was the
          Change-PJP popup — a day already approved AS a Meeting/Leave day had no such popup open,
@@ -6964,7 +7004,7 @@ var Plan = {
     var d = {};
     if (ww === 'ME Sales Team' || ww === 'BA Supervisor') d.name = val('pl_wwname');
     if (ww === 'Meeting / Activity') { d.act = val('pl_act'); d.dur = val('pl_dur'); d.rmk = val('pl_rmk'); }
-    if (ww === 'Leave' || ww === 'Sick Leave') { d.reason = val('pl_reason'); d.rmk = val('pl_rmk'); }
+    if (ww === 'Leave' || ww === 'Sick Leave') { d.reason = val('pl_reason'); }
     return d;
   },
   /* which beats the HOD has already refused, shown wherever a new beat is being chosen */
@@ -6993,7 +7033,7 @@ var Plan = {
     if (ww === 'Meeting / Activity')
       return !val('pl_act') ? 'Meeting / Activity type chuno' : (!val('pl_rmk') ? 'Remark likho' : '');
     if (ww === 'Leave' || ww === 'Sick Leave')
-      return !val('pl_reason') ? 'Leave ka reason likho' : (!val('pl_rmk') ? 'Remark likho' : '');
+      return !val('pl_reason') ? 'Leave ka reason likho' : '';
     return '';
   },
   save: function (quiet, el) {
@@ -7012,7 +7052,7 @@ var Plan = {
     var d = {};
     if (ww === 'ME Sales Team' || ww === 'BA Supervisor') d.name = val('pl_wwname');
     if (ww === 'Meeting / Activity') { d.act = val('pl_act'); d.dur = val('pl_dur'); d.rmk = val('pl_rmk'); }
-    if (ww === 'Leave' || ww === 'Sick Leave') { d.reason = val('pl_reason'); d.rmk = val('pl_rmk'); }
+    if (ww === 'Leave' || ww === 'Sick Leave') { d.reason = val('pl_reason'); }
     /* off-PJP = a different Working-With than the approved plan, or (on a field day only) a
        different beat. Town/Beat mean nothing on a non-field day, so comparing them there — against
        whatever the master happens to hold in those columns for a Meeting/Leave/Off day — used to
@@ -7167,7 +7207,7 @@ var Field = {
   noFieldHtml: function () {
     var r = Plan.row(), ww = Pjp.ww(r.WorkingWith || Plan.ww());
     return UI.head('', 'Field band hai', dmy(today()) + ' · aaj field day nahi hai.') +
-      '<div class="banner w"><span>!</span><div><b>Aaj ' + esc(Plan.wwFull(r) || ww) + ' hai</b><br>' +
+      '<div class="banner w"><span>!</span><div><b>Aaj ' + esc(Plan.wwFull(r, ww)) + ' hai</b><br>' +
       '<span style="font-weight:500">Is din koi store visit nahi hai, isliye Field, Stock aur POSM ' +
       'band hain. Din close karna ho to sidha <b>EOD</b> me jao.<br>Agar aaj market jaana hai to ' +
       'pehle <b>Plan tab me Change PJP</b> karke din ko field day banao — approve hone par Field ' +
@@ -7703,7 +7743,11 @@ var Field = {
         '<div class="hint">12 + 13 + 14, apne aap</div></div></div>' +
 
       '<div class="sec-title">Beautician</div>' +
-      Field.nsSel('n_beaut', '18 · Beautician available', Field.NS_YN) +
+      Field.nsSel('n_beaut', '18 · Beautician available', Field.NS_YN, 'Field.nsBeautToggle(this)') +
+      '<div id="n_beaut_box" style="display:' + (Field.nsD('n_beaut') === 'Yes' ? '' : 'none') + '">' +
+        '<label class="f">Kis brand ka beautician available hai <span class="req">*</span></label>' +
+        '<input class="in" id="n_beaut_brands" placeholder="e.g. Mamaearth, The Derma Co." value="' +
+        esc(Field.nsD('n_beaut_brands')) + '"></div>' +
 
       Field.nsOrderHtml() +
 
@@ -7724,7 +7768,7 @@ var Field = {
   nsDraft:{},
   NS_FIELDS:['n_db','n_name','n_type','n_addr','n_pin','n_beat','n_cat','n_owner','n_mob',
              'n_day','n_turn','n_inv','n_sugg','n_int','n_class','n_comp','n_cdisp','n_cmarg',
-             'n_bacost','n_beaut','n_reason'],
+             'n_bacost','n_beaut','n_beaut_brands','n_reason'],
   /* The option lists the images do not spell out. Kept here, in one place, so they are one line to
      change — and deliberately plain, because a wrong option is worse than a short list. */
   NS_INTEREST:['MEGA BA', 'BA Store', 'Only visibility / POSM', 'Only stock', 'Not interested'],
@@ -7747,13 +7791,20 @@ var Field = {
         ? ' oninput="Field.nsCostLive()"' : '') +
       ' value="' + esc(Field.nsD(id)) + '"></div>';
   },
-  nsSel: function (id, label, list) {
+  nsSel: function (id, label, list, onchange) {
     var cur = Field.nsD(id);
-    return '<div><label class="f">' + label + '</label><select class="in" id="' + id + '">' +
+    return '<div><label class="f">' + label + '</label><select class="in" id="' + id + '"' +
+      (onchange ? ' onchange="' + onchange + '"' : '') + '>' +
       '<option value="">Select…</option>' +
       list.map(function (x) {
         return '<option value="' + esc(x) + '"' + (x === cur ? ' selected' : '') + '>' + esc(x) + '</option>';
       }).join('') + '</select></div>';
+  },
+  /* shows/hides the brand-list box without a full render — a render here would throw away every
+     other half-typed field on this long form, same pattern as Plan.other()'s "add new" reveal */
+  nsBeautToggle: function (el) {
+    Field.nsDraft.n_beaut = el.value;
+    var box = $('n_beaut_box'); if (box) box.style.display = el.value === 'Yes' ? '' : 'none';
   },
   nsCost: function () {
     return num(Field.nsD('n_cdisp')) + num(Field.nsD('n_cmarg')) + num(Field.nsD('n_bacost'));
@@ -7768,39 +7819,44 @@ var Field = {
   /* ══ the order a brand-new outlet books on the spot ══
      A new outlet has no Master_Stores row yet, so it cannot be picked in the Field tab and cannot go
      round the normal order flow — which is exactly when the shopkeeper says "send me two cases".
-     So the order is taken HERE, in the shape the rep can actually answer at the counter: brand, MRP,
-     units, one line at a time, adding itself up. It is NOT a secondary order: no PO number is
-     consumed and nothing enters the Tracker's order board. It is what this outlet opened with. */
+     So a SUMMARY is taken here — brand, units, MRP value — one line at a time. It is NOT a per-SKU
+     order: no PO number is consumed and nothing enters the Tracker's order board. The real SKU-wise
+     order is punched later, once this outlet exists as a store (see the note under the total).
+     Units and MRP value are two INDEPENDENT numbers the rep types in, never one multiplied out of the
+     other — a brand's MRP value is the total worth of everything ordered, not "units × a single MRP",
+     which is meaningless the moment one brand's line mixes more than one SKU/size. */
   nsOrdYes:'', nsOrd:[],
   nsOrdGrab: function () {
     Field.nsOrd = (Field.nsOrd || []).map(function (r, i) {
-      var b = $('no_b_' + i), m = $('no_m_' + i), u = $('no_u_' + i);
-      return { brand:b ? b.value : r.brand, mrp:m ? m.value : r.mrp, units:u ? u.value : r.units };
+      var b = $('no_b_' + i), u = $('no_u_' + i), v = $('no_v_' + i);
+      return { brand:b ? b.value : r.brand, units:u ? u.value : r.units, value:v ? v.value : r.value };
     });
   },
   nsOrdSet: function (v) {
     Field.nsGrab();
     Field.nsOrdYes = v;
-    if (v === 'Yes' && !Field.nsOrd.length) Field.nsOrd = [{ brand:'', mrp:'', units:'' }];
+    if (v === 'Yes' && !Field.nsOrd.length) Field.nsOrd = [{ brand:'', units:'', value:'' }];
     render();
   },
   nsOrdAdd: function () {
     Field.nsGrab();
-    Field.nsOrd.push({ brand:'', mrp:'', units:'' });
+    Field.nsOrd.push({ brand:'', units:'', value:'' });
     render();
   },
   nsOrdDel: function (i) {
     Field.nsGrab();
     Field.nsOrd.splice(i, 1);
-    if (!Field.nsOrd.length) Field.nsOrd = [{ brand:'', mrp:'', units:'' }];
+    if (!Field.nsOrd.length) Field.nsOrd = [{ brand:'', units:'', value:'' }];
     render();
   },
-  /* the running total, straight off the boxes — no render, so typing is never interrupted */
+  /* the running total, straight off the boxes — no render, so typing is never interrupted. Units and
+     value are summed INDEPENDENTLY — never units-total × value-total, and never one derived from the
+     other line by line either. */
   nsOrdSum: function () {
     var u = 0, v = 0;
     (Field.nsOrd || []).forEach(function (r, i) {
-      var m = num(($('no_m_' + i) || {}).value), q = num(($('no_u_' + i) || {}).value);
-      u += q; v += m * q;
+      u += num(($('no_u_' + i) || {}).value);
+      v += num(($('no_v_' + i) || {}).value);
     });
     var bu = $('no_tot_u'), bv = $('no_tot_v');
     if (bu) bu.textContent = u + ' units';
@@ -7817,10 +7873,10 @@ var Field = {
         '<button type="button" class="' + (Field.nsOrdYes === 'No' ? 'on' : '') +
           '" onclick="Field.nsOrdSet(\'No\')">Nahi</button></div>';
     if (!yes) return h + '<div class="hint" style="margin-top:6px">Order liya hai to Haan dabao — ' +
-      'brand, MRP aur units bhar dena, total apne aap ban jayega.</div>';
+      'brand chuno, units aur MRP value bhar dena, total apne aap ban jayega.</div>';
 
     h += '<div class="tw" style="margin-top:8px"><table><thead><tr><th>Brand</th>' +
-      '<th class="num" style="min-width:86px">MRP</th><th class="num" style="min-width:76px">Units</th>' +
+      '<th class="num" style="min-width:76px">Units</th><th class="num" style="min-width:96px">MRP value</th>' +
       '<th></th></tr></thead><tbody>' +
       (Field.nsOrd || []).map(function (r, i) {
         return '<tr><td><select class="in" id="no_b_' + i + '" style="min-width:130px">' +
@@ -7828,11 +7884,11 @@ var Field = {
             Field.NS_BRANDS.map(function (x) {
               return '<option value="' + esc(x) + '"' + (x === r.brand ? ' selected' : '') + '>' +
                 esc(x) + '</option>'; }).join('') + '</select></td>' +
-          '<td class="num"><input class="in" id="no_m_' + i + '" type="number" inputmode="numeric" min="0"' +
-            ' style="text-align:right;padding:6px 8px;min-height:34px" value="' + esc(r.mrp || '') +
-            '" oninput="Field.nsOrdSum()"></td>' +
           '<td class="num"><input class="in" id="no_u_' + i + '" type="number" inputmode="numeric" min="0"' +
             ' style="text-align:right;padding:6px 8px;min-height:34px" value="' + esc(r.units || '') +
+            '" oninput="Field.nsOrdSum()"></td>' +
+          '<td class="num"><input class="in" id="no_v_' + i + '" type="number" inputmode="numeric" min="0"' +
+            ' style="text-align:right;padding:6px 8px;min-height:34px" value="' + esc(r.value || '') +
             '" oninput="Field.nsOrdSum()"></td>' +
           '<td><button type="button" class="btn ghost xs" onclick="Field.nsOrdDel(' + i + ')">Hatao</button></td>' +
           '</tr>'; }).join('') +
@@ -7840,9 +7896,11 @@ var Field = {
       '<div class="btns" style="margin-top:6px">' +
         '<button type="button" class="btn ghost sm" onclick="Field.nsOrdAdd()">+ Ek aur line</button></div>' +
       '<div class="lrow" style="padding:10px 0 0"><div class="m"><div class="t">Order total</div>' +
-        '<div class="s">MRP × units, sab lines ka</div></div>' +
+        '<div class="s">Units aur MRP value, dono alag-alag total</div></div>' +
         '<span class="pill p-blue" id="no_tot_u">0 units</span>' +
-        '<span class="pill p-ok" id="no_tot_v" style="margin-left:6px">₹0</span></div>';
+        '<span class="pill p-ok" id="no_tot_v" style="margin-left:6px">₹0</span></div>' +
+      '<div class="hint" style="margin-top:8px">Order outlet create hone ke baad SKU-wise punch hoga — ' +
+        'yahan sirf brand-wise units aur MRP value ka total record ho raha hai.</div>';
     return h;
   },
   saveNew: function (el) {
@@ -7855,23 +7913,26 @@ var Field = {
     if (!state) return toast('State select karo');
     if (!town) return toast('Town select karo');
     if (!reason) return toast('Reason likho');
+    if (val('n_beaut') === 'Yes' && !val('n_beaut_brands'))
+      return toast('Beautician available hai to brand names likho');
     /* ── the opening order ──
        Answering the question is compulsory (a blank is not "no"), and answering Haan means the lines
-       have to be real: a brand, an MRP and a quantity. A half-filled line saved as an order is a
-       number somebody downstream would add up. */
+       have to be real: a brand, units and an MRP value. A half-filled line saved as an order is a
+       number somebody downstream would add up. Units and value are independent inputs — value is
+       NEVER units × a per-unit MRP, it is the total worth the rep was actually told. */
     if (Field.nsOrdYes !== 'Yes' && Field.nsOrdYes !== 'No')
       return toast('Order liya ya nahi — Haan / Nahi chuno');
     var oline = [], ounits = 0, ovalue = 0;
     if (Field.nsOrdYes === 'Yes') {
       var bad = '';
       (Field.nsOrd || []).forEach(function (r, i) {
-        var b = String(r.brand || '').trim(), m = num(r.mrp), q = num(r.units);
-        if (!b && !m && !q) return;                     /* an untouched line is not an error */
+        var b = String(r.brand || '').trim(), q = num(r.units), v = num(r.value);
+        if (!b && !q && !v) return;                      /* an untouched line is not an error */
         if (!b) { bad = bad || ('Brand chuno — line ' + (i + 1)); return; }
-        if (m <= 0) { bad = bad || ('MRP bharo — line ' + (i + 1)); return; }
         if (q <= 0) { bad = bad || ('Units bharo — line ' + (i + 1)); return; }
-        oline.push({ Brand:b, Mrp:m, Units:q, Value:m * q });
-        ounits += q; ovalue += m * q;
+        if (v <= 0) { bad = bad || ('MRP value bharo — line ' + (i + 1)); return; }
+        oline.push({ Brand:b, Units:q, Value:v });
+        ounits += q; ovalue += v;
       });
       if (bad) return toast(bad, 4000);
       if (!oline.length) return toast('Order Haan hai to kam se kam ek line bharo', 4000);
@@ -7894,6 +7955,7 @@ var Field = {
       TotalCost:num(val('n_cdisp')) + num(val('n_cmarg')) + num(val('n_bacost')),
       InterestedFor:val('n_int'), OutletClass:val('n_class'),
       BeauticianAvailable:val('n_beaut'),
+      BeauticianBrands:val('n_beaut') === 'Yes' ? val('n_beaut_brands') : '',
       CommittedInventory:num(val('n_inv')), SuggestedBusiness:num(val('n_sugg')),
       /* the order this outlet opened with — not a secondary order, no PO number consumed */
       OrderYesNo:Field.nsOrdYes, OrderJson:JSON.stringify(oline),
@@ -8871,7 +8933,7 @@ var Rep = {
     rows.push([], [Xl.b('TARGET ACHIEVED TILL DATE (₹ Lakh) — ' + (monthName(M.mo) || M.mo))]);
     rows.push(['Working days gaye', Xl.n(M.elapsed), 'of', Xl.n(M.days),
       'Month ka', Xl.p(M.tot.target ? M.elapsed / M.days : 0), '']);
-    rows.push(['Brand', 'Month target', 'Till date target', 'Achieved', '% of month', 'Baaki', 'Status']
+    rows.push(['Brand', 'Month target', 'Till date target', 'Achieved', '% of month', 'BTG', 'Status']
       .map(Xl.h));
     M.rows.forEach(function (r) {
       var ok = r.target > 0 && r.got >= r.pace;
@@ -8886,7 +8948,7 @@ var Rep = {
 
     rows.push([], [Xl.b('ORDER STATUS — kitne store kis stage par')]);
     rows.push(['Status', 'Store', 'Units', 'Value (₹)', 'NSV (₹L)', '% store', ''].map(Xl.h));
-    ['Billing Done', 'Order in Process', 'Cancel Order'].forEach(function (x) {
+    ['Billing Done', 'Partial Order', 'Order in Process', 'Cancel Order'].forEach(function (x) {
       var g = st(x);
       rows.push([Xl.t(x), Xl.n(g.length), Xl.n(sum(g, 'TotUnits')), Xl.m(sum(g, 'TotValue')),
         Xl.d2(sum(g, 'TotNsvLakh')), Xl.p(Rep.pct(g.length, a.ord.length)), '']);
@@ -9170,7 +9232,7 @@ var Rep = {
     s1.push(['Order value', Xl.m(sum(ord, 'TotValue'))]);
     s1.push(['NSV (₹ Lakh)', Xl.d2(sum(ord, 'TotNsvLakh'))]);
     s1.push([], [Xl.b('STATUS')], ['Status', 'Store', 'Value (₹)', 'NSV (₹L)', '', ''].map(Xl.h));
-    ['Billing Done', 'Order in Process', 'Cancel Order'].forEach(function (x) {
+    ['Billing Done', 'Partial Order', 'Order in Process', 'Cancel Order'].forEach(function (x) {
       var g = ord.filter(function (o) { return String(o.Status) === x; });
       s1.push([Xl.t(x), Xl.n(g.length), Xl.m(sum(g, 'TotValue')), Xl.d2(sum(g, 'TotNsvLakh')), '', '']);
     });
@@ -9619,15 +9681,17 @@ var Rep = {
       ['InterestedFor', '16 Interested for'],
       ['OutletClass', '17 Outlet class'],
       ['BeauticianAvailable', '18 Beautician available'],
+      ['BeauticianBrands', '18 Beautician brands'],
       ['CommittedInventory', '20 Committed inventory hold', 'm'],
       ['SuggestedBusiness', '21 Suggested monthly business', 'm'],
-      /* the order the outlet opened with — taken on the new-outlet form, not through the Field flow */
+      /* the order the outlet opened with — taken on the new-outlet form, not through the Field flow.
+         Units and MRP value are independent per-brand totals, never one multiplied off the other. */
       ['OrderYesNo', 'Order liya'],
-      ['OrderUnits', 'Order units', 'n'], ['OrderValue', 'Order value', 'm'],
+      ['OrderUnits', 'Order units', 'n'], ['OrderValue', 'Order MRP value', 'm'],
       [function (r) {
         var l = []; try { l = JSON.parse(r.OrderJson || '[]') || []; } catch (e) {}
         return l.map(function (x) {
-          return x.Brand + ' × ' + num(x.Units) + ' @ ' + num(x.Mrp); }).join(', ');
+          return x.Brand + ' — ' + num(x.Units) + ' units, ' + inr(num(x.Value)); }).join(', ');
       }, 'Order lines'],
       ['Reason', 'Kyun add kiya'],
       [function (r) { return r.PhotoFront ? 'Yes' : 'No'; }, 'Front photo'],
@@ -10893,7 +10957,7 @@ var Sec = {
       /* status + remarks no longer commit on blur: ONE Save writes the whole order, so nothing is
          written behind the rep's back and nothing typed just before Save is lost */
       '<label class="f">Status</label><select class="in" id="sl_status">' +
-        ['Order in Process','Billing Done','Cancel Order'].map(function (s) {
+        ['Order in Process','Billing Done','Partial Order','Cancel Order'].map(function (s) {
           return '<option value="' + s + '"' + (s === o.Status ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' +
       '<label class="f">Remarks</label><input class="in" id="sl_rm" value="' + esc(o.Remarks || '') + '">' +
       /* what the sheet holds RIGHT NOW, so "did it save?" is answerable on screen */
@@ -11255,7 +11319,7 @@ var Fin = {
 
     h += '<label class="f">Status</label>' +
       '<select class="in" onchange="Fin.setStatus(\'' + esc(s.po) + '\',this.value)">' +
-      ['Order in Process','Billing Done','Cancel Order'].map(function (x) {
+      ['Order in Process','Billing Done','Partial Order','Cancel Order'].map(function (x) {
         return '<option value="' + x + '"' + (x === s.st ? ' selected' : '') + '>' + x + '</option>'; }).join('') +
       '</select>' +
       '<div class="btns"><button class="btn ghost" onclick="Fin.tap(\'' + esc(s.po) + '\')">Close</button>' +
@@ -11624,6 +11688,11 @@ var Eod = {
       value:ord.reduce(function (a, o) { return a + num(o.TotValue); }, 0),
       nsv:ord.reduce(function (a, o) { return a + num(o.TotNsvLakh); }, 0) };
   },
+  /* "is the report ready" must mean Eod.save() itself has actually run — not the looser Gate.locked()
+     flag, which Posm.closeDay() also sets (on its own, before the rep ever reaches this screen's Save
+     button). Reusing that flag here used to draw the image the moment "close day" was tapped from
+     POSM, with numbers that could still change before the real save. */
+  saved: function () { return !!DB.find('Eod', DB.me.code + '_' + today()); },
   html: function () {
     var a = Eod.agg(), saved = DB.find('Eod', DB.me.code + '_' + a.t);
     var h = UI.head('', 'EOD — din close karo', 'Sab figures automatic hain. Check karke save karo, phir report bhejo.');
@@ -11649,13 +11718,13 @@ var Eod = {
     h += Tgt.html();
 
     h += '<div class="sec-title">Order status</div><div class="card">' +
-      ['Billing Done','Order in Process','Cancel Order'].map(function (s) {
+      ['Billing Done','Partial Order','Order in Process','Cancel Order'].map(function (s) {
         var g = a.ord.filter(function (o) { return o.Status === s; });
         var gv = g.reduce(function (x, o) { return x + num(o.TotValue); }, 0);
         var gn = g.reduce(function (x, o) { return x + num(o.TotNsvLakh); }, 0);
         return '<div class="lrow"><div class="m"><div class="t">' + s + '</div><div class="s">' + g.length +
           ' store · MRP value ' + inr(gv) + ' · NSV ' + lakh(gn) + 'L</div></div>' +
-          '<span class="pill ' + (s === 'Billing Done' ? 'p-ok' : s === 'Order in Process' ? 'p-warn' : 'p-bad') + '">' + g.length + '</span></div>'; }).join('') +
+          '<span class="pill ' + (s === 'Billing Done' ? 'p-ok' : s === 'Cancel Order' ? 'p-bad' : 'p-warn') + '">' + g.length + '</span></div>'; }).join('') +
       '</div>';
 
     h += '<div class="card"><label class="f">Remarks (optional)</label><textarea class="in" id="eod_rm" rows="2">' +
@@ -11669,7 +11738,7 @@ var Eod = {
        Gated behind an actual close: the image is only drawn — and WhatsApp / mail / Excel only become
        tappable — once EOD is saved. Before that the numbers can still change with the next tap, and a
        report sent off a live draft is worse than no report at all. */
-    h += Gate.locked() ?
+    h += saved ?
       '<div class="card"><h3>Din ka report — WhatsApp image</h3>' +
       '<div class="sub">Subah wali card ki tarah, lekin aaj ke poore numbers ke saath. Text nahi, image jaati hai.</div>' +
       '<div id="eod_card" style="margin-top:12px"><div class="skel" style="height:180px;border-radius:12px"></div></div>' +
@@ -11682,7 +11751,7 @@ var Eod = {
       '<div class="hint">EOD save karke din close karo — tabhi report ki image aur WhatsApp / mail / Excel access milega.</div></div>';
     return h;
   },
-  after: function () { if (Gate.locked()) Card.preview('eod'); },
+  after: function () { if (Eod.saved()) Card.preview('eod'); },
   /* ONE brand-wise builder for the screen, the image and the workbook, so the three can never
      disagree about a brand's target or its achievement. */
   brandRows: function (a) {
@@ -11796,12 +11865,17 @@ var Trk = {
   TAB:{ ord:'SecOrders', ns:'NewStores', pq:'PosmRequirement' },
   /* one status list per type, in the order the work actually moves */
   ST:{
-    ord:['Order in Process', 'Billing Done', 'Cancel Order'],
+    /* 'Partial Order' is a status the rep picks directly — not a toggle buried under Billing Done —
+       so a short delivery is visible on the SAME dropdown as Order in Process / Cancel Order. */
+    ord:['Order in Process', 'Billing Done', 'Partial Order', 'Cancel Order'],
     ns: ['Pending', 'Sent to ASM', 'Code created', 'First billing done', 'Dropped'],
     pq: ['Pending', 'Sent to ASM', 'Approved by ASM', 'Dispatched', 'Installed', 'Rejected']
   },
   stList: function (k) { return Trk.ST[k] || Trk.ST.ord; },
-  /* finished either way (drives the Open/Done filter) and finished BADLY (drives the red pill) */
+  /* finished either way (drives the Open/Done filter) and finished BADLY (drives the red pill).
+     'Partial Order' deliberately stays OPEN, same bucket as 'Order in Process' — picking it is the
+     start of filling in the supplied-qty table, not the end of the follow-up; it would otherwise
+     vanish off the default Open filter the instant it is chosen, before the table is even filled. */
   DONE:['Billing Done', 'Cancel Order', 'First billing done', 'Dropped',
         'Installed', 'Rejected'],
   BAD:['Cancel Order', 'Dropped', 'Rejected'],
@@ -11911,9 +11985,6 @@ var Trk = {
     s.classList.toggle('fit', s.scrollWidth <= s.clientWidth + 2);
   },
 
-  /* transient UI choice for the Full/Partial toggle — a tap must reveal the Partial fields (or
-     save Full instantly) without waiting on a full save round trip first */
-  billSel:{},
   card: function (r) {
     var k = Trk.kind, q = Appr.q(r.key), id = Appr.jid(r.key);
     var h = '<div class="card">' +
@@ -11927,8 +11998,9 @@ var Trk = {
         Trk.stList(k).map(function (s) {
           return '<option value="' + esc(s) + '"' + (s === r.st ? ' selected' : '') + '>' + esc(s) + '</option>'; }).join('') +
       '</select>' +
-      /* Full vs Partial only ever means something once the order is actually billed */
-      (r.st === 'Billing Done' ? Trk.billingHtml(r, id, q) : '') +
+      /* billingHtml decides for itself what (if anything) to show — an invoice history if one
+         exists, and the ordered-vs-supplied table only while the status is Partial Order */
+      (k === 'ord' ? Trk.billingHtml(r, id, q) : '') +
       '<label class="f">Note — ASM ne kya kaha</label>' +
       '<div style="display:flex;gap:6px;align-items:center">' +
       '<input class="in" style="flex:1 1 0;min-width:0" id="tk_n_' + id + '" value="' + esc(r.note) + '" placeholder="Follow-up note">' +
@@ -11939,11 +12011,10 @@ var Trk = {
   },
   /* ══ RAISING THE INVOICE, SKU BY SKU ══
      "He ordered 10 of this and I only have 5" is a per-PRODUCT fact, so this is a per-product form:
-     every line of the PO gets a row, the ordered quantity next to it, and a box for what actually
-     went on the invoice. Full is one tap (every line at its ordered qty, nothing to fill in).
-     Partial opens the list with each box pre-filled at the ordered quantity — the rep only edits the
-     lines that fell short, which is almost always one or two of them, and the invoice total adds
-     itself up live underneath.
+     every line of the PO gets a row, the ordered quantity next to it, and a box for what the
+     distributor actually SUPPLIED. Picking the 'Partial Order' status IS the "this was short" signal
+     — there is no separate Full/Partial toggle to tap first — so the table opens pre-filled at the
+     ordered quantity and the rep only edits the lines that fell short.
 
      Once the HOD has APPROVED the invoice this whole block goes read-only: an approved number that
      can still be edited underneath the approver is not an approval. */
@@ -11952,55 +12023,45 @@ var Trk = {
     var lines = Sec.lines(o);
     var st = String(o.InvoiceStatus || '');
     var locked = /^approved$/i.test(st);
-    var type = Trk.billSel[r.key] !== undefined ? Trk.billSel[r.key] : (r.billType || 'Full');
     var saved = Sec.billed(o), hasSaved = Object.keys(saved).length > 0;
-    var h = '<div style="margin:10px 0;padding-top:10px;border-top:1px dashed var(--line)">';
+    var h = '';
 
-    /* the invoice as it stands, and where it has got to */
+    /* the invoice as it stands, and where it has got to — shown whenever one exists, whatever the
+       order's CURRENT status is; moving the status on does not erase the invoice's own history */
     if (r.billType) {
       var pill = /approved/i.test(st) ? 'p-ok' : /reject/i.test(st) ? 'p-bad' : 'p-warn';
       var word = /approved/i.test(st) ? 'Invoice approved'
                : /reject/i.test(st) ? 'Invoice reject hua' : 'Invoice HOD ke paas hai';
-      h += '<div class="lrow" style="padding:0 0 8px"><div class="m">' +
+      h += '<div style="margin:10px 0;padding-top:10px;border-top:1px dashed var(--line)">' +
+        '<div class="lrow" style="padding:0 0 8px"><div class="m">' +
         '<div class="t">' + esc(o.InvoiceNo || Sec.invNo(r.key)) + '</div>' +
         '<div class="s">' + num(o.BilledUnits) + ' / ' + r.units + ' units · ' +
           inr(o.BilledValue) + ' · ' + esc(o.BillingType || '') + '</div></div>' +
-        '<span class="pill ' + pill + '">' + word + '</span></div>';
-      if (o.InvoiceRemarks) h += '<div class="banner ' + (/reject/i.test(st) ? 'r' : 'b') +
-        '" style="margin-bottom:8px"><span></span><div><b>HOD ka message</b><br>' +
-        '<span style="font-weight:500">' + esc(o.InvoiceRemarks) + '</span></div></div>';
+        '<span class="pill ' + pill + '">' + word + '</span></div>' +
+        (o.InvoiceRemarks ? '<div class="banner ' + (/reject/i.test(st) ? 'r' : 'b') +
+          '" style="margin-bottom:0"><span></span><div><b>HOD ka message</b><br>' +
+          '<span style="font-weight:500">' + esc(o.InvoiceRemarks) + '</span></div></div>' : '') +
+        '</div>';
     }
 
-    if (locked) {
-      return h + '<div class="hint">Ye invoice approve ho chuka hai — ab change nahi hoga. ' +
-        'Kuch galat hai to HOD se baat karo.</div></div>';
-    }
+    if (r.st !== 'Partial Order') return h;      /* the editable SKU table is Partial-Order-only */
 
-    h += '<label class="f">Invoice — poora order bana ya kuch hi?</label>' +
-      '<div class="seg"><button type="button" class="' + (type === 'Full' ? 'on' : '') +
-        '" onclick="Trk.setBillType(\'' + q + '\',\'Full\')">Poora (Full)</button>' +
-      '<button type="button" class="' + (type === 'Partial' ? 'on' : '') +
-        '" onclick="Trk.setBillType(\'' + q + '\',\'Partial\')">Kuch hi (Partial)</button></div>';
+    h += '<div style="margin:10px 0;padding-top:10px;border-top:1px dashed var(--line)">';
+    if (locked) return h + '<div class="hint">Ye invoice approve ho chuka hai — ab change nahi hoga. ' +
+      'Kuch galat hai to HOD se baat karo.</div></div>';
 
-    if (type !== 'Partial') {
-      return h + (r.billType === 'Full'
-        ? '<div class="hint" style="margin-top:6px">Poora order invoice ho gaya maana gaya hai — ' +
-          r.units + ' units.</div>'
-        : '<div class="hint" style="margin-top:6px">Poora order invoice hua hai to Full dabao — ' +
-          'saare units invoice me chale jayenge.</div>') + '</div>';
-    }
+    if (!lines.length) return h + '<div class="hint">Is order ki SKU lines device par nahi hain — ' +
+      'Sync karke dobara kholo.</div></div>';
 
-    if (!lines.length) return h + '<div class="hint" style="margin-top:8px">Is order ki SKU lines ' +
-      'device par nahi hain — Sync karke dobara kholo.</div></div>';
-
-    /* one row per SKU: what was ordered, and what the distributor actually billed */
-    h += '<div class="hint" style="margin:8px 0 4px">Har SKU ke saamne jitne units ka invoice bana ' +
-      'hai wo likho. Jo line poori bani hai use haath mat lagao.</div>' +
-      '<div class="tw"><table><thead><tr><th>SKU</th><th class="num">Order</th>' +
-      '<th class="num" style="min-width:96px">Invoice</th></tr></thead><tbody>' +
+    /* two columns, side by side, on purpose: what was actually ordered, and what the distributor
+       actually supplied — nothing to read between the lines */
+    h += '<div class="hint" style="margin-bottom:4px">Har SKU ke saamne jitna distributor ne diya hai ' +
+      'wo likho — box order ki qty se bhara hua hai, jo line poori mili hai use haath mat lagao.</div>' +
+      '<div class="tw"><table><thead><tr><th>SKU</th><th class="num">Ordered</th>' +
+      '<th class="num" style="min-width:96px">Supplied</th></tr></thead><tbody>' +
       lines.map(function (l, i) {
         var ordq = num(l.Units);
-        /* a saved invoice re-opens exactly as it was saved; a new one starts at the full order */
+        /* a saved supply figure re-opens exactly as it was saved; a fresh one starts at the ordered qty */
         var cur = hasSaved ? num(saved[String(l.Sku)]) : ordq;
         return '<tr><td><b class="nm">' + esc(l.SkuName || l.Sku || '—') + '</b>' +
           '<div class="hint">' + [l.Brand, inr(l.Mrp)].filter(Boolean).map(esc).join(' · ') +
@@ -12011,15 +12072,15 @@ var Trk = {
             '" value="' + cur + '" oninput="Trk.billSum(\'' + id + '\',' + lines.length + ')"></td></tr>';
       }).join('') +
       '</tbody></table></div>' +
-      '<div class="lrow" style="padding:8px 0 0"><div class="m"><div class="t">Invoice total</div>' +
+      '<div class="lrow" style="padding:8px 0 0"><div class="m"><div class="t">Supplied total</div>' +
         '<div class="s">Order me the: ' + r.units + ' units</div></div>' +
         '<span class="pill p-blue" id="tk_tot_' + id + '">—</span></div>' +
-      '<label class="f">Kyun kam bana? <span class="req">*</span></label>' +
+      '<label class="f">Kyun kam mila? <span class="req">*</span></label>' +
       '<input class="in" id="tk_br_' + id + '" value="' + esc(r.billRemark || '') +
         '" placeholder="e.g. distributor ke paas itna hi stock tha">' +
       '<div class="btns" style="margin-top:8px"><button class="btn ok sm" ' +
         'onclick="Trk.saveBilling(\'' + q + '\',\'' + id + '\',' + lines.length + ',this)">' +
-        'Invoice banao aur HOD ko bhejo</button></div>' +
+        'Save karo aur HOD ko bhejo</button></div>' +
       '</div>';
     return h;
   },
@@ -12038,22 +12099,6 @@ var Trk = {
     if (box) box.textContent = t + ' units';
     return t;
   },
-  setBillType: function (key, t) {
-    Trk.billSel[key] = t;
-    if (t === 'Full') {
-      Sec.setBilling(key, 'Full').then(function () {
-        Log.add('Tracker', 'Invoice Full', key, '');
-        render(); toast('Poora invoice ban gaya — HOD ke paas approval ke liye chala gaya', 3800);
-      });
-      return;
-    }
-    render();
-    /* the boxes start pre-filled, so the total has to be right before the first keystroke */
-    setTimeout(function () {
-      var o = DB.find('SecOrders', key) || {};
-      Trk.billSum(Appr.jid(key), Sec.lines(o).length);
-    }, 0);
-  },
   saveBilling: function (key, id, n, el) {
     var o = DB.find('SecOrders', key); if (!o) return toast('Ye order nahi mila — Sync karo');
     var lines = Sec.lines(o), rm = val('tk_br_' + id);
@@ -12064,16 +12109,13 @@ var Trk = {
       per[String(lines[i].Sku)] = q;
       tot += q;
     }
-    if (tot <= 0) return toast('Kam se kam ek SKU ka invoice bharo — sab zero hai');
-    if (tot >= num(o.TotUnits))
-      return toast('Poora order invoice ho raha hai — upar Full dabao', 4000);
-    if (!rm) return toast('Kyun kam bana — reason likhna zaroori hai');
-    Busy.run('tkbill_' + id, el, 'Invoice ban raha hai…', function () {
+    if (tot <= 0) return toast('Kam se kam ek SKU ka supplied qty bharo — sab zero hai');
+    if (!rm) return toast('Kyun kam mila — reason likhna zaroori hai');
+    Busy.run('tkbill_' + id, el, 'Save ho raha hai…', function () {
       return Sec.setBilling(key, 'Partial', per, rm).then(function () {
-        delete Trk.billSel[key];
-        Log.add('Tracker', 'Invoice Partial', key, tot + ' / ' + num(o.TotUnits) + ' units — ' + rm);
+        Log.add('Tracker', 'Partial supply', key, tot + ' / ' + num(o.TotUnits) + ' units — ' + rm);
         render();
-        toast('Invoice ban gaya — HOD ke paas approval ke liye chala gaya', 3800);
+        toast('Save ho gaya — HOD ke paas approval ke liye chala gaya', 3800);
       });
     });
   },
@@ -12092,6 +12134,12 @@ var Trk = {
         return Sec.setStatus(key, s).then(function () { return Sec.setField(key, 'Remarks', reason); })
           .then(function () { render(); toast('Order cancel ho gaya'); });
       });
+    }
+    /* Billing Done now always means the order billed IN FULL — a short delivery is its own status
+       ('Partial Order') picked directly off this same dropdown, not a toggle nested under this one. */
+    if (k === 'ord' && s === 'Billing Done') {
+      return Sec.setStatus(key, s).then(function () { return Sec.setBilling(key, 'Full'); })
+        .then(function () { Log.add('Tracker', 'Invoice Full', key, ''); render(); toast('Billing Done — poora order'); });
     }
     if (k === 'ord') return Sec.setStatus(key, s);
     var tab = Trk.TAB[k], r = DB.find(tab, key);
@@ -12334,19 +12382,33 @@ var Tgt = {
     return g.cfg.reduce(function (a, c) { return a + num(DB.cfg(c[0], c[1])); }, 0);
   },
   mon: function (mo) { return mo || today().slice(0, 7); },
-  /* ── how much of the month has already been worked ──
-     Pro-rated off the calendar rather than counted off the plan on purpose: it needs no PJP, it is the
-     same answer for everybody, and it cannot drift when a plan is edited. Never below 1 (on the 1st
-     you are already meant to have done a day) and never above 26. */
-  elapsed: function (mo) {
+  /* ── how much of the month has already been WORKED ──
+     Counted off the rep's own PJP, not off the calendar: 1st-of-month to today, minus every day
+     Master_PJP tags Weekly Off / Leave / Sick Leave / HO Holiday for THIS employee. A day the PJP
+     says nothing about (no row yet) still counts as worked — silence is not a day off. Capped at
+     Tgt.DAYS because the whole "target" is built as daily × 26 in the first place; a month with more
+     than 26 real working days must not push "till date" past the month's own total. */
+  activeDays: function (mo, code) {
     mo = Tgt.mon(mo);
     var t = today();
     if (mo > t.slice(0, 7)) return 0;                        /* a future month has not started */
     var y = +mo.slice(0, 4), m = +mo.slice(5, 7);
     var inMonth = new Date(y, m, 0).getDate();
-    var d = (mo === t.slice(0, 7)) ? +t.slice(8, 10) : inMonth;
-    return Math.max(1, Math.min(Tgt.DAYS, Math.round(Tgt.DAYS * d / inMonth)));
+    var lastDay = (mo === t.slice(0, 7)) ? +t.slice(8, 10) : inMonth;
+    var pjp = {};
+    DB.pjpMonth(code || DB.me.code, mo).forEach(function (r) { pjp[toISO(r.Date)] = Pjp.ww(r.Ww); });
+    var OFF = /weekly|leave|holiday/i;                       /* Weekly Off · Leave · Sick Leave · HO Holiday */
+    var n = 0;
+    for (var day = 1; day <= lastDay; day++) {
+      var ww = pjp[mo + '-' + p2(day)];
+      if (ww && OFF.test(ww)) continue;
+      n++;
+    }
+    return Math.max(0, Math.min(Tgt.DAYS, n));
   },
+  /* kept as the old name so every call site (dashboard, WhatsApp text, EOD image, xlsx) keeps working
+     unchanged — only what it COUNTS has changed, from a calendar pro-ration to real active days. */
+  elapsed: function (mo, code) { return Tgt.activeDays(mo, code); },
   /* NSV booked per brand group, 1st of the month to today. Cancelled orders never count: nothing was
      ever sold on them. */
   achieved: function (mo, code) {
@@ -12374,7 +12436,7 @@ var Tgt = {
   /* the whole picture for one month, ready to render anywhere */
   rows: function (mo, code) {
     mo = Tgt.mon(mo);
-    var got = Tgt.achieved(mo, code), el = Tgt.elapsed(mo);
+    var got = Tgt.achieved(mo, code), el = Tgt.elapsed(mo, code);
     var rows = Tgt.GROUPS.map(function (g) {
       var d = Tgt.daily(g), t = d * Tgt.DAYS, a = num(got[g.key]);
       return { name:g.name, key:g.key, daily:d, target:t, pace:d * el, got:a,
@@ -12420,7 +12482,9 @@ var Tgt = {
         'kaali line = aaj ka pace (' + pacePc + '%) \u00b7 ' + lakh(T.left) + ' L baaki</div>';
     h += Tgt.table(d);
     h += '<div class="hint" style="margin-top:8px">Month target = daily target \u00d7 ' + d.days +
-      ' working days. <span>Daily target Master_Config me set hota hai.</span></div></div>';
+      ' working days. Till date target = daily target \u00d7 ' + d.elapsed + ' active working days ' +
+      '(weekly off, leave aur office holiday count nahi hote \u2014 sirf actual working days). ' +
+      '<span>Daily target Master_Config me set hota hai.</span></div></div>';
     return h;
   },
   /* the same table everywhere it is needed */
@@ -14211,7 +14275,7 @@ var Appr = {
         h += '<label class="f">Order status badlo</label>' +
           '<select class="in" onclick="event.stopPropagation()"' +
           ' onchange="event.stopPropagation();Admin.setOrder(&quot;' + Appr.q(o.key) + '&quot;,this.value)">' +
-          ['Order in Process','Billing Done','Cancel Order'].map(function (x) {
+          ['Order in Process','Billing Done','Partial Order','Cancel Order'].map(function (x) {
             return '<option value="' + x + '"' + (x === o.statusText ? ' selected' : '') + '>' + x + '</option>'; }).join('') +
           '</select>';
       }
@@ -15281,12 +15345,22 @@ var Admin = {
     Admin.ddel = null; render();
   },
 
+  /* two sections under the same Data tab: the download/delete/master-reference screen exactly as it
+     was, and a new "Data Lookup" screen for finding ONE person's record and correcting it in place. */
+  dataSub:'main',
+  dataTop: function () {
+    var subs = [['main', 'Reports & Tools'], ['lookup', 'Data Lookup']];
+    return '<div class="seg" style="margin-bottom:10px">' + subs.map(function (s) {
+      return '<button type="button" class="' + (Admin.dataSub === s[0] ? 'on' : '') +
+        '" onclick="Admin.dataSub=\'' + s[0] + '\';render()">' + esc(s[1]) + '</button>'; }).join('') + '</div>';
+  },
   data: function () {
+    if (Admin.dataSub === 'lookup') return Admin.dataTop() + Admin.lookupHtml();
     var r = Admin.dRange(), codes = Admin.dcodes, who = Admin.whoText();
     var kinds = Admin.dkinds, whats = Admin.dwhats;
 
     /* the one screen where a stale deployment is the likeliest explanation for "it did nothing" */
-    var h = Admin.verStrip();
+    var h = Admin.dataTop() + Admin.verStrip();
 
     /* ── the range, and nothing else ── */
     h += '<div class="card"><div class="pair">' +
@@ -15373,6 +15447,118 @@ var Admin = {
     h += Admin.master();
     return h;
   },
+
+  /* ══════════ DATA LOOKUP — find one person's record, in this app, and correct it in place ══════════
+     Pick an employee, pick what to look at, and either the app's own review screen opens (PJP reuses
+     Admin.pjpOne, TA/DA reuses Tada.hodView — the SAME editors the Approvals queue already uses, so
+     there is no second, competing way to decide the same claim) or a generic field editor does, for
+     the record types that never had one. Every save is DB.save on the row's OWN key — an upsert that
+     OVERWRITES the existing row, never a new column or a new row. */
+  lkEmp:'', lkCat:'pjp', lkMon:'', lkKey:'',
+  LK_CATS:[['pjp', 'PJP', 'PjpDraft'], ['dev', 'Change PJP', 'Deviation'], ['tada', 'TA/DA', 'TaDa'],
+           ['ord', 'Orders', 'SecOrders'], ['ns', 'New outlet', 'NewStores'], ['pq', 'POSM requirement', 'PosmRequirement']],
+  /* columns a generic edit form must never expose: upsert keys, the row's owner, derived totals kept
+     in step by their own committer (SecOrders' Tot-columns and LinesJson, NewStores' Order-columns),
+     and the audit trail a hand edit here should not stamp over */
+  LK_SKIP:['EmpCode','EmpName','Ts','LastSync','HodBy','HodRole','HodAt','PublishedAt','PublishedRows',
+           'SubmittedAt','LinesJson','OrderJson','BilledJson','TotSku','TotUnits','TotValue','TotNsvLakh',
+           'BilledValue','BilledUnits','OrderUnits','OrderValue','StoreId','PoNumber','Id','Key',
+           'DaysJson','FixedDaysJson','RejectedDaysJson','DeductJson',
+           'BillingType','InvoiceNo','InvoiceAt','InvoiceStatus','InvoiceHodBy','InvoiceHodRole',
+           'InvoiceHodAt','InvoiceRemarks'],
+  lkCatOf: function (tab) { var c = Admin.LK_CATS.filter(function (x) { return x[2] === tab; })[0]; return c ? c[0] : ''; },
+  lkPick: function (cat) { Admin.lkCat = cat; Admin.lkKey = ''; render(); },
+  lkPickEmp: function (code) { Admin.lkEmp = code; Admin.lkKey = ''; render(); },
+  lkOpen: function (key) { Admin.lkKey = key; render(); },
+  lkClose: function () { Admin.lkKey = ''; render(); },
+  lookupHtml: function () {
+    var h = '<div class="card"><label class="f">Employee</label>' +
+      '<select class="in" onchange="Admin.lkPickEmp(this.value)">' +
+      '<option value="">Select…</option>' +
+      Admin.empItems().map(function (e) {
+        return '<option value="' + esc(e[0]) + '"' + (e[0] === Admin.lkEmp ? ' selected' : '') + '>' +
+          esc(e[1]) + ' (' + esc(e[0]) + ')</option>'; }).join('') + '</select>' +
+      '<div class="tnav fit" style="margin-top:10px">' + Admin.LK_CATS.map(function (c) {
+        return '<button class="' + (Admin.lkCat === c[0] ? 'on' : '') + '"' +
+          (Admin.lkCat === c[0] ? ' data-on="1"' : '') + ' onclick="Admin.lkPick(\'' + c[0] + '\')">' +
+          esc(c[1]) + '</button>'; }).join('') + '</div></div>';
+
+    if (!Admin.lkEmp) return h + '<div class="card">' + UI.empty('', 'Employee chuno — uska data yahan aayega') + '</div>';
+    var cat = Admin.LK_CATS.filter(function (c) { return c[0] === Admin.lkCat; })[0], tab = cat[2];
+
+    if (Admin.lkCat === 'pjp') {
+      var mon = Admin.lkMon || today().slice(0, 7);
+      h += '<div class="card"><label class="f">Month</label>' +
+        '<input class="in" type="month" value="' + esc(mon) + '" onchange="Admin.lkMon=this.value;render()"></div>';
+      return h + Admin.pjpOne(Admin.lkEmp, mon);
+    }
+
+    if (Admin.lkKey) {
+      var back = '<div class="card"><button class="btn ghost sm" onclick="Admin.lkClose()">‹ ' + esc(cat[1]) + ' list</button></div>';
+      if (Admin.lkCat === 'tada') return back + Tada.hodView(Admin.lkKey, true);
+      return back + Admin.lkEditHtml(tab, Admin.lkKey);
+    }
+
+    var rows = DB.rows(tab).filter(function (r) { return DB.same(r.EmpCode, Admin.lkEmp); })
+      .sort(function (a, b) { return String(b.Date || b.Month || '').localeCompare(String(a.Date || a.Month || '')); });
+    if (!rows.length) return h + '<div class="card">' + UI.empty('', 'Is employee ka ' + esc(cat[1]) + ' me kuch nahi hai') + '</div>';
+    return h + '<div class="sec-title">' + rows.length + ' record' + (rows.length > 1 ? 's' : '') + '</div>' +
+      rows.slice(0, 60).map(function (r) { return Admin.lkRowHtml(tab, r); }).join('');
+  },
+  /* one summary line per row, whatever the tab — enough to recognise it and tap into the editor */
+  lkRowHtml: function (tab, r) {
+    var key = tab === 'TaDa' ? r.Key : tab === 'SecOrders' ? r.PoNumber : tab === 'NewStores' ? r.StoreId : r.Id;
+    var sub = tab === 'TaDa' ? (monthName(r.Month) || r.Month) + ' · ' + inr(r.NetTotal || r.Total)
+      : tab === 'SecOrders' ? (r.StoreName || '') + ' · ' + num(r.TotUnits) + ' units · ' + inr(r.TotValue)
+      : tab === 'NewStores' ? (r.StoreName || '') + ' · ' + (r.Town || '—')
+      : tab === 'Deviation' ? (r.PlannedTown || '—') + ' → ' + (r.NewTown || '—') + ' / ' + (r.NewBeat || '—')
+      : (r.StoreName || '') + ' · ' + (r.Element || '—');
+    var stCls = /approv|done|ok/i.test(r.Status || '') ? 'p-ok' :
+      /reject|cancel|drop/i.test(r.Status || '') ? 'p-bad' : 'p-warn';
+    return '<div class="card"><div class="lrow" style="padding-top:0"><div class="m">' +
+      '<div class="t">' + dmy(r.Date || (r.Month + '-01')) + '</div>' +
+      '<div class="s">' + esc(sub) + '</div></div>' +
+      '<span class="pill ' + stCls + '">' + esc(r.Status || '—') + '</span></div>' +
+      '<div class="btns" style="margin-top:0"><button class="btn ghost sm" onclick="Admin.lkOpen(\'' +
+      esc(String(key)) + '\')">Kholo aur edit karo</button></div></div>';
+  },
+  /* the generic editor — one text/number box per real column the tab's own report registry (Rep.ANY)
+     already documents, minus LK_SKIP. Reusing that registry means a new column added there for
+     reporting is automatically available here too, with the same label. */
+  lkEditHtml: function (tab, key) {
+    var row = DB.find(tab, key);
+    if (!row) return '<div class="card">' + UI.empty('', 'Row nahi mila — Sync karo') + '</div>';
+    var def = Rep.ANY[tab];
+    var fields = (def ? def.cols : []).filter(function (c) {
+      return typeof c[0] === 'string' && Admin.LK_SKIP.indexOf(c[0]) < 0;
+    });
+    var h = '<div class="card"><div class="hint" style="margin-bottom:8px">' + esc(row.EmpName || '') +
+      ' (' + esc(row.EmpCode || '') + ') — save karne par ye SAME row overwrite hoga, nayi row nahi banegi.</div>';
+    h += fields.map(function (c) {
+      var num2 = c[2] === 'm' || c[2] === 'n';
+      return '<label class="f">' + esc(c[1]) + '</label><input class="in" id="lk_f_' + c[0] + '"' +
+        (num2 ? ' type="number"' : '') + ' value="' + esc(row[c[0]] == null ? '' : row[c[0]]) + '">';
+    }).join('');
+    h += '<div class="btns" style="margin-top:8px"><button class="btn ok" onclick="Admin.lkSave(\'' +
+      tab + '\',\'' + esc(String(key)) + '\',this)">Save karo</button></div></div>';
+    return h;
+  },
+  lkSave: function (tab, key, el) {
+    var row = DB.find(tab, key); if (!row) return toast('Row nahi mila — Sync karo');
+    var def = Rep.ANY[tab];
+    var fields = (def ? def.cols : []).filter(function (c) {
+      return typeof c[0] === 'string' && Admin.LK_SKIP.indexOf(c[0]) < 0;
+    });
+    var patch = {};
+    fields.forEach(function (c) { var e = $('lk_f_' + c[0]); if (e) patch[c[0]] = e.value; });
+    return Busy.run('lksave_' + key, el, 'Save ho raha hai…', function () {
+      return DB.save(tab, Object.assign({}, row, patch)).then(function () {
+        Log.add('DataLookup', 'Edited ' + tab, key, '');
+        toast('Save ho gaya — sheet update ho gayi'); render();
+      });
+    });
+  },
+
   /* the rows a choice describes, on this device — the same filter the server will apply */
   pick: function (kind, codes, r) {
     var want = Admin.codeSet(codes);
