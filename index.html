@@ -2877,6 +2877,7 @@ I18n.D.en = I18n.EN = {
   'Invoice bana':'Invoice raised on',
   'Kyun kam bana':'Why it was short',
   'Invoice value':'Invoice value',
+  'Kisi bhi store par tap karo — SKU-wise detail dikhega.':'Tap any store to see the SKU-wise detail.',
 
   /* ── target achieved till date ── */
   'Target achieved till date':'Target achieved till date',
@@ -3594,7 +3595,7 @@ var Preview = {
     Posm.store = null; Posm.ans = null; Posm.date = ''; Posm.need = 'Yes';
     Sec.edit = null; Sec.addPo = ''; Sec.addQ = '';
     Pjp.month = ''; Pjp.days = null; Pjp.loadedKey = ''; Pjp.hydratedAt = 0; Pjp._dirty = false;
-    Appr.open = {}; Appr.filter = 'all'; Appr.kindF = 'all';
+    Appr.open = {}; Appr.filter = 'open'; Appr.kindF = 'all';
     Cam.clear();
     Flush.clear();                       /* nothing of the admin's is pending a save */
   },
@@ -11952,9 +11953,18 @@ var Trk = {
     if (k === 'pq' && Trk.posmSub === 'req') DB.mine('PosmRequirement').filter(function (r) {
       return r.Requirement !== 'No';
     }).forEach(function (r) {
+      /* "a little bit of description of what is required" — Element/PosmType/Brand says WHAT, the
+         second line says the rest of it (where, how prominent, how many, by when), so an open
+         requirement reads as a real ask instead of just an Element name and a city. */
+      var bits = [];
+      if (r.Location) bits.push(r.Location);
+      if (r.Dominance) bits.push(r.Dominance);
+      if (num(r.Qty)) bits.push('Qty ' + num(r.Qty));
+      if (r.NeededBy) bits.push('Chahiye: ' + dmy(r.NeededBy));
       out.push({ key:String(r.Id), date:toISO(r.Date), title:r.StoreName || '',
-        sub:(r.Element || '—') + ' · ' + (r.City || '—'),
-        sub2:r.Remarks || '', st:Trk.st('pq', r.Status), note:r.StatusReason || '', at:r.StatusAt || '' });
+        sub:[r.Element || 'POSM', r.PosmType, r.Brand].filter(Boolean).join(' · ') + ' · ' + (r.City || '—'),
+        sub2:bits.concat(r.Remarks ? [r.Remarks] : []).join(' · '),
+        st:Trk.st('pq', r.Status), note:r.StatusReason || '', at:r.StatusAt || '' });
     });
     if (k === 'pq' && Trk.posmSub === 'audit') {
       DB.mine('PosmAudit').forEach(function (r) {
@@ -12041,8 +12051,10 @@ var Trk = {
       Trk.filter = 'open';                      /* harmless for audit rows — shut() is always false */
       h += '</div>';
     } else {
-      /* the number belongs on OPEN only — "Closed (12)" is a fact, not something that needs doing */
-      var chips = [['open', 'Open', open.length], ['done', 'Closed', 0], ['all', 'All', 0]];
+      /* the number belongs on OPEN only — "Closed (12)" is a fact, not something that needs doing.
+         Open/Closed only, no "All" — a closed row is locked (see card()), so mixing it into a combined
+         list only invited a tap that would do nothing. */
+      var chips = [['open', 'Open', open.length], ['done', 'Closed', 0]];
       h += '<div style="display:flex;gap:6px;margin:10px 0 4px">' + chips.map(function (c) {
         return '<button class="btn ' + (Trk.filter === c[0] ? '' : 'ghost') + ' sm" style="flex:1 1 0"' +
           ' onclick="Trk.set(\'' + c[0] + '\')">' + esc(c[1]) +
@@ -12053,7 +12065,7 @@ var Trk = {
        orders live in PO vs Invoice now); `open` already equals `all` for the Audit sub-section since
        an audit row is never "shut", so this one line is correct for both noChips cases at once. */
     var show = noChips ? open : all.filter(function (r) {
-      return Trk.filter === 'all' || (Trk.filter === 'open' ? !Trk.shut(r) : Trk.shut(r)); });
+      return Trk.filter === 'open' ? !Trk.shut(r) : Trk.shut(r); });
     if (!show.length) return h + '<div class="card">' +
       UI.empty('', all.length ? 'Is filter me kuch nahi hai' : 'Abhi is type ka kuch nahi bhara') + '</div>';
 
@@ -12083,12 +12095,22 @@ var Trk = {
   card: function (r) {
     if (r.isAudit) return Trk.audCard(r);
     var k = Trk.kind, q = Appr.q(r.key), id = Appr.jid(r.key);
+    /* CLOSED = locked, for an employee. A mistake made after something is done (wrong note, status
+       flipped back by accident) is exactly the kind of thing that should need a second pair of eyes
+       — Admin/HOD keep full edit rights on a closed row from the console (Data Lookup, or Admin.setOrder
+       on the Orders card in Notifications), unaffected by this; this is the employee's OWN screen only. */
+    var locked = Trk.shut(r) && !Auth.isAdmin();
     var h = '<div class="card">' +
       '<div class="lrow" style="padding-top:0"><div class="m">' +
         '<div class="t">' + esc(r.title) + '</div>' +
         '<div class="s">' + dmy(r.date) + ' · ' + esc(r.sub) + '</div>' +
         (r.sub2 ? '<div class="s">' + esc(r.sub2) + '</div>' : '') + '</div>' +
       '<span class="pill ' + Trk.pill(r) + '">' + esc(r.st) + '</span></div>' +
+      (locked ?
+      '<div class="hint" style="margin-top:6px">Bandh ho gaya — status ya note ab nahi badal sakte. ' +
+        'Galti hui ho to Admin/HOD se baat karo, wo console se theek kar sakte hain.' +
+        (r.note ? '<br><b>Note:</b> ' + esc(r.note) : '') +
+        (r.at ? '<br>Updated ' + esc(Appr.when(r.at)) + '</b>' : '') + '</div>' :
       '<label class="f">Status</label>' +
       '<select class="in" onchange="Trk.setSt(\'' + q + '\',this.value)">' +
         Trk.stList(k).map(function (s) {
@@ -12104,7 +12126,7 @@ var Trk = {
       '<div style="display:flex;gap:6px;align-items:center">' +
       '<input class="in" style="flex:1 1 0;min-width:0" id="tk_n_' + id + '" value="' + esc(r.note) + '" placeholder="Follow-up note">' +
       '<button class="btn ghost sm" style="flex:0 0 auto" onclick="Trk.setNote(\'' + q + '\',\'' + id + '\',this)">Save</button></div>' +
-      (r.at ? '<div class="hint" style="margin-top:6px">Updated ' + esc(Appr.when(r.at)) + '</div>' : '')) +
+      (r.at ? '<div class="hint" style="margin-top:6px">Updated ' + esc(Appr.when(r.at)) + '</div>' : ''))) +
       '</div>';
     return h;
   },
@@ -12298,8 +12320,9 @@ var Trk = {
      everywhere else), never read off a line's own NsvLakh — that field is priced off the ORDERED qty
      and stays fixed even once only part of the order is actually billed, which is what made this
      column read 0/wrong here. */
-  poiRows: function () {
-    return DB.mine('SecOrders').filter(function (o) {
+  poiRows: function (code) {
+    var src = code ? DB.rows('SecOrders').filter(function (o) { return DB.same(o.EmpCode, code); }) : DB.mine('SecOrders');
+    return src.filter(function (o) {
       return num(o.TotUnits) > 0;
     }).map(function (o) {
       var lines = Sec.lines(o);
@@ -12324,12 +12347,19 @@ var Trk = {
         remark:o.BillingRemark || '', group:group };
     }).sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
   },
-  POI_GROUPS:[['full', 'Fully fulfilled', 'p-ok'], ['partial', 'Partially fulfilled', 'p-warn'],
-              ['cancel', 'Cancelled', 'p-bad']],
+  /* type filter (Full/Partial, applied only to the merged "billed orders" table below) and a custom
+     date range (applied to the WHOLE screen, including Cancelled) — both off by default, so the
+     screen shows everything actioned until asked to narrow down. */
+  poiTypeF:'all', poiFrom:'', poiTo:'',
+  poiSetType: function (f) { Trk.poiTypeF = f; render(); },
+  poiSetRange: function (k, v) { if (k === 'from') Trk.poiFrom = v; else Trk.poiTo = v; render(); },
   poiHtml: function () {
     /* 'pending' (never billed / still Order in Process) is deliberately dropped here — that is the
        Orders tab's own job now. */
     var rows = Trk.poiRows().filter(function (r) { return r.group !== 'pending'; });
+    if (Trk.poiFrom) rows = rows.filter(function (r) { return r.date >= Trk.poiFrom; });
+    if (Trk.poiTo) rows = rows.filter(function (r) { return r.date <= Trk.poiTo; });
+
     var h = UI.head('', 'Tracker', 'Jin order par action ho gaya hai — billed, partial billed ya ' +
       'cancelled — unka record, store-wise table me. Jo order abhi in process hain wo Orders tab me hain.');
     var totPo = 0, totBill = 0, totNsv = 0;
@@ -12337,48 +12367,87 @@ var Trk = {
     h += '<div class="kpis k3">' + UI.kpi(totPo, 'PO units', 'b') + UI.kpi(totBill, 'Invoiced units', 'g') +
       UI.kpi(lakh(totNsv) + 'L', 'Invoiced NSV', '') + '</div>';
     h += Trk.navHtml() + '</div>';
+
+    h += '<div class="card"><label class="f">Date range (dono khali = poora data)</label>' +
+      '<div class="row two"><div><label class="f">From</label><input class="in" type="date" value="' +
+        esc(Trk.poiFrom) + '" onchange="Trk.poiSetRange(\'from\',this.value)"></div>' +
+      '<div><label class="f">To</label><input class="in" type="date" value="' + esc(Trk.poiTo) +
+        '" onchange="Trk.poiSetRange(\'to\',this.value)"></div></div></div>';
+
     if (!rows.length) return h + '<div class="card">' +
-      UI.empty('', 'Abhi kisi order par action nahi hua — jo bhi order in process hai wo Orders tab me hai') + '</div>';
+      UI.empty('', 'Is range me kisi order par action nahi hua') + '</div>';
     h += '<div class="banner b"><span></span><div><b>Ye screen read-only hai</b><br>' +
       '<span style="font-weight:500">Har number Orders/Tracker tab ke status se apne aap banta hai. ' +
       'Badalna ho to wahan jaakar status ya invoice dobara mark karo. Kisi bhi store par tap karo — ' +
       'ordered qty, fulfilled qty, MRP aur NSV alag-alag dikhega.</span></div></div>';
-    Trk.POI_GROUPS.forEach(function (g) {
-      var grp = rows.filter(function (r) { return r.group === g[0]; });
-      if (grp.length) h += Trk.poiTable(g, grp);
-    });
+
+    /* ONE table for Full + Partial together — a Type column (as a pill on the store name) says which,
+       and the chip row narrows to just one type when that is all that is wanted. Cancelled stays its
+       own table: an invoice/NSV column would be zero on every single row there, which is not the
+       same thing as a real number that happens to be small. */
+    var mainRows = rows.filter(function (r) { return r.group === 'full' || r.group === 'partial'; });
+    var cancelRows = rows.filter(function (r) { return r.group === 'cancel'; });
+
+    if (mainRows.length) {
+      h += '<div class="sec-title">Billed orders <span class="pill p-blue">' + mainRows.length + '</span></div>';
+      h += '<div style="display:flex;gap:6px;margin:6px 0 10px">' + [['all', 'Sab'], ['full', 'Fully'], ['partial', 'Partial']].map(function (c) {
+        return '<button class="btn ' + (Trk.poiTypeF === c[0] ? '' : 'ghost') + ' sm" style="flex:1 1 0"' +
+          ' onclick="Trk.poiSetType(\'' + c[0] + '\')">' + esc(c[1]) + '</button>'; }).join('') + '</div>';
+      var shown = Trk.poiTypeF === 'all' ? mainRows : mainRows.filter(function (r) { return r.group === Trk.poiTypeF; });
+      h += shown.length ? Trk.poiMainTable(shown) : '<div class="card">' + UI.empty('', 'Is filter me kuch nahi hai') + '</div>';
+    }
+    if (cancelRows.length) h += Trk.poiTable(['cancel', 'Cancelled', 'p-bad'], cancelRows);
     return h;
   },
-  /* one section = one plain table, one row per store, numbers side by side. Columns are the SAME
-     across every section on purpose — a rep scanning down should never have to re-learn what a
-     column means because the group changed. */
-  poiTable: function (g, rows) {
-    /* 4 columns, not 7 — Ordered/Invoiced/Gap collapse into ONE "invoiced / ordered" cell (a Full
-       section has nothing to compare so it just shows the one number), and Cancelled shows the order
-       value it never earned instead of an invoiced value that will always be zero. Fits a phone
-       without the table needing to scroll sideways, which is the whole point of "side by side". */
-    var isCancel = g[0] === 'cancel';
-    var tuInv = 0, tuOrd = 0, tv = 0, tnsv = 0;
+  /* the merged Full+Partial table — PO unit, Invoice unit, Invoice value and NSV as four SEPARATE
+     columns for both types (a Full row's PO unit and Invoice unit are simply equal, shown plainly
+     rather than collapsed into one cell — asked for explicitly, so both types read identically). */
+  poiMainTable: function (rows, onClick) {
+    onClick = onClick || 'Trk.poiOpenDetail';
+    var tPo = 0, tInv = 0, tVal = 0, tNsv = 0;
+    var h = '<div class="card"><div class="tw"><table><thead><tr><th>Store</th>' +
+      '<th class="num">PO unit</th><th class="num">Invoice unit</th>' +
+      '<th class="num">Invoice value</th><th class="num">NSV ₹L</th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        tPo += r.poUnits; tInv += r.billed; tVal += r.billedVal; tNsv += r.billedNsv;
+        var typePill = r.group === 'full' ? '<span class="pill p-ok" style="margin-left:6px">Full</span>'
+          : '<span class="pill p-warn" style="margin-left:6px">Partial</span>';
+        return '<tr style="cursor:pointer" onclick="' + onClick + '(\'' + Appr.q(r.po) + '\')">' +
+          '<td><b class="nm">' + esc(r.store || '—') + '</b>' + typePill +
+          '<div class="hint">' + esc(r.po) + ' · ' + dmy(r.date) + (r.dbName ? ' · ' + esc(r.dbName) : '') +
+            (r.remark ? '<br>' + esc(r.remark) : '') + '</div></td>' +
+          '<td class="num">' + r.poUnits + '</td>' +
+          '<td class="num">' + r.billed + '</td>' +
+          '<td class="num">' + inr(r.billedVal) + '</td>' +
+          '<td class="num">' + lakh(r.billedNsv) + '</td></tr>';
+      }).join('') +
+      '<tr class="tot"><td><b>TOTAL</b></td>' +
+      '<td class="num"><b>' + tPo + '</b></td>' +
+      '<td class="num"><b>' + tInv + '</b></td>' +
+      '<td class="num"><b>' + inr(tVal) + '</b></td>' +
+      '<td class="num"><b>' + lakh(tNsv) + '</b></td></tr></tbody></table></div></div>';
+    return h;
+  },
+  /* Cancelled only, now — nothing was ever invoiced there, so it keeps its own simpler shape (the
+     order value it never earned, no Invoice-unit/NSV columns that would just read zero every time). */
+  poiTable: function (g, rows, onClick) {
+    onClick = onClick || 'Trk.poiOpenDetail';
+    var tuOrd = 0, tv = 0;
     var h = '<div class="sec-title">' + esc(g[1]) + ' <span class="pill ' + g[2] + '">' + rows.length + '</span></div>' +
       '<div class="card"><div class="tw"><table><thead><tr><th>Store</th><th class="num">Units</th>' +
-      '<th class="num">' + (isCancel ? 'Order value' : 'Invoiced value') + '</th>' +
-      '<th class="num">NSV ₹L</th></tr></thead><tbody>' +
+      '<th class="num">Order value</th></tr></thead><tbody>' +
       rows.map(function (r) {
-        var units = r.group === 'full' || r.group === 'cancel' ? String(r.poUnits) : r.billed + ' / ' + r.poUnits;
-        var val = isCancel ? r.poValue : r.billedVal;
-        tuInv += r.billed; tuOrd += r.poUnits; tv += val; tnsv += isCancel ? 0 : r.billedNsv;
-        return '<tr style="cursor:pointer" onclick="Trk.poiOpenDetail(\'' + Appr.q(r.po) + '\')">' +
+        tuOrd += r.poUnits; tv += r.poValue;
+        return '<tr style="cursor:pointer" onclick="' + onClick + '(\'' + Appr.q(r.po) + '\')">' +
           '<td><b class="nm">' + esc(r.store || '—') + '</b>' +
           '<div class="hint">' + esc(r.po) + ' · ' + dmy(r.date) + (r.dbName ? ' · ' + esc(r.dbName) : '') +
             (r.remark ? '<br>' + esc(r.remark) : '') + '</div></td>' +
-          '<td class="num">' + units + '</td>' +
-          '<td class="num">' + inr(val) + '</td>' +
-          '<td class="num">' + (isCancel ? '—' : lakh(r.billedNsv)) + '</td></tr>';
+          '<td class="num">' + r.poUnits + '</td>' +
+          '<td class="num">' + inr(r.poValue) + '</td></tr>';
       }).join('') +
       '<tr class="tot"><td><b>TOTAL</b></td>' +
-      '<td class="num"><b>' + (isCancel ? tuOrd : tuInv + ' / ' + tuOrd) + '</b></td>' +
-      '<td class="num"><b>' + inr(tv) + '</b></td>' +
-      '<td class="num"><b>' + (isCancel ? '—' : lakh(tnsv)) + '</b></td></tr></tbody></table></div></div>';
+      '<td class="num"><b>' + tuOrd + '</b></td>' +
+      '<td class="num"><b>' + inr(tv) + '</b></td></tr></tbody></table></div></div>';
     return h;
   },
   /* tap a store — a compact bottom sheet with exactly the 4 numbers asked for, nothing more: ordered
@@ -12482,13 +12551,17 @@ var Tgt = {
        and, separately, as SecOrderLines rows; which of the two is present depends on how and when
        the order was saved. Sec.lines() is the reader that knows about both, so a month's total can
        never come out short just because one of the stores is empty. Cancelled orders are skipped
-       here rather than filtered afterwards: nothing was ever sold on them. */
+       here rather than filtered afterwards: nothing was ever sold on them.
+       NSV is computed fresh from each line's Value (× 0.6, same conversion as everywhere else in
+       the app) instead of read off l.NsvLakh — a freshly-punched order's LinesJson never carries
+       that field (only the SecOrderLines rows do), so reading it here silently summed to 0 for
+       every order punched the normal way. */
     DB.rows('SecOrders').forEach(function (o) {
       if (String(o.EmpCode || '').toUpperCase() !== me) return;
       if (String(toISO(o.Date) || '').slice(0, 7) !== mo) return;
       if (/cancel|no.?order/i.test(String(o.Status || ''))) return;
       Sec.lines(o).forEach(function (l) {
-        var b = String(l.Brand || ''), v = num(l.NsvLakh), hit = null;
+        var b = String(l.Brand || ''), v = num(l.Value) * .6 / 1e5, hit = null;
         for (var i = 0; i < Tgt.GROUPS.length && !hit; i++) if (Tgt.GROUPS[i].is(b)) hit = Tgt.GROUPS[i];
         if (hit) out[hit.key] = (out[hit.key] || 0) + v; else other += v;
       });
@@ -14265,8 +14338,10 @@ var Appr = {
     var byKind = all.filter(function (o) { return Appr.kindF === 'all' || o.kind === Appr.kindF; });
     var oc2 = { open:0, closed:0 };
     byKind.forEach(function (o) { oc2[o.oc]++; });
-    /* the number rides on OPEN only — "Closed (218)" is a fact, not something anybody must do */
-    var chips = [['open', 'Open', oc2.open], ['closed', 'Closed', 0], ['all', 'Sab', 0]];
+    /* the number rides on OPEN only — "Closed (218)" is a fact, not something anybody must do.
+       Open/Closed only, no "Sab" — a decided request is exactly as closed as it will ever get, so
+       a combined view never showed anything a rep could still act on differently. */
+    var chips = [['open', 'Open', oc2.open], ['closed', 'Closed', 0]];
     h += '<div class="card" style="padding:10px"><div class="row two">' +
       '<div><label class="f">Type</label><select class="in" onchange="Appr.setKind(this.value)">' +
         kinds.map(function (c) {
@@ -14281,7 +14356,7 @@ var Appr = {
           (c[2] ? ' <span class="bdg">' + (c[2] > 99 ? '99+' : c[2]) + '</span>' : '') +
           '</button>'; }).join('') + '</div></div>';
 
-    var show = byKind.filter(function (o) { return Appr.filter === 'all' || o.oc === Appr.filter; });
+    var show = byKind.filter(function (o) { return o.oc === (Appr.filter === 'open' ? 'open' : 'closed'); });
     if (!show.length) {
       h += UI.empty('', all.length ? 'Is filter me kuch nahi hai' :
         'Abhi tak koi request nahi bheji. PJP ya plan change bhejoge to yahan dikhega.');
@@ -14472,8 +14547,10 @@ var Appr = {
     if (!lines.length) return h + '<div class="hint" style="margin-top:8px">Is order me koi SKU nahi — ' +
       'ye Cancel Order wala visit hai.</div>';
 
+    /* NSV computed fresh from Value (× 0.6), not read off l.NsvLakh — a freshly-punched order's
+       LinesJson never carries that field, so reading it here silently showed 0 per SKU. */
     var u = 0, v = 0, nsv = 0;
-    lines.forEach(function (l) { u += num(l.Units); v += num(l.Value); nsv += num(l.NsvLakh); });
+    lines.forEach(function (l) { u += num(l.Units); v += num(l.Value); nsv += num(l.Value) * .6 / 1e5; });
     h += '<div class="tw" style="margin-top:10px"><table><thead><tr><th>SKU</th>' +
       '<th class="num">MRP</th><th class="num">Qty</th><th class="num">MRP value</th>' +
       '<th class="num">NSV ₹L</th></tr></thead><tbody>' +
@@ -14484,7 +14561,7 @@ var Appr = {
           '<td class="num">' + inr(l.Mrp) + '</td>' +
           '<td class="num">' + num(l.Units) + '</td>' +
           '<td class="num">' + inr(l.Value) + '</td>' +
-          '<td class="num">' + lakh(l.NsvLakh) + '</td></tr>'; }).join('') +
+          '<td class="num">' + lakh(num(l.Value) * .6 / 1e5) + '</td></tr>'; }).join('') +
       '<tr class="tot"><td><b>TOTAL — ' + lines.length + ' SKU</b></td><td></td>' +
       '<td class="num"><b>' + u + '</b></td><td class="num"><b>' + inr(v) + '</b></td>' +
       '<td class="num"><b>' + lakh(nsv) + '</b></td></tr></tbody></table></div>';
@@ -15566,9 +15643,10 @@ var Admin = {
      there is no second, competing way to decide the same claim) or a generic field editor does, for
      the record types that never had one. Every save is DB.save on the row's OWN key — an upsert that
      OVERWRITES the existing row, never a new column or a new row. */
-  lkEmp:'', lkCat:'pjp', lkMon:'', lkKey:'',
+  lkEmp:'', lkCat:'pjp', lkMon:'', lkKey:'', lkFrom:'', lkTo:'', lkPoiKey:'',
   LK_CATS:[['pjp', 'PJP', 'PjpDraft'], ['dev', 'Change PJP', 'Deviation'], ['tada', 'TA/DA', 'TaDa'],
-           ['ord', 'Orders', 'SecOrders'], ['ns', 'New outlet', 'NewStores'], ['pq', 'POSM requirement', 'PosmRequirement']],
+           ['ord', 'Orders', 'SecOrders'], ['poi', 'PO vs Invoice', 'SecOrders'],
+           ['ns', 'New outlet', 'NewStores'], ['pq', 'POSM requirement', 'PosmRequirement']],
   /* columns a generic edit form must never expose: upsert keys, the row's owner, derived totals kept
      in step by their own committer (SecOrders' Tot-columns and LinesJson, NewStores' Order-columns),
      and the audit trail a hand edit here should not stamp over */
@@ -15579,10 +15657,83 @@ var Admin = {
            'BillingType','InvoiceNo','InvoiceAt','InvoiceStatus','InvoiceHodBy','InvoiceHodRole',
            'InvoiceHodAt','InvoiceRemarks'],
   lkCatOf: function (tab) { var c = Admin.LK_CATS.filter(function (x) { return x[2] === tab; })[0]; return c ? c[0] : ''; },
-  lkPick: function (cat) { Admin.lkCat = cat; Admin.lkKey = ''; render(); },
-  lkPickEmp: function (code) { Admin.lkEmp = code; Admin.lkKey = ''; render(); },
+  lkPick: function (cat) { Admin.lkCat = cat; Admin.lkKey = ''; Admin.lkPoiKey = ''; render(); },
+  lkPickEmp: function (code) { Admin.lkEmp = code; Admin.lkKey = ''; Admin.lkPoiKey = ''; render(); },
   lkOpen: function (key) { Admin.lkKey = key; render(); },
   lkClose: function () { Admin.lkKey = ''; render(); },
+  lkSetRange: function (k, v) { if (k === 'from') Admin.lkFrom = v; else Admin.lkTo = v; render(); },
+  /* ── PO vs Invoice, employee-scoped ── same read as the rep's own Tracker screen (Trk.poiRows),
+     just handed the picked employee's code instead of defaulting to DB.me. The click-through here
+     goes SKU-wise (Admin.lkPoiSkuHtml) rather than the rep's own 4-number sheet — the extra detail
+     an HOD looking at someone else's order actually needs. */
+  lkPoiOpen: function (po) { Admin.lkPoiKey = po; render(); },
+  lkPoiClose: function () { Admin.lkPoiKey = ''; render(); },
+  lkPoiHtml: function () {
+    if (Admin.lkPoiKey) {
+      var back = '<div class="card"><button class="btn ghost sm" onclick="Admin.lkPoiClose()">‹ PO vs Invoice list</button></div>';
+      return back + Admin.lkPoiSkuHtml(Admin.lkPoiKey);
+    }
+    var rows = Trk.poiRows(Admin.lkEmp).filter(function (r) { return r.group !== 'pending'; });
+    if (Admin.lkFrom) rows = rows.filter(function (r) { return r.date >= Admin.lkFrom; });
+    if (Admin.lkTo) rows = rows.filter(function (r) { return r.date <= Admin.lkTo; });
+    if (!rows.length) return '<div class="card">' + UI.empty('', 'Is range me kisi order par action nahi hua') + '</div>';
+
+    var totPo = 0, totBill = 0, totNsv = 0;
+    rows.forEach(function (r) { totPo += r.poUnits; totBill += r.billed; totNsv += r.billedNsv; });
+    var h = '<div class="kpis k3">' + UI.kpi(totPo, 'PO units', 'b') + UI.kpi(totBill, 'Invoiced units', 'g') +
+      UI.kpi(lakh(totNsv) + 'L', 'Invoiced NSV', '') + '</div>';
+
+    var mainRows = rows.filter(function (r) { return r.group === 'full' || r.group === 'partial'; });
+    var cancelRows = rows.filter(function (r) { return r.group === 'cancel'; });
+    if (mainRows.length) {
+      h += '<div class="sec-title">Billed orders <span class="pill p-blue">' + mainRows.length + '</span></div>';
+      h += Trk.poiMainTable(mainRows, 'Admin.lkPoiOpen');
+    }
+    if (cancelRows.length) h += Trk.poiTable(['cancel', 'Cancelled', 'p-bad'], cancelRows, 'Admin.lkPoiOpen');
+    h += '<div class="hint" style="margin-top:6px">Kisi bhi store par tap karo — SKU-wise detail dikhega.</div>';
+    return h;
+  },
+  /* the per-SKU breakdown a click opens — same billed-qty maths as Trk.poiRows, just one line at a
+     time: MRP, PO qty, invoiced qty, the gap between them, and both values side by side so nothing
+     needs a second screen to cross-check. */
+  lkPoiSkuHtml: function (po) {
+    var r = Trk.poiRows(Admin.lkEmp).filter(function (x) { return x.po === po; })[0];
+    var o = DB.find('SecOrders', po);
+    if (!r || !o) return '<div class="card">' + UI.empty('', 'Row nahi mila — Sync karo') + '</div>';
+    var lines = Sec.lines(o), per = Sec.billed(o), hasPer = Object.keys(per).length > 0;
+    var billedAtAll = r.group === 'full' || r.group === 'partial';
+    var h = '<div class="card"><div class="hint">' + esc(r.store || '') + ' · ' + esc(r.po) + ' · ' + dmy(r.date) +
+      (r.dbName ? ' · ' + esc(r.dbName) : '') + '</div></div>';
+    var tPoU = 0, tInvU = 0, tPoV = 0, tInvV = 0, tNsv = 0;
+    h += '<div class="tw"><table><thead><tr><th>SKU</th><th class="num">MRP</th>' +
+      '<th class="num">Order</th><th class="num">Invoice</th><th class="num">Gap</th>' +
+      '<th class="num">Order value</th><th class="num">Invoice value</th><th class="num">NSV ₹L</th></tr></thead><tbody>' +
+      lines.map(function (l) {
+        var q = num(l.Units);
+        var b = billedAtAll ? (hasPer ? Math.max(0, Math.min(num(per[String(l.Sku)]), q)) : q) : 0;
+        var bv = q ? Math.round(b * (num(l.Value) / q)) : 0;
+        var nsv = +(bv * .6 / 1e5).toFixed(4);
+        tPoU += q; tInvU += b; tPoV += num(l.Value); tInvV += bv; tNsv += nsv;
+        return '<tr><td><b class="nm">' + esc(l.SkuName || l.Sku || '—') + '</b>' +
+          '<div class="hint">' + esc(l.Brand || '') + ' · ' + esc(l.Sku || '') + '</div></td>' +
+          '<td class="num">' + inr(l.Mrp) + '</td>' +
+          '<td class="num">' + q + '</td>' +
+          '<td class="num">' + b + '</td>' +
+          '<td class="num">' + (q - b > 0 ? q - b : '—') + '</td>' +
+          '<td class="num">' + inr(l.Value) + '</td>' +
+          '<td class="num">' + inr(bv) + '</td>' +
+          '<td class="num">' + lakh(nsv) + '</td></tr>';
+      }).join('') +
+      '<tr class="tot"><td><b>TOTAL</b></td><td></td>' +
+      '<td class="num"><b>' + tPoU + '</b></td>' +
+      '<td class="num"><b>' + tInvU + '</b></td>' +
+      '<td class="num"><b>' + (tPoU - tInvU > 0 ? tPoU - tInvU : '—') + '</b></td>' +
+      '<td class="num"><b>' + inr(tPoV) + '</b></td>' +
+      '<td class="num"><b>' + inr(tInvV) + '</b></td>' +
+      '<td class="num"><b>' + lakh(tNsv) + '</b></td></tr></tbody></table></div>' +
+      (r.remark ? '<div class="hint" style="margin-top:6px">Reason: ' + esc(r.remark) + '</div>' : '');
+    return h;
+  },
   lookupHtml: function () {
     var h = '<div class="card"><label class="f">Employee</label>' +
       '<select class="in" onchange="Admin.lkPickEmp(this.value)">' +
@@ -15605,6 +15756,16 @@ var Admin = {
       return h + Admin.pjpOne(Admin.lkEmp, mon);
     }
 
+    /* every other category can be narrowed to a period — asked for once, applied everywhere rather
+       than re-built per screen */
+    h += '<div class="card"><label class="f">Date range (dono khali = poora data)</label>' +
+      '<div class="row two"><div><label class="f">From</label><input class="in" type="date" value="' +
+        esc(Admin.lkFrom) + '" onchange="Admin.lkSetRange(\'from\',this.value)"></div>' +
+      '<div><label class="f">To</label><input class="in" type="date" value="' + esc(Admin.lkTo) +
+        '" onchange="Admin.lkSetRange(\'to\',this.value)"></div></div></div>';
+
+    if (Admin.lkCat === 'poi') return h + Admin.lkPoiHtml();
+
     if (Admin.lkKey) {
       var back = '<div class="card"><button class="btn ghost sm" onclick="Admin.lkClose()">‹ ' + esc(cat[1]) + ' list</button></div>';
       if (Admin.lkCat === 'tada') return back + Tada.hodView(Admin.lkKey, true);
@@ -15612,6 +15773,12 @@ var Admin = {
     }
 
     var rows = DB.rows(tab).filter(function (r) { return DB.same(r.EmpCode, Admin.lkEmp); })
+      .filter(function (r) {
+        var d = String(r.Date || (r.Month ? r.Month + '-01' : ''));
+        if (Admin.lkFrom && d < Admin.lkFrom) return false;
+        if (Admin.lkTo && d > Admin.lkTo) return false;
+        return true;
+      })
       .sort(function (a, b) { return String(b.Date || b.Month || '').localeCompare(String(a.Date || a.Month || '')); });
     if (!rows.length) return h + '<div class="card">' + UI.empty('', 'Is employee ka ' + esc(cat[1]) + ' me kuch nahi hai') + '</div>';
     return h + '<div class="sec-title">' + rows.length + ' record' + (rows.length > 1 ? 's' : '') + '</div>' +
