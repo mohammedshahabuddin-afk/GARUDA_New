@@ -11874,6 +11874,9 @@ var Eod = {
    (never a new one) and syncs like everything else, so the sheet always shows the real stage. */
 var Trk = {
   kind:'ord', filter:'open',
+  /* which of POSM's two sections is showing — Requirement is the actionable one, so it opens first */
+  posmSub:'req',
+  posmSet: function (s) { Trk.posmSub = s; Trk.filter = 'open'; render(); },
   /* ── TAT is NOT a tab here any more ──
      "Orders stuck past their turnaround" is an ALERT, not a follow-up board of its own: it was a
      filtered view of the very rows already sitting on the Orders tab, so it said the same thing
@@ -11939,11 +11942,33 @@ var Trk = {
         sub2:(r.DbName || '') + (r.OwnerMobile ? ' · ' + r.OwnerMobile : ''),
         st:Trk.st('ns', r.Status), note:r.StatusReason || '', at:r.StatusAt || '' });
     });
-    if (k === 'pq') DB.mine('PosmRequirement').forEach(function (r) {
+    /* POSM splits into two sections that mean different things and never mix:
+       Requirement — the store genuinely needs POSM, and an ASM has to act on it (a real workflow,
+         Pending → … → Installed/Rejected, exactly like before).
+       Audit — a check that found nothing to chase: either a completed PosmAudit (POSM already there,
+         condition logged) or a PosmRequirement row where the rep answered "No" (no requirement was
+         raised — `Requirement:'No'` is written verbatim from that Yes/No answer, Posm.saveReq). Both
+         are a record, not a request, so they get no status dropdown and no open/closed concept. */
+    if (k === 'pq' && Trk.posmSub === 'req') DB.mine('PosmRequirement').filter(function (r) {
+      return r.Requirement !== 'No';
+    }).forEach(function (r) {
       out.push({ key:String(r.Id), date:toISO(r.Date), title:r.StoreName || '',
         sub:(r.Element || '—') + ' · ' + (r.City || '—'),
         sub2:r.Remarks || '', st:Trk.st('pq', r.Status), note:r.StatusReason || '', at:r.StatusAt || '' });
     });
+    if (k === 'pq' && Trk.posmSub === 'audit') {
+      DB.mine('PosmAudit').forEach(function (r) {
+        out.push({ key:'pa_' + r.Id, date:toISO(r.Date), title:r.StoreName || '',
+          sub:(r.Element || 'POSM') + ' · ' + (r.Condition || r.PosmStatus || '—'),
+          sub2:[r.Brand, r.PosmType].filter(Boolean).join(' · ') + (r.Remarks ? ' · ' + r.Remarks : ''),
+          st:'', note:'', at:r.Ts || '', isAudit:true });
+      });
+      DB.mine('PosmRequirement').filter(function (r) { return r.Requirement === 'No'; }).forEach(function (r) {
+        out.push({ key:String(r.Id), date:toISO(r.Date), title:r.StoreName || '',
+          sub:'Audit · POSM requirement nahi tha', sub2:r.Remarks || '',
+          st:'', note:'', at:r.Ts || r.StatusAt || '', isAudit:true });
+      });
+    }
     /* open work first, then newest — a rep opens this screen to see what is still stuck */
     return out.sort(function (a, b) {
       var da = Trk.shut(a) ? 1 : 0, db = Trk.shut(b) ? 1 : 0;
@@ -11954,12 +11979,15 @@ var Trk = {
   /* how much OPEN work each type is carrying — read straight from the rows, so the badge on a tab is
      that tab's own number whether or not it is the one on screen */
   openCounts: function () {
-    var was = Trk.kind, out = {};
+    var was = Trk.kind, wasSub = Trk.posmSub, out = {};
     Trk.KINDS.forEach(function (c) {
       Trk.kind = c[0];
+      /* the POSM badge means "requirements needing action" — Audit has no such thing, so it is never
+         what the nav badge should be counting even while the Audit section happens to be on screen */
+      if (c[0] === 'pq') Trk.posmSub = 'req';
       out[c[0]] = Trk.rows().filter(function (r) { return !Trk.shut(r); }).length;
     });
-    Trk.kind = was;
+    Trk.kind = was; Trk.posmSub = wasSub;
     return out;
   },
   navHtml: function () {
@@ -11973,31 +12001,58 @@ var Trk = {
           (Trk.kind === c[0] ? ' data-on="1"' : '') + ' onclick="Trk.go(\'' + c[0] + '\')">' +
           esc(c[1]) + (n ? '<span class="bdg">' + n + '</span>' : '') + '</button>'; }).join('') + '</div>';
   },
+  /* Requirement vs Audit — the only two things POSM ever is. A store that needs POSM and one that
+     doesn't are different jobs (one has an ASM to chase, one is just a fact on file), so they get
+     separate sections rather than living in one list with a "why is this here" status. */
+  posmSubNav: function () {
+    var subs = [['req', 'Requirement'], ['audit', 'Audit']];
+    return '<div class="seg" style="margin:10px 0">' + subs.map(function (s) {
+      return '<button type="button" class="' + (Trk.posmSub === s[0] ? 'on' : '') +
+        '" onclick="Trk.posmSet(\'' + s[0] + '\')">' + esc(s[1]) + '</button>'; }).join('') + '</div>';
+  },
+  /* Orders: Closed/All used to be a chip here too, but PO vs Invoice now IS that view — a second
+     copy of the same distinction was one screen too many. This list is always just the open ones.
+     POSM/Audit: an audit or a "no requirement needed" visit is a plain log, not a request with a
+     state — there is no Closed to move to, so the chip row would be offering a choice that means
+     nothing. Both cases: no chips, no filter, just every row that belongs there. */
+  noChips: function () { return Trk.kind === 'ord' || (Trk.kind === 'pq' && Trk.posmSub === 'audit'); },
   html: function () {
     if (Trk.kind === 'poi') return Trk.poiHtml();
     var all = Trk.rows();
     var open = all.filter(function (r) { return !Trk.shut(r); });
+    var noChips = Trk.noChips();
     var sub = 'Apne order, naye outlet aur POSM ka status khud update karo. Koi approval nahi — ' +
       'ASM se baat karke jo hua wahi yahan mark kar do, sheet me chala jayega.';
     var h = UI.head('', 'Tracker', sub);
 
-    h += '<div class="kpis k3">' +
-      UI.kpi(open.length, 'Open — action chahiye', open.length ? 'r' : 'g') +
-      UI.kpi(all.length - open.length, 'Closed', 'g') +
-      UI.kpi(all.length, 'Total', 'b') + '</div>';
+    h += noChips && Trk.kind === 'pq'
+      ? '<div class="kpis k3">' + UI.kpi(all.length, 'Audit / check records', 'b') + '</div>'
+      : '<div class="kpis k3">' +
+        UI.kpi(open.length, 'Open — action chahiye', open.length ? 'r' : 'g') +
+        UI.kpi(all.length - open.length, 'Closed', 'g') +
+        UI.kpi(all.length, 'Total', 'b') + '</div>';
 
-    /* leaves the outer .card div open — closed right below, after the Open/Closed/All chips,
+    /* leaves the outer .card div open — closed right below, after the sub-nav/chips,
        exactly like the original single-card layout */
     h += Trk.navHtml();
+    if (Trk.kind === 'pq') h += Trk.posmSubNav();
 
-    /* the number belongs on OPEN only — "Closed (12)" is a fact, not something that needs doing */
-    var chips = [['open', 'Open', open.length], ['done', 'Closed', 0], ['all', 'All', 0]];
-    h += '<div style="display:flex;gap:6px;margin:10px 0 4px">' + chips.map(function (c) {
-      return '<button class="btn ' + (Trk.filter === c[0] ? '' : 'ghost') + ' sm" style="flex:1 1 0"' +
-        ' onclick="Trk.set(\'' + c[0] + '\')">' + esc(c[1]) +
-        (c[2] ? ' <span class="bdg">' + c[2] + '</span>' : '') + '</button>'; }).join('') + '</div></div>';
+    if (noChips) {
+      Trk.filter = 'open';                      /* harmless for audit rows — shut() is always false */
+      h += '</div>';
+    } else {
+      /* the number belongs on OPEN only — "Closed (12)" is a fact, not something that needs doing */
+      var chips = [['open', 'Open', open.length], ['done', 'Closed', 0], ['all', 'All', 0]];
+      h += '<div style="display:flex;gap:6px;margin:10px 0 4px">' + chips.map(function (c) {
+        return '<button class="btn ' + (Trk.filter === c[0] ? '' : 'ghost') + ' sm" style="flex:1 1 0"' +
+          ' onclick="Trk.set(\'' + c[0] + '\')">' + esc(c[1]) +
+          (c[2] ? ' <span class="bdg">' + c[2] + '</span>' : '') + '</button>'; }).join('') + '</div></div>';
+    }
 
-    var show = all.filter(function (r) {
+    /* noChips means "no toggle", not "no filter" — Orders still only ever shows the open ones (closed
+       orders live in PO vs Invoice now); `open` already equals `all` for the Audit sub-section since
+       an audit row is never "shut", so this one line is correct for both noChips cases at once. */
+    var show = noChips ? open : all.filter(function (r) {
       return Trk.filter === 'all' || (Trk.filter === 'open' ? !Trk.shut(r) : Trk.shut(r)); });
     if (!show.length) return h + '<div class="card">' +
       UI.empty('', all.length ? 'Is filter me kuch nahi hai' : 'Abhi is type ka kuch nahi bhara') + '</div>';
@@ -12014,7 +12069,19 @@ var Trk = {
     s.classList.toggle('fit', s.scrollWidth <= s.clientWidth + 2);
   },
 
+  /* an audit is a completed fact, not a request — no status to change, nothing to chase, nothing
+     to note. Read-only by design, same spirit as the 'notify'/'psup' cards elsewhere in the app. */
+  audCard: function (r) {
+    return '<div class="card"><div class="lrow" style="padding-top:0"><div class="m">' +
+      '<div class="t">' + esc(r.title) + '</div>' +
+      '<div class="s">' + dmy(r.date) + ' · ' + esc(r.sub) + '</div>' +
+      (r.sub2 ? '<div class="s">' + esc(r.sub2) + '</div>' : '') + '</div>' +
+      '<span class="pill p-grey">Audit</span></div>' +
+      (r.at ? '<div class="hint" style="margin-top:6px">' + esc(Appr.when(r.at)) + '</div>' : '') +
+      '</div>';
+  },
   card: function (r) {
+    if (r.isAudit) return Trk.audCard(r);
     var k = Trk.kind, q = Appr.q(r.key), id = Appr.jid(r.key);
     var h = '<div class="card">' +
       '<div class="lrow" style="padding-top:0"><div class="m">' +
@@ -12223,11 +12290,14 @@ var Trk = {
   set: function (f) { Trk.filter = f; render(); },
 
   /* ── PO vs Invoice Generated — ordered units against what was actually billed, side by side.
-     Plain tables, grouped by outcome (Fully fulfilled / Partially fulfilled / Cancelled / Not billed
-     yet) — one row per store, numbers side by side, no per-SKU drill-down. NSV is computed fresh from
-     the INVOICED value (Value × 0.6, the one conversion this app uses everywhere else), never read
-     off a line's own NsvLakh — that field is priced off the ORDERED qty and stays fixed even once
-     only part of the order is actually billed, which is what made this column read 0/wrong here. */
+     Plain tables, grouped by outcome (Fully fulfilled / Partially fulfilled / Cancelled) — one row
+     per store, numbers side by side, no per-SKU drill-down. This screen is ACTIONED orders only —
+     Full, Partial or Cancelled — never 'Order in Process': that one still lives, and only lives, in
+     the Orders tab, so an order is never split across two screens depending on what happened to it.
+     NSV is computed fresh from the INVOICED value (Value × 0.6, the one conversion this app uses
+     everywhere else), never read off a line's own NsvLakh — that field is priced off the ORDERED qty
+     and stays fixed even once only part of the order is actually billed, which is what made this
+     column read 0/wrong here. */
   poiRows: function () {
     return DB.mine('SecOrders').filter(function (o) {
       return num(o.TotUnits) > 0;
@@ -12254,45 +12324,29 @@ var Trk = {
         remark:o.BillingRemark || '', group:group };
     }).sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
   },
-  /* 4th slot = which filter bucket the group sits under. Partial + Not-billed-yet still need
-     someone's eyes (a gap to chase, or an order nobody has billed at all) — Fully fulfilled and
-     Cancelled are done, one way or the other, and stay out of the way until asked for. */
-  POI_GROUPS:[['full', 'Fully fulfilled', 'p-ok', 'closed'], ['partial', 'Partially fulfilled', 'p-warn', 'open'],
-              ['cancel', 'Cancelled', 'p-bad', 'closed'], ['pending', 'Not billed yet', 'p-grey', 'open']],
-  poiFilter:'open',
-  poiSet: function (f) { Trk.poiFilter = f; render(); },
+  POI_GROUPS:[['full', 'Fully fulfilled', 'p-ok'], ['partial', 'Partially fulfilled', 'p-warn'],
+              ['cancel', 'Cancelled', 'p-bad']],
   poiHtml: function () {
-    var rows = Trk.poiRows();
-    var h = UI.head('', 'Tracker', 'PO me kitna order tha, uske against kitna mila — dono side by side, ' +
-      'store-wise table me.');
+    /* 'pending' (never billed / still Order in Process) is deliberately dropped here — that is the
+       Orders tab's own job now. */
+    var rows = Trk.poiRows().filter(function (r) { return r.group !== 'pending'; });
+    var h = UI.head('', 'Tracker', 'Jin order par action ho gaya hai — billed, partial billed ya ' +
+      'cancelled — unka record, store-wise table me. Jo order abhi in process hain wo Orders tab me hain.');
     var totPo = 0, totBill = 0, totNsv = 0;
     rows.forEach(function (r) { totPo += r.poUnits; totBill += r.billed; totNsv += r.billedNsv; });
     h += '<div class="kpis k3">' + UI.kpi(totPo, 'PO units', 'b') + UI.kpi(totBill, 'Invoiced units', 'g') +
       UI.kpi(lakh(totNsv) + 'L', 'Invoiced NSV', '') + '</div>';
     h += Trk.navHtml() + '</div>';
-    if (!rows.length) return h + '<div class="card">' + UI.empty('', 'Abhi koi order nahi') + '</div>';
+    if (!rows.length) return h + '<div class="card">' +
+      UI.empty('', 'Abhi kisi order par action nahi hua — jo bhi order in process hai wo Orders tab me hai') + '</div>';
     h += '<div class="banner b"><span></span><div><b>Ye screen read-only hai</b><br>' +
       '<span style="font-weight:500">Har number Orders/Tracker tab ke status se apne aap banta hai. ' +
-      'Badalna ho to wahan jaakar status ya invoice dobara mark karo.</span></div></div>';
-
-    /* Open (needs eyes) in front by default; Fully fulfilled + Cancelled sit behind a Closed tab —
-       same Open/Closed shape the rest of the Tracker already uses. */
-    var openGroups = Trk.POI_GROUPS.filter(function (g) { return g[3] === 'open'; });
-    var closedGroups = Trk.POI_GROUPS.filter(function (g) { return g[3] === 'closed'; });
-    var openN = rows.filter(function (r) { return openGroups.some(function (g) { return g[0] === r.group; }); }).length;
-    var closedN = rows.length - openN;
-    h += '<div style="display:flex;gap:6px;margin:10px 0 4px">' + [['open', 'Open', openN], ['closed', 'Closed', closedN]].map(function (c) {
-      return '<button class="btn ' + (Trk.poiFilter === c[0] ? '' : 'ghost') + ' sm" style="flex:1 1 0"' +
-        ' onclick="Trk.poiSet(\'' + c[0] + '\')">' + esc(c[1]) +
-        (c[2] ? ' <span class="bdg">' + c[2] + '</span>' : '') + '</button>'; }).join('') + '</div>';
-
-    var show = Trk.poiFilter === 'open' ? openGroups : closedGroups;
-    var any = false;
-    show.forEach(function (g) {
+      'Badalna ho to wahan jaakar status ya invoice dobara mark karo. Kisi bhi store par tap karo — ' +
+      'ordered qty, fulfilled qty, MRP aur NSV alag-alag dikhega.</span></div></div>';
+    Trk.POI_GROUPS.forEach(function (g) {
       var grp = rows.filter(function (r) { return r.group === g[0]; });
-      if (grp.length) { any = true; h += Trk.poiTable(g, grp); }
+      if (grp.length) h += Trk.poiTable(g, grp);
     });
-    if (!any) h += '<div class="card">' + UI.empty('', 'Is filter me kuch nahi hai') + '</div>';
     return h;
   },
   /* one section = one plain table, one row per store, numbers side by side. Columns are the SAME
@@ -12313,7 +12367,8 @@ var Trk = {
         var units = r.group === 'full' || r.group === 'cancel' ? String(r.poUnits) : r.billed + ' / ' + r.poUnits;
         var val = isCancel ? r.poValue : r.billedVal;
         tuInv += r.billed; tuOrd += r.poUnits; tv += val; tnsv += isCancel ? 0 : r.billedNsv;
-        return '<tr><td><b class="nm">' + esc(r.store || '—') + '</b>' +
+        return '<tr style="cursor:pointer" onclick="Trk.poiOpenDetail(\'' + Appr.q(r.po) + '\')">' +
+          '<td><b class="nm">' + esc(r.store || '—') + '</b>' +
           '<div class="hint">' + esc(r.po) + ' · ' + dmy(r.date) + (r.dbName ? ' · ' + esc(r.dbName) : '') +
             (r.remark ? '<br>' + esc(r.remark) : '') + '</div></td>' +
           '<td class="num">' + units + '</td>' +
@@ -12325,6 +12380,23 @@ var Trk = {
       '<td class="num"><b>' + inr(tv) + '</b></td>' +
       '<td class="num"><b>' + (isCancel ? '—' : lakh(tnsv)) + '</b></td></tr></tbody></table></div></div>';
     return h;
+  },
+  /* tap a store — a compact bottom sheet with exactly the 4 numbers asked for, nothing more: ordered
+     qty and fulfilled qty as two SEPARATE figures (the table above only shows them combined as
+     "6 / 10"), the order's own MRP value, and NSV priced off what was actually fulfilled. */
+  poiOpenDetail: function (po) {
+    var r = Trk.poiRows().filter(function (x) { return x.po === po; })[0];
+    if (!r) return;
+    var h = '<div class="hint" style="margin-bottom:8px">' + esc(r.po) + ' · ' + dmy(r.date) +
+      (r.dbName ? ' · ' + esc(r.dbName) : '') + '</div>' +
+      '<table class="ap-t">' +
+      '<tr><td>Ordered qty</td><td><b>' + r.poUnits + ' units</b></td></tr>' +
+      '<tr><td>Fulfilled qty</td><td><b>' + r.billed + ' units</b></td></tr>' +
+      '<tr><td>MRP value</td><td><b>' + inr(r.poValue) + '</b></td></tr>' +
+      '<tr><td>NSV (fulfilled qty ke hisaab se)</td><td><b>' + lakh(r.billedNsv) + ' L</b></td></tr>' +
+      (r.remark ? '<tr><td>Reason</td><td><b>' + esc(r.remark) + '</b></td></tr>' : '') +
+      '</table>';
+    UI.sheet(r.store || 'Order detail', h);
   }
 };
 
