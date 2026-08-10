@@ -2384,6 +2384,10 @@ I18n.D.en = I18n.EN = {
   '= leave,':'= leave,',
   '= weekly off,':'= weekly off,',
   '= meeting — us din market me nahi the. Sab employee dikhte hain, zero ho ya na ho.':'= meeting — not in the market that day. Every employee is listed, zero or not.',
+  'Apna naam tap karo — Self / ME team / BA ka breakdown dikhega.':'Tap your own name — a Self / ME team / BA breakdown shows up.',
+  'Mera breakdown — ':'My breakdown — ',
+  'Din ka plan jo bhi bataye — Self Working, ME Sales Team ya BA Supervisor ke saath — usi hisaab se ye teen alag hisse bante hain.':
+    'Whatever the day’s plan says — Self Working, With ME Sales Team or With BA Supervisor — these three sections are split accordingly.',
   'Summary, approvals, permissions, data — sab kuch yahin se.':'Summary, approvals, permissions, data — all of it from here.',
   'Summary':'Summary',
   'Approvals':'Approvals',
@@ -5776,7 +5780,7 @@ var Home = {
     /* which orders are actually stuck — the whole point of the tab */
     var pend = A.pend.sort(function (a, b) { return String(a.Date).localeCompare(String(b.Date)); });
     h += '<div class="sec-title">Pending orders — billing nahi hui (' + pend.length + ')</div><div class="card">' +
-      (pend.length ? Home.tbl(['Store', 'Din', 'Value', 'NSV L'], pend.slice(0, 40).map(function (o) {
+      (pend.length ? Home.tbl(['Store', 'Aging', 'Value', 'NSV L'], pend.slice(0, 40).map(function (o) {
         var age = Math.max(0, Math.round((Date.now() - new Date(toISO(o.Date) + 'T00:00:00').getTime()) / 864e5));
         return ['<b>' + esc(o.StoreName) + '</b><div class="hint">' + dmy(o.Date) + ' · ' + esc(o.PoNumber) + '</div>',
           age, inr(o.TotValue), lakh(o.TotNsvLakh)]; })) +
@@ -5862,7 +5866,10 @@ var Home = {
           if (away) return '<td class="num"><span class="pill p-grey" title="' + MK[mk] + '">' + mk + '</span></td>';
           return '<td class="num">' + (money ? lakh(v(e, k)) : String(Math.round(v(e, k)))) + '</td>';
         };
-        return '<tr' + (isMe ? ' class="me"' : '') + '><td>' +
+        /* only MY OWN row opens up — that is the one breakdown a rep is allowed to see behind a
+           single number; a teammate's row stays a plain overview, exactly the totals-only shape the
+           backend itself promises (no drill-down into someone else's data). */
+        return '<tr' + (isMe ? ' class="me" style="cursor:pointer" onclick="Home.teamSelf()"' : '') + '><td>' +
           (isMe ? '<b>' + esc(e.name || e.code) + '</b> <span class="pill p-blue">You</span>'
                 : esc(e.name || e.code)) +
           '<div class="hint">' + esc(e.code) + (e.hq ? ' · ' + esc(e.hq) : '') + '</div></td>' +
@@ -5876,9 +5883,39 @@ var Home = {
       '</tbody></table></div>' +
       '<div class="hint" style="margin-top:8px">SC = scheduled calls (plan), TC = total calls, ' +
       'PC = productive calls, NSV ₹ lakh. <b>L</b> = leave, <b>O</b> = weekly off, <b>M</b> = meeting — ' +
-      'us din market me nahi the. Sab employee dikhte hain, zero ho ya na ho.</div>' +
+      'us din market me nahi the. Sab employee dikhte hain, zero ho ya na ho. ' +
+      (mine ? 'Apna naam tap karo — Self / ME team / BA ka breakdown dikhega.' : '') + '</div>' +
       '</div>';
     return h;
+  },
+  /* tap-your-own-name breakdown — same self/team/ba buckets the backend already computes (team_()
+     splits every call by what that day's plan said the rep was working with), just surfaced instead
+     of only being summed into one flat NSV number. Nobody else's buckets are ever shown this way —
+     Home.teamHtml() only wires this onclick onto the caller's own row. */
+  teamSelf: function () {
+    var r = Home.range(), T = Team.get(r[0], r[1]);
+    var me = String(DB.me.code || '').toUpperCase();
+    var mine = (T.rows || []).filter(function (e) { return String(e.code).toUpperCase() === me; })[0];
+    if (!mine) return;
+    var b = mine.b || {};
+    var BK = [['self', 'Alone (Self Working)'], ['team', 'With ME Sales Team'], ['ba', 'With BA Supervisor']];
+    if (num((b.other || {}).days) || num((b.other || {}).tc)) BK.push(['other', 'Other']);
+    var h = '<div class="tw"><table><thead><tr><th>Working with</th><th class="num">Days</th>' +
+      '<th class="num">TC</th><th class="num">PC</th><th class="num">NSV ₹L</th></tr></thead><tbody>' +
+      BK.map(function (k) {
+        var x = b[k[0]] || {};
+        return '<tr><td>' + esc(k[1]) + '</td><td class="num">' + num(x.days) + '</td>' +
+          '<td class="num">' + Math.round(num(x.tc)) + '</td><td class="num">' + Math.round(num(x.pc)) + '</td>' +
+          '<td class="num">' + lakh(x.nsv) + '</td></tr>';
+      }).join('') +
+      '<tr class="tot"><td><b>TOTAL</b></td>' +
+      '<td class="num"><b>' + BK.reduce(function (a, k) { return a + num((b[k[0]] || {}).days); }, 0) + '</b></td>' +
+      '<td class="num"><b>' + Math.round(num(mine.tc)) + '</b></td>' +
+      '<td class="num"><b>' + Math.round(num(mine.pc)) + '</b></td>' +
+      '<td class="num"><b>' + lakh(mine.nsv) + '</b></td></tr></tbody></table></div>' +
+      '<div class="hint" style="margin-top:8px">Din ka plan jo bhi bataye — Self Working, ME Sales Team ' +
+      'ya BA Supervisor ke saath — usi hisaab se ye teen alag hisse bante hain.</div>';
+    UI.sheet('Mera breakdown — ' + esc(Home.rangeLbl()), h);
   }
 };
 
@@ -7192,9 +7229,22 @@ var Field = {
      photo (waived by bypass); a telephonic call needs nothing; either way the rep must first say which
      it is, so a bypassed user is not silently skipped past the question. */
   srcSet:false,
+  /* ── which store the buffered entry photo actually belongs to ──
+     Cam.buf is one global slot ('entry'), not one per store — Field.pick() clears it on a genuine
+     store switch, but that clear is the ONLY thing standing between "photo required" and "photo from
+     whichever store was visited last still counts". This tags the slot with the store it was taken
+     for, so the gate is never satisfied by a photo that belongs to a DIFFERENT shop, no matter which
+     code path changed Field.store. */
+  entryFor:'',
+  storeKey: function (s) { return String((s && (s.CompanyCode || s.ClientId)) || ''); },
+  entryOk: function () {
+    /* extending an order that already exists (Sec order → Fin.add) needs no fresh photo — the shop
+       was already visited and photographed the day that order was first punched */
+    return !!Field.editPo || (Cam.ok('entry') && Field.entryFor === Field.storeKey(Field.store));
+  },
   ready: function () {
     if (!Field.store || !Field.srcSet || Field.none()) return false;
-    return Field.phone() || Cam.ok('entry') || Bypass.on();
+    return Field.phone() || Field.entryOk() || Bypass.on();
   },
   /* the one door from the gate to the order page */
   toOrder: function () {
@@ -7279,7 +7329,7 @@ var Field = {
        only thing asked for, and then the rep carries straight on to POSM — the shelf still has to be
        audited whether or not an order came out of the call. */
     if (Field.none()) {
-      if (Cam.has('entry')) h += '<div class="banner g"><span></span><div><b>Shop ka photo ho gaya</b>' +
+      if (Field.entryOk()) h += '<div class="banner g"><span></span><div><b>Shop ka photo ho gaya</b>' +
         '<br><span style="font-weight:500">Visit ka proof save hai. Ab sirf reason bharo.</span></div></div>';
       h += '<div class="card"><h3><span class="ic">' + (++sN) + '</span>Order kyun nahi bana?</h3>' +
         '<div class="sub">Reason select karo — product aur photo ki zaroorat nahi. Save karte hi POSM khul jayega.</div>' +
@@ -7318,7 +7368,7 @@ var Field = {
       '<button class="btn ghost xs" onclick="Router.go(\'stk\')">Stock se add karo</button></div>' +
       '<div class="sub">Stock tab me shop aur distributor ka stock dikhta hai — wahin se product add karo.</div>' +
       '<div class="hint" style="margin-top:8px">Ye visit: <b>' + esc(Field.src) + '</b>' +
-        (Field.phone() ? '' : (Cam.has('entry') ? ' · shop ka photo ho gaya' : ' · photo bypass')) +
+        (Field.phone() ? '' : (Field.entryOk() ? ' · shop ka photo ho gaya' : ' · photo bypass')) +
         ' — <a class="pl" onclick="Field.srcSet=false;render()">badlo</a></div></div>';
 
     Field.lineStep = ++sN;
@@ -7361,7 +7411,7 @@ var Field = {
     var st = DB.myStores()[i];
     if (!st) return toast('Ye store list me nahi mila — Sync karo');
     Field.store = st;
-    Cam.clear(['entry']);                       /* new store = new visit photo */
+    Cam.clear(['entry']); Field.entryFor = '';   /* new store = new visit photo */
     Field.lines = [];
     Field.src = 'Store Visit';
     Field.srcSet = false;                       /* the visit has not declared itself yet */
@@ -7433,7 +7483,7 @@ var Field = {
      Drive upload even confirms) — which raced past this very render() and the "Punch order / No
      order" choice underneath it was never reached in the normal flow. The rep now sees that choice
      and picks one; Field.toOrder() is the only door to 'stk'. */
-  entryDone: function () { render(); },
+  entryDone: function () { Field.entryFor = Field.storeKey(Field.store); render(); },
   /* stable id for everything photographed at this store today, so re-taking a slot overwrites
      the same Photos row instead of adding another */
   visitId: function (s) {
@@ -7563,8 +7613,10 @@ var Field = {
   submit: function (el) {
     if (Busy.busy('order')) return toast('Ruko — order save ho raha hai');
     if (!Field.store) return toast('Store select karo');
-    /* never trust the disabled button — but a bypassed user, and a telephonic order, are allowed through */
-    if (!Cam.ok('entry') && !Bypass.on() && !Field.phone()) return toast('Pehle shop ka photo lo');
+    /* never trust the disabled button — but a bypassed user, and a telephonic order, are allowed through.
+       Field.entryOk() (not a bare Cam.ok) so a stale photo left over from a DIFFERENT store can never
+       satisfy this for the one on screen now. */
+    if (!Field.entryOk() && !Bypass.on() && !Field.phone()) return toast('Pehle shop ka photo lo');
     var st = val('f_status'), src = val('f_src'), rem = val('f_remarks');
     var noOrder = st === 'Cancel Order';
     if (!noOrder && !Field.lines.length) return toast('Product add karo (ya Cancel Order select karo)');
@@ -11875,7 +11927,8 @@ var Eod = {
    (never a new one) and syncs like everything else, so the sheet always shows the real stage. */
 var Trk = {
   kind:'ord', filter:'open',
-  /* which of POSM's two sections is showing — Requirement is the actionable one, so it opens first */
+  /* which of POSM's two sections is showing — Audit is listed first in posmSubNav(), but Requirement
+     still opens by default since it's the actionable one that needs follow-up */
   posmSub:'req',
   posmSet: function (s) { Trk.posmSub = s; Trk.filter = 'open'; render(); },
   /* ── TAT is NOT a tab here any more ──
@@ -12015,7 +12068,7 @@ var Trk = {
      doesn't are different jobs (one has an ASM to chase, one is just a fact on file), so they get
      separate sections rather than living in one list with a "why is this here" status. */
   posmSubNav: function () {
-    var subs = [['req', 'Requirement'], ['audit', 'Audit']];
+    var subs = [['audit', 'Audit'], ['req', 'Requirement']];
     return '<div class="seg" style="margin:10px 0">' + subs.map(function (s) {
       return '<button type="button" class="' + (Trk.posmSub === s[0] ? 'on' : '') +
         '" onclick="Trk.posmSet(\'' + s[0] + '\')">' + esc(s[1]) + '</button>'; }).join('') + '</div>';
@@ -15827,6 +15880,16 @@ var Admin = {
         inr(row.BilledValue) + (row.BillingRemark ? ' · ' + esc(row.BillingRemark) : '') + '</span></div></div>';
     }
     h += fields.map(function (c) {
+      /* New outlet's Status is a fixed pipeline (Trk.ST.ns) the rep's own Tracker also reads — a
+         free-text box here could write a value shut()/pill() would never recognise, and the rep's
+         screen would then show the row stuck "open" forever even though it is really done. Same
+         dropdown, same options, same field. */
+      if (tab === 'NewStores' && c[0] === 'Status') {
+        return '<label class="f">' + esc(c[1]) + '</label><select class="in" id="lk_f_' + c[0] + '">' +
+          Trk.ST.ns.map(function (s) {
+            return '<option value="' + esc(s) + '"' + (s === row.Status ? ' selected' : '') + '>' + esc(s) + '</option>';
+          }).join('') + '</select>';
+      }
       var num2 = c[2] === 'm' || c[2] === 'n';
       return '<label class="f">' + esc(c[1]) + '</label><input class="in" id="lk_f_' + c[0] + '"' +
         (num2 ? ' type="number"' : '') + ' value="' + esc(row[c[0]] == null ? '' : row[c[0]]) + '">';
@@ -15841,12 +15904,27 @@ var Admin = {
     var fields = (def ? def.cols : []).filter(function (c) {
       return typeof c[0] === 'string' && Admin.LK_SKIP.indexOf(c[0]) < 0;
     });
-    var patch = {};
-    fields.forEach(function (c) { var e = $('lk_f_' + c[0]); if (e) patch[c[0]] = e.value; });
+    var patch = {}, diffs = [];
+    fields.forEach(function (c) {
+      var e = $('lk_f_' + c[0]); if (!e) return;
+      patch[c[0]] = e.value;
+      var before = String(row[c[0]] == null ? '' : row[c[0]]);
+      if (before !== String(e.value)) diffs.push(c[1] + ': ' + (before || '—') + ' → ' + (e.value || '—'));
+    });
     return Busy.run('lksave_' + key, el, 'Save ho raha hai…', function () {
+      /* one upsert on the SAME row (same key) — there is no separate "employee copy"; the rep's own
+         Tracker reads this very row, so the edit is already visible to him the moment it syncs. The
+         only thing missing without a Notify row is him actually finding out without being told. */
       return DB.save(tab, Object.assign({}, row, patch)).then(function () {
-        Log.add('DataLookup', 'Edited ' + tab, key, '');
+        Log.add('DataLookup', 'Edited ' + tab, key, diffs.join(', '));
         toast('Save ho gaya — sheet update ho gayi'); render();
+        if (!diffs.length || !row.EmpCode) return;
+        var cat = Admin.LK_CATS.filter(function (x) { return x[2] === tab; })[0];
+        var label = cat ? cat[1] : tab;
+        return DB.save('Notify', { Id:uid('NT'), Ts:new Date().toISOString(),
+          EmpCode:row.EmpCode, EmpName:row.EmpName, Kind:label,
+          Title:label + ' updated by ' + (Admin.role() || 'HOD'),
+          Detail:diffs.join(', '), Ref:key, Status:'Open', By:DB.me.name }, { quiet:true });
       });
     });
   },
