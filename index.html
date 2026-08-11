@@ -1453,6 +1453,11 @@ I18n.D.en = I18n.EN = {
   'SC (calls)':'SC (calls)',
   'NSO (naye outlet)':'NSO (new outlets)',
   'Target ₹L / din':'Target ₹L / day',
+  'hi rehna chahiye — ':'must stay the same — ',
+  'match ho gaya, save karo.':'it matches, save it.',
+  'zyada hai, kisi aur brand se adjust karo.':'too much — take it off another brand.',
+  'kam hai, kisi aur brand se adjust karo.':'too little — add it from another brand.',
+  'Customize my target':'Customize my target',
   'Plan save karo':'Save plan',
   'Din ki shuruaat — WhatsApp image':'Start of day — WhatsApp image',
   'Yahi image group me jaati hai —':'This exact image goes to the group —',
@@ -2929,8 +2934,8 @@ I18n.D.en = I18n.EN = {
   'Order liya':'Order taken',
 
   /* ── new outlet: beautician brands + the units/MRP-value order rework ── */
-  'Kis brand ka beautician available hai':'Which brand has a beautician available',
-  'Beautician available hai to brand names likho':'A beautician is available — write the brand names',
+  'Kis brand ka Beauty Advisor/Promoter available hai':'Which brand has a Beauty Advisor/Promoter available',
+  'Beauty Advisor/Promoter available hai to brand names likho':'A Beauty Advisor/Promoter is available — write the brand names',
   'Order liya hai to Haan dabao — brand chuno, units aur MRP value bhar dena, total apne aap ban jayega.':
     'If an order was taken, tap Yes — pick a brand, fill in units and MRP value and the total adds itself up.',
   'Units aur MRP value, dono alag-alag total':'Units and MRP value, each totalled separately',
@@ -4624,7 +4629,7 @@ var Card = {
     var dev0 = Plan.dev();          /* the day's own Change-PJP request, when there is one */
     var ww = r.WorkingWith || (pjp ? Pjp.ww(pjp.Ww) : 'Self Working');
     var fld = Pjp.isField(ww);
-    var tg = Plan.tgt();
+    var tg = Plan.dayTgt();
     var tdc = tg.slice(0, 6).reduce(function (a, x) { return a + x[1]; }, 0);
     var tot = tg.reduce(function (a, x) { return a + x[1]; }, 0);
     return {
@@ -6619,10 +6624,16 @@ var Plan = {
   /* The rep's choice is sticky for the day. It is NOT re-derived on every render — that was the
      R61/R62 bug class, where a re-render read the last saved copy back over a fresh choice. */
   wwSel:'', mode:'', dayKey:'',
+  /* ── customize my target — redistribute the SAME daily total across brands ──
+     custOn: is the editor open right now. custVals: index -> the number currently typed into that
+     row, seeded from Plan.dayTgt() (the last SAVED target, if this day already has one, else the
+     plain default) the moment the editor opens — so re-opening an already-customised day continues
+     from what was last saved, not a reset back to the raw default. */
+  custOn:false, custVals:{},
   /* a new day (or a different rep in preview) must not inherit yesterday's transient choice */
   sync: function () {
     var k = (DB.me.code || '') + '_' + today();
-    if (Plan.dayKey !== k) { Plan.dayKey = k; Plan.wwSel = ''; Plan.mode = ''; }
+    if (Plan.dayKey !== k) { Plan.dayKey = k; Plan.wwSel = ''; Plan.mode = ''; Plan.custOn = false; Plan.custVals = {}; }
   },
   ww: function () {
     Plan.sync();
@@ -6923,10 +6934,7 @@ var Plan = {
         '<div class="row three"><div><label class="f">SC (calls)</label><input class="in" id="pl_sc" type="number" value="' + sc + '"></div>' +
         '<div><label class="f">NSO (naye outlet)</label><input class="in" id="pl_nso" type="number" value="' + (num(r.NsoTarget) || 1) + '"></div>' +
         '<div><label class="f">POSM</label><input class="in" id="pl_posm" type="number" value="' + (num(r.PosmTarget) || 1) + '"></div></div>' +
-        '<div class="tw" style="margin-top:12px"><table><thead><tr><th>Brand</th><th class="num">Target ₹L / din</th></tr></thead><tbody>' +
-        Plan.tgt().map(function (x) { return '<tr><td>' + esc(x[0]) + '</td><td class="num">' + x[1].toFixed(2) + '</td></tr>'; }).join('') +
-        '<tr><td><b>TOTAL</b></td><td class="num"><b>' + Plan.tgt().reduce(function (a, x) { return a + x[1]; }, 0).toFixed(2) + '</b></td></tr>' +
-        '</tbody></table></div></div>';
+        Plan.tgtHtml() + '</div>';
     }
 
     /* Save is OUTSIDE the target block: a Leave / Meeting day still has to be saved and sent */
@@ -6954,12 +6962,90 @@ var Plan = {
     /* draws the card and caches the PNG, so the Send tap can share inside its own user gesture */
     if (Plan.row().PlanAt) Card.preview();
   },
+  /* the PLAIN default — always read straight off Master_Config, never off anything saved. This is
+     the invariant a customisation redistributes: its own total never moves, whatever a rep does to
+     the rows underneath it. The MONTH target (Tgt module) reads this same config directly too, so a
+     day's customisation never touches the month figure — only how one day's total is sliced. */
   tgt: function () {
     return [['TDC – Face Wash', num(DB.cfg('TDC_FW', .3))], ['TDC – Sunscreen', num(DB.cfg('TDC_SUNSCREEN', .1))],
       ['TDC – Serum', num(DB.cfg('TDC_SERUM', .15))], ['TDC – FMDC / Moisturisers', num(DB.cfg('TDC_FMDC/MOISTURISERS', .15))],
       ['TDC – Combo', num(DB.cfg('TDC_COMBO', .1))], ['TDC – Rest', num(DB.cfg('TDC_REST', .1))],
       ['BBlunt (BB)', num(DB.cfg('BB', .25))], ['Aqualogica (AQ)', num(DB.cfg('AQ', .15))],
       ['Dr. Sheth\'s (DRS)', num(DB.cfg('DRS', .1))], ['ME Color Care (CC)', num(DB.cfg('CC', .1))]];
+  },
+  /* the EFFECTIVE target for TODAY — what every screen and calculation should actually use. If
+     today's plan was saved with a customised split (PlanJson.tgt, same row count as the live
+     default), that is what is in effect; otherwise it is simply the plain default. This is the ONE
+     place that decides which of the two a reader gets, so the EOD screen, the Excel workbook, the
+     WhatsApp card and the Plan screen's own read-back can never disagree. */
+  dayTgt: function () {
+    var def = Plan.tgt();
+    try {
+      var pj = JSON.parse(Plan.row().PlanJson || '{}') || {};
+      if (Array.isArray(pj.tgt) && pj.tgt.length === def.length) return pj.tgt;
+    } catch (e) {}
+    return def;
+  },
+  custSum: function () {
+    var s = 0; Object.keys(Plan.custVals).forEach(function (k) { s += num(Plan.custVals[k]); }); return s;
+  },
+  custDefTotal: function () { return Plan.tgt().reduce(function (a, x) { return a + x[1]; }, 0); },
+  /* how far the rows on screen are from the total they are required to add up to — 0 means Save is
+     allowed; a tiny float residue (well under a paisa of a lakh) still counts as matching */
+  custGap: function () { return Math.round((Plan.custSum() - Plan.custDefTotal()) * 10000) / 10000; },
+  custOpen: function () {
+    var seed = Plan.dayTgt();
+    Plan.custVals = {};
+    seed.forEach(function (x, i) { Plan.custVals[i] = x[1]; });
+    Plan.custOn = true; render();
+  },
+  custCancel: function () { Plan.custOn = false; Plan.custVals = {}; render(); },
+  custSet: function (i, v) { Plan.custVals[i] = num(v); render(); },
+  /* the customised array in the exact shape dayTgt()/PlanJson.tgt expect — labels from the default,
+     values from what is on screen right now */
+  custRows: function () {
+    return Plan.tgt().map(function (x, i) { return [x[0], num(Plan.custVals[i])]; });
+  },
+  /* ── the target table itself — three states ──
+     read-only (nothing customised): the plain default, exactly as before.
+     read-only (customised and saved): dayTgt()'s values, with every row that differs from the plain
+       default picked out in amber — the "what I changed for myself" the HOD sees at a glance.
+     editing: one input per row, seeded from dayTgt(), with a running total banner that turns green
+       only once it exactly matches the default total — Save plan is refused otherwise. */
+  tgtHtml: function () {
+    var def = Plan.tgt(), saved = Plan.dayTgt(), defTot = Plan.custDefTotal();
+    var h = '<div class="tw" style="margin-top:12px"><table><thead><tr><th>Brand</th>' +
+      '<th class="num">Target ₹L / din</th></tr></thead><tbody>';
+    if (Plan.custOn) {
+      h += def.map(function (x, i) {
+        return '<tr><td>' + esc(x[0]) + '</td><td class="num">' +
+          '<input class="in" style="text-align:right;padding:4px 8px;width:90px;display:inline-block" ' +
+          'type="number" step="0.01" min="0" value="' + num(Plan.custVals[i]).toFixed(2) +
+          '" oninput="Plan.custSet(' + i + ',this.value)"></td></tr>';
+      }).join('');
+      var sum = Plan.custSum(), gap = Plan.custGap(), ok = Math.abs(gap) < 0.005;
+      h += '<tr class="tot"><td><b>TOTAL</b></td><td class="num"><b style="color:' +
+        (ok ? 'var(--ok)' : 'var(--bad)') + '">' + sum.toFixed(2) + '</b></td></tr></tbody></table></div>' +
+        '<div class="hint" style="margin-top:6px">Total <b>' + defTot.toFixed(2) + ' L</b> hi rehna chahiye — ' +
+        (ok ? 'match ho gaya, save karo.' : 'abhi ' + (gap > 0 ? '+' : '') + gap.toFixed(2) + ' L ' +
+          (gap > 0 ? 'zyada hai' : 'kam hai') + ', kisi aur brand se adjust karo.') + '</div>' +
+        '<div class="btns" style="margin-top:8px">' +
+        '<button class="btn ghost sm" onclick="Plan.custCancel()">Cancel</button></div>';
+    } else {
+      h += def.map(function (x, i) {
+        var v = num((saved[i] || x)[1]);
+        var changed = Math.abs(v - x[1]) > 0.005;
+        return '<tr' + (changed ? ' style="background:var(--warn-l)"' : '') + '><td>' + esc(x[0]) +
+          (changed ? ' <span class="pill p-warn" style="margin-left:4px">Customised</span>' : '') +
+          '</td><td class="num">' + v.toFixed(2) + '</td></tr>';
+      }).join('');
+      var tot = saved.reduce(function (a, x) { return a + num(x[1]); }, 0);
+      h += '<tr class="tot"><td><b>TOTAL</b></td><td class="num"><b>' + tot.toFixed(2) + '</b></td></tr>' +
+        '</tbody></table></div>' +
+        '<div class="btns" style="margin-top:8px">' +
+        '<button class="btn ghost sm" onclick="Plan.custOpen()">Customize my target</button></div>';
+    }
+    return h;
   },
 
   /* A day can be re-planned TWICE. The first version refused a second change once the first was
@@ -7096,6 +7182,13 @@ var Plan = {
       if (bad) { toast(bad); return null; }
       if (field && !town) { toast('Town / City chuno'); return null; }
       if (field && !beat) { toast('Beat / Market chuno'); return null; }
+      /* a redistribution, not a new total — the plan cannot save while the rows underneath it add up
+         to anything else */
+      if (Plan.custOn && Math.abs(Plan.custGap()) >= 0.005) {
+        toast('Target total ' + Plan.custDefTotal().toFixed(2) + ' L hi rehna chahiye — abhi ' +
+          Plan.custSum().toFixed(2) + ' L hai');
+        return null;
+      }
     }
     /* the bracket answers travel as JSON so they can be read back into the same inputs */
     var d = {};
@@ -7110,15 +7203,24 @@ var Plan = {
     var same = function (a, b) { return String(a || '').toUpperCase().trim() === String(b || '').toUpperCase().trim(); };
     var off = !pjp || !same(ww, Pjp.ww(pjp.Ww)) || (field && (!same(town, pjp.Town) || !same(beat, pjp.Beat)));
     var r = Plan.row();
+    /* only a CONFIRMED, matching customisation is ever written — an editor left open with a
+       mismatched total (or one caught mid-edit by a quiet auto-save) falls back to dayTgt(), i.e.
+       whatever was last actually saved, so an in-progress edit can never corrupt it */
+    var custOk = Plan.custOn && Math.abs(Plan.custGap()) < 0.005;
+    var wasCust = Plan.custOn;
     return DB.save('DayPlan', { Id:Plan.id(), Date:t, Zone:e.Zone || '', Hq:e.HQ || '',
       WorkingWith:ww, WwDetail:JSON.stringify(d), Town:town, Beat:beat, State:state,
       Focus:pjp ? (pjp.Focus || '') : '', Week:pjp ? (pjp.Week || '') : '',
       Station:Plan.station(), OffPjp:off ? 'Yes' : '', Approval:off ? (Plan.dev() ? Plan.dev().Status : 'Pending') : 'PJP',
       ScTarget:field ? (num(val('pl_sc')) || 7) : 0, NsoTarget:field ? num(val('pl_nso')) : 0,
       PosmTarget:field ? num(val('pl_posm')) : 0,
-      PlanJson:JSON.stringify({ tgt:Plan.tgt() }), PlanAt:r.PlanAt || new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }),
+      PlanJson:JSON.stringify({ tgt:custOk ? Plan.custRows() : Plan.dayTgt() }),
+      PlanAt:r.PlanAt || new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }),
       NotifiedAt:r.NotifiedAt || '', StartAt:r.StartAt || '' }, { quiet:!!quiet }).then(function () {
-      if (!quiet) { Log.add('Plan', 'Saved', t, (town || ww) + (beat ? ' / ' + beat : '')); toast('Plan save ho gaya'); render(); Nav.build(); }
+      if (!quiet) {
+        if (wasCust) { Plan.custOn = false; Plan.custVals = {}; }
+        Log.add('Plan', 'Saved', t, (town || ww) + (beat ? ' / ' + beat : '')); toast('Plan save ho gaya'); render(); Nav.build();
+      }
     });
   },
   /* text-only send. The Plan screen no longer offers it (the morning message is the image) — it stays
@@ -7156,7 +7258,7 @@ var Plan = {
     if (Pjp.isField(r.WorkingWith) && r.Focus) L.push('Focus        : ' + r.Focus);
     L.push('');
     L.push('Target — Calls ' + (r.ScTarget || 0) + ' · NSO ' + (r.NsoTarget || 0) + ' · POSM ' + (r.PosmTarget || 0));
-    L.push('Order target : ₹' + Plan.tgt().reduce(function (a, x) { return a + x[1]; }, 0).toFixed(2) + ' L');
+    L.push('Order target : ₹' + Plan.dayTgt().reduce(function (a, x) { return a + x[1]; }, 0).toFixed(2) + ' L');
     L.push('');
     L.push('_Sent from GARUDA_');
     return L.join('\n');
@@ -7788,7 +7890,7 @@ var Field = {
         Field.nsNum('n_inv', '20 · Committed inventory hold (₹ MRP)') +
         Field.nsNum('n_sugg', '21 · Suggested monthly business with us (₹)') + '</div>' +
       '<div class="row two">' +
-        Field.nsSel('n_int', '16 · Interested for', Field.NS_INTEREST) +
+        Field.nsSel('n_int', '16 · Brand', Field.NS_INTEREST) +
         Field.nsSel('n_class', '17 · Outlet class', Field.NS_CLASS) + '</div>' +
 
       '<div class="sec-title">Competitor & cost</div>' +
@@ -7806,10 +7908,10 @@ var Field = {
         '<input class="in lk" id="n_tcost" readonly value="' + Field.nsCost() + '">' +
         '<div class="hint">12 + 13 + 14, apne aap</div></div></div>' +
 
-      '<div class="sec-title">Beautician</div>' +
-      Field.nsSel('n_beaut', '18 · Beautician available', Field.NS_YN, 'Field.nsBeautToggle(this)') +
+      '<div class="sec-title">Beauty Advisor/Promoter</div>' +
+      Field.nsSel('n_beaut', '18 · Beauty Advisor/Promoter available', Field.NS_YN, 'Field.nsBeautToggle(this)') +
       '<div id="n_beaut_box" style="display:' + (Field.nsD('n_beaut') === 'Yes' ? '' : 'none') + '">' +
-        '<label class="f">Kis brand ka beautician available hai <span class="req">*</span></label>' +
+        '<label class="f">Kis brand ka Beauty Advisor/Promoter available hai <span class="req">*</span></label>' +
         '<input class="in" id="n_beaut_brands" placeholder="e.g. Mamaearth, The Derma Co." value="' +
         esc(Field.nsD('n_beaut_brands')) + '"></div>' +
 
@@ -7835,7 +7937,10 @@ var Field = {
              'n_bacost','n_beaut','n_beaut_brands','n_reason'],
   /* The option lists the images do not spell out. Kept here, in one place, so they are one line to
      change — and deliberately plain, because a wrong option is worse than a short list. */
-  NS_INTEREST:['MEGA BA', 'BA Store', 'Only visibility / POSM', 'Only stock', 'Not interested'],
+  /* which brand the outlet actually wants to stock — same brand names the rest of the app uses
+     (Tgt.GROUPS, SecOrderLines.Brand), so this answer lines up with everything else without a
+     separate mapping */
+  NS_INTEREST:['Mamaearth', 'The Derma Co.', 'BBlunt', 'Aqualogica', "Dr. Sheth's", 'ME Color Care', 'Not interested'],
   NS_CLASS:['A', 'B', 'C', 'D'],
   NS_YN:['Yes', 'No'],
   NS_BRANDS:['Mamaearth', 'The Derma Co.', 'BBlunt', 'Aqualogica', "Dr. Sheth's", 'ME Color Care'],
@@ -7978,7 +8083,7 @@ var Field = {
     if (!town) return toast('Town select karo');
     if (!reason) return toast('Reason likho');
     if (val('n_beaut') === 'Yes' && !val('n_beaut_brands'))
-      return toast('Beautician available hai to brand names likho');
+      return toast('Beauty Advisor/Promoter available hai to brand names likho');
     /* ── the opening order ──
        Answering the question is compulsory (a blank is not "no"), and answering Haan means the lines
        have to be real: a brand, units and an MRP value. A half-filled line saved as an order is a
@@ -8960,7 +9065,7 @@ var Rep = {
       ['Order value (₹)',       0,                      a.value,          1],
       ['NSV (₹ Lakh)',          0,                      a.nsv,            2]
     ];
-    var tgtNsv = 0; Plan.tgt().forEach(function (x) { tgtNsv += x[1]; });
+    var tgtNsv = 0; Plan.dayTgt().forEach(function (x) { tgtNsv += x[1]; });
     kpi[5][1] = tgtNsv;
     kpi.forEach(function (k) {
       var tg = k[1], ac = k[2], mode = k[3], gap = ac - tg;
@@ -8978,7 +9083,7 @@ var Rep = {
     rows.push([], [Xl.b('BRAND-WISE TARGET vs ACHIEVEMENT (₹ Lakh)')]);
     rows.push(['Brand', 'Target', 'Achieve', 'Gap', '%', '', ''].map(Xl.h));
     var tt = 0, ta = 0;
-    Plan.tgt().forEach(function (x) {
+    Plan.dayTgt().forEach(function (x) {
       var ach = 0;
       Object.keys(a.brand).forEach(function (b) { if (Eod.match(b, x[0])) ach += a.brand[b]; });
       tt += x[1]; ta += ach;
@@ -9043,6 +9148,10 @@ var Rep = {
       me.code + '  ·  ' + dmy(a.t) + '  ·  ' + a.ord.length + ' visit');
     var lSheet = Rep.anySheet('SecOrderLines', a.lines, null,
       me.code + '  ·  ' + dmy(a.t) + '  ·  ' + a.lines.length + ' line');
+    /* the tabs that need action from someone ELSE (a distributor stocking up, an ASM chasing a
+       requirement, a code being created for a new outlet) are red; everything else stays the
+       default blue, so a rep forwarding the workbook can see at a glance which tabs are on him */
+    lSheet.tab = 'FFD93B30';
 
     /* ── brand split ── MRP value and NSV side by side, so both readings of the day are visible ── */
     var bl = {}, bu = {}, bv = {}, bm = {};
@@ -9098,7 +9207,11 @@ var Rep = {
     var sub1 = me.code + '  ·  ' + dmy(a.t);
     var pmTabs = [['PosmAudit', a.pa], ['PosmRequirement', a.pr], ['NewStores', a.ns]]
       .map(function (x) {
-        return Rep.anySheet(x[0], x[1], null, sub1 + '  ·  ' + x[1].length + ' row');
+        var sh = Rep.anySheet(x[0], x[1], null, sub1 + '  ·  ' + x[1].length + ' row');
+        /* Audit is a passive record (nothing owed to anyone); Requirement and New outlet both need
+           someone else to act, so they get the same red as Order lines / Primary Order */
+        if (x[0] === 'PosmRequirement' || x[0] === 'NewStores') sh.tab = 'FFD93B30';
+        return sh;
       });
 
     /* ── tab: DFR — one chronological line per thing that happened, morning plan to day close.
@@ -9156,7 +9269,7 @@ var Rep = {
       { name:I18n.s('Din ka Report'), cols:[30, 18, 16, 14, 12, 14, 13, 12, 12, 12, 12, 12],
         rows:rows, merges:t1.merges },
       vSheet, lSheet,
-      { name:I18n.s('Primary Order'),
+      { name:I18n.s('Primary Order'), tab:'FFD93B30',
         cols:[16, 26, 14, 40, 16, 16, 10, 11, 22, 18, 15, 13, 16, 24,
               14, 20, 16, 12, 12, 16, 16, 16, 16],
         rows:po2, freeze:1, filter:'A1:W' + po2.length },
@@ -9742,10 +9855,10 @@ var Rep = {
       ['CompetitorMargin', '13 Competitor margin / scheme', 'm'],
       ['BaCost', '14 Approx. BA cost', 'm'],
       ['TotalCost', '15 Total cost', 'm'],
-      ['InterestedFor', '16 Interested for'],
+      ['InterestedFor', '16 Brand'],
       ['OutletClass', '17 Outlet class'],
-      ['BeauticianAvailable', '18 Beautician available'],
-      ['BeauticianBrands', '18 Beautician brands'],
+      ['BeauticianAvailable', '18 Beauty Advisor/Promoter available'],
+      ['BeauticianBrands', '18 Beauty Advisor/Promoter brands'],
       ['CommittedInventory', '20 Committed inventory hold', 'm'],
       ['SuggestedBusiness', '21 Suggested monthly business', 'm'],
       /* the order the outlet opened with — taken on the new-outlet form, not through the Field flow.
@@ -9785,7 +9898,10 @@ var Rep = {
       [function (r) { return Rep.photo(r.StoreName, r.Date, r.CompanyCode); }, 'Photos', 'raw'],
       ['Remarks', 'Remarks']].concat(xlWhen('Ts', 'Punched')) },
     PosmRequirement:{ t:'POSM requirement', cols:[
-      ['Date', 'Date', 'd'], ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
+      /* the one thing an ASM/distributor needs to refer back to when they respond — an Audit row is
+         a passive record with nothing to action, so it gets no such column; a Requirement is a
+         request, and a request needs a number to quote */
+      ['Date', 'Date', 'd'], ['Id', 'Requirement no'], ['EmpCode', 'Employee code'], ['EmpName', 'Employee'],
       ['ClientId', 'Client id'], ['CompanyCode', 'Store code'], ['StoreName', 'Store'],
       ['StoreType', 'Store type'], ['City', 'City'],
       [function (r) { return Rep.store(r).State || ''; }, 'State'],
@@ -11771,12 +11887,15 @@ var Eod = {
       (Store.get(K.lock, {}).at ? ' (' + esc(Store.get(K.lock, {}).at) + ')' : '') +
       '.<div class="btns"><button class="btn sm ghost" onclick="Field.reopen()"> Dobara kholo</button></div></div></div>';
 
+    /* PC and Telephonic calls sit together (Telephonic is a slice of the same PC count), and MRP
+       value / NSV sit together (the two readings of the same day's money) — grouped rather than
+       split across the two KPI rows the way they used to be. */
     h += '<div class="kpis">' + UI.kpi(a.tc + ' / ' + a.sc, 'TC / SC', a.tc >= a.sc ? 'g' : 'w') +
-      UI.kpi(a.pc, 'PC', 'g') + UI.kpi(lakh(a.nsv), 'NSV ₹L', 'b') + UI.kpi(a.ns.length, 'Naye outlet', 'w') + '</div>';
+      UI.kpi(a.pc, 'PC', 'g') + UI.kpi(a.tele, 'Telephonic calls', '') + UI.kpi(a.ns.length, 'Naye outlet', 'w') + '</div>';
     h += '<div class="kpis" style="margin-top:10px">' + UI.kpi(a.pa.length, 'POSM audit', '') +
       UI.kpi(a.pr.length, 'POSM req', '') + UI.kpi(a.msl, 'MSL lines', '') +
       UI.kpi(a.nonMsl, 'Non-MSL lines', '') + UI.kpi(inr(a.value), 'MRP value', 'b') +
-      UI.kpi(a.tele, 'Telephonic calls', '') + '</div>';
+      UI.kpi(lakh(a.nsv), 'NSV ₹L', 'b') + '</div>';
 
     /* ONE brand table, not two — it used to be a plain generic KPI loop here AND a duplicated (twice!)
        "Brand-wise" section below it, all three built the same target-vs-achieved shape. brandRows()
@@ -11826,7 +11945,7 @@ var Eod = {
   /* ONE brand-wise builder for the screen, the image and the workbook, so the three can never
      disagree about a brand's target or its achievement. */
   brandRows: function (a) {
-    var tgt = Plan.tgt(), rows = [], tT = 0, tA = 0;
+    var tgt = Plan.dayTgt(), rows = [], tT = 0, tA = 0;
     tgt.forEach(function (x) {
       var got = 0;
       Object.keys(a.brand).forEach(function (b) { if (Eod.match(b, x[0])) got += num(a.brand[b]); });
@@ -13672,7 +13791,7 @@ var Tada = {
 
   /* ── the two documents a rep asks for ──
      the policy he is paid under, and his own claim in a form he can forward or keep. */
-  POLICY:'Travel-Policy.pdf',
+  POLICY:'https://drive.google.com/file/d/133_TfL_1t1F33QxVfvFMWkT2WAW1MzPF/preview',
   policyUrl: function () { return String(DB.cfg('Policy_PDF_URL', '') || '').trim() || Tada.POLICY; },
   /* read it right here first — download is one tap away inside the same viewer, not the only option */
   policyView: function () {
