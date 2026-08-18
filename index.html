@@ -43,8 +43,9 @@ h1,h2,h3,h4{margin:0;font-weight:700;letter-spacing:-.01em}
 button{font:inherit;cursor:pointer}
 input,select,textarea{font:inherit;color:var(--ink)}
 .hide{display:none!important}
-/* Decorative glyphs were removed for a cleaner, more professional look. Their holders must collapse
-   instead of leaving an empty circle or a blank line — one rule, so no screen has to remember. */
+/* Icon holders that have nothing in them must collapse instead of leaving an empty circle or a
+   blank line — one rule, so no screen has to remember it. The nav's own .g is filled in now (see
+   Icon, above); the others still gate whichever screens have not been given one yet. */
 .card>h3 .ic:empty,.c-h .ic:empty,.modal-ic:empty,.nav button .g:empty,.empty .g:empty,
 .strip .g:empty,.banner>span:empty,.ph-e span:empty,.ap-ic:empty,.kpi span:empty{display:none}
 
@@ -265,8 +266,8 @@ td.num,th.num{text-align:right}
 #nav_r{right:0;background:linear-gradient(to right,rgba(255,255,255,0),#fff 45%)}
 #nav_l{left:0;background:linear-gradient(to left,rgba(255,255,255,0),#fff 45%)}
 @media(min-width:900px){ .navar{display:none !important} }
-/* the tab icons were dropped for a cleaner look, so the button needs its own height — without the
-   19px glyph line a text-only tab collapsed to 33px, under the thumb-target minimum */
+/* an explicit min-height, not just the glyph line, so a tab is never under the thumb-target minimum
+   even for the odd button with no icon at all */
 .nav button{position:relative;flex:0 0 auto;min-width:78px;border:0;background:0;padding:8px 6px 9px;
   color:var(--ink-3);font-size:11.5px;font-weight:600;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:52px}
@@ -3042,7 +3043,12 @@ var DB = {
   boot: function () {
     var c = Store.get(K.cache, null);
     if (c) { DB.m = c.m || {}; DB.t = c.t || {}; DB.me = c.me || null; DB.pulledAt = c.at || 0;
-      DB.mAt = c.mAt || 0; DB.mver = c.mver || 0; DB.counts = c.counts || {}; }
+      DB.mAt = c.mAt || 0; DB.mver = c.mver || 0; DB.counts = c.counts || {};
+      /* a device can go straight from this cached copy into a fully offline day without ever
+         reaching pull()'s own DB.fix() call — so a phone that boots offline still gets the same
+         column-name normalisation (whitespace/case fixes, the retailer-master rename backfill)
+         as one that syncs first */
+      DB.fix(); }
   },
   cache: function () { Store.set(K.cache, { m:DB.m, t:DB.t, me:DB.me, at:DB.pulledAt,
     mAt:DB.mAt, mver:DB.mver, counts:DB.counts }); },
@@ -3322,7 +3328,13 @@ var DB = {
   fix: function () {
     ['Master_PJP', 'Master_Employees', 'Master_Phasing'].forEach(function (t) {
       (DB.m[t] || []).forEach(function (r) {
+        /* the retailer-master rename (12 Aug '26 spec) renames Master_PJP's own employee column
+           from Code to EmpCode — whichever the sheet actually holds right now becomes the source,
+           trimmed/uppercased the same way Code always was, then mirrored onto BOTH names so every
+           existing `.Code` read in this app keeps matching exactly as before */
+        if (t === 'Master_PJP' && r.Code === undefined && r.EmpCode !== undefined) r.Code = r.EmpCode;
         if (r.Code !== undefined) r.Code = String(r.Code == null ? '' : r.Code).trim().toUpperCase();
+        if (t === 'Master_PJP' && r.Code !== undefined) r.EmpCode = r.Code;
         if (t === 'Master_PJP' && r.Date !== undefined) r.Date = toISO(r.Date) || r.Date;
       });
     });
@@ -3330,6 +3342,28 @@ var DB = {
       if (r.Code !== undefined) r.Code = String(r.Code == null ? '' : r.Code).trim().toUpperCase();
     });
     if (DB.me && DB.me.code) DB.me.code = String(DB.me.code).trim().toUpperCase();
+    /* ── the rest of the retailer-master rename ──
+       Every OTHER reader across this app still asks for the OLD column name (Ww, StoreType, DbCode,
+       DbName, EmAsm, EmAsmHq, and Master_Distributors' own Code/Name) — rather than touch every one
+       of those call sites, each row is given BOTH names here, the instant it arrives, so the actual
+       sheet can be renamed on whatever schedule the admin runs it without a single screen breaking
+       either before or after that happens. Additive only: nothing here ever REMOVES a value. */
+    var pair = function (rows, a, b) {
+      (rows || []).forEach(function (r) {
+        if (r[a] === undefined && r[b] !== undefined) r[a] = r[b];
+        else if (r[b] === undefined && r[a] !== undefined) r[b] = r[a];
+      });
+    };
+    pair(DB.m.Master_PJP, 'Ww', 'Workingwith');
+    pair(DB.m.Master_Stores, 'StoreType', 'StoreSubCategory');
+    pair(DB.m.Master_Stores, 'DbCode', 'DistributorCode');
+    pair(DB.m.Master_Stores, 'DbName', 'DistributorName');
+    pair(DB.m.Master_Stores, 'EmAsm', 'EMASMNAME');
+    pair(DB.m.Master_Stores, 'EmAsmHq', 'EMASMHQ');
+    pair(DB.m.Master_Distributors, 'Code', 'DistributorCode');
+    pair(DB.m.Master_Distributors, 'Name', 'DistributorName');
+    pair(DB.m.Master_Distributors, 'EmAsm', 'EMASMNAME');
+    pair(DB.m.Master_Distributors, 'EmAsmHq', 'EMASMHQ');
   },
   /* PJP row straight from Master_PJP — admin edits here reflect immediately after a pull */
   pjpFor: function (code, date) {
@@ -3792,23 +3826,60 @@ var Gate = {
   unlock: function () { Store.del(K.lock); }
 };
 
+/* ═══════════════ ICONS ═══════════════
+   Minimal, monochrome, line-only glyphs — one stroke width, no fill, `currentColor` so a nav icon
+   is exactly the tab's own text colour (muted grey, blue once active) and never a colour of its
+   own. This app's icons were pulled out once already for looking cheap (see the .g:empty rule
+   above) — the discipline this time round is that every glyph below names one real, concrete thing
+   a screen is about (a calendar, a pin, a box), drawn the same plain way as every other one, never
+   a flourish added just to fill a corner. */
+var Icon = {
+  _wrap: function (inner, size) {
+    size = size || 17;
+    return '<svg viewBox="0 0 24 24" width="' + size + '" height="' + size + '" fill="none" stroke="currentColor" ' +
+      'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;flex:0 0 auto">' +
+      inner + '</svg>';
+  },
+  calendar: function (s) { return Icon._wrap('<rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/>', s); },
+  grid: function (s) { return Icon._wrap('<rect x="3" y="3" width="7" height="7" rx="1.3"/><rect x="14" y="3" width="7" height="7" rx="1.3"/><rect x="3" y="14" width="7" height="7" rx="1.3"/><rect x="14" y="14" width="7" height="7" rx="1.3"/>', s); },
+  clipboard: function (s) { return Icon._wrap('<path d="M9 3.2h6a1 1 0 011 1v1.3H8V4.2a1 1 0 011-1z"/><rect x="5" y="4.5" width="14" height="16.5" rx="2"/><line x1="9" y1="11.5" x2="15" y2="11.5"/><line x1="9" y1="15.5" x2="15" y2="15.5"/>', s); },
+  pin: function (s) { return Icon._wrap('<path d="M12 21s-7-6.1-7-11a7 7 0 0114 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/>', s); },
+  box: function (s) { return Icon._wrap('<path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v9l9 5 9-5V8"/><line x1="12" y1="13" x2="12" y2="22"/>', s); },
+  fileText: function (s) { return Icon._wrap('<path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/>', s); },
+  tag: function (s) { return Icon._wrap('<path d="M11.2 2.6H19a1.4 1.4 0 011.4 1.4v7.8a1.4 1.4 0 01-.4 1L11.6 21a2 2 0 01-2.8 0l-6.4-6.4a2 2 0 010-2.8l7.8-7.8a1.4 1.4 0 011-.4z"/><circle cx="7.5" cy="7.5" r="1.3"/>', s); },
+  moon: function (s) { return Icon._wrap('<path d="M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z"/>', s); },
+  card: function (s) { return Icon._wrap('<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>', s); },
+  database: function (s) { return Icon._wrap('<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>', s); },
+  checkCircle: function (s) { return Icon._wrap('<circle cx="12" cy="12" r="9"/><polyline points="8.5 12.5 11 15 16 9"/>', s); },
+  users: function (s) { return Icon._wrap('<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M15.3 14.2c2.5.5 4.4 2.7 4.4 5.5"/>', s); },
+  eye: function (s) { return Icon._wrap('<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/>', s); },
+  /* second tier — the chip/segmented sub-navs inside a screen, not the app-wide bar */
+  target: function (s) { return Icon._wrap('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>', s); },
+  bell: function (s) { return Icon._wrap('<path d="M12 2.5a5 5 0 00-5 5V11c0 .9-.3 1.7-.9 2.4L4 16h16l-2.1-2.6a3.6 3.6 0 01-.9-2.4V7.5a5 5 0 00-5-5z"/><path d="M9.5 19a2.5 2.5 0 005 0"/>', s); },
+  list: function (s) { return Icon._wrap('<line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>', s); },
+  phone: function (s) { return Icon._wrap('<path d="M21 16.4v3a2 2 0 01-2.2 2 18.8 18.8 0 01-8.2-2.9 18.5 18.5 0 01-5.7-5.7A18.8 18.8 0 012 5.2 2 2 0 014 3h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.5 2L7.9 10.9a15 15 0 005.2 5.2l1.4-1.3a2 2 0 012-.5c.9.3 1.8.6 2.8.7A2 2 0 0121 16.4z"/>', s); },
+  truck: function (s) { return Icon._wrap('<rect x="1" y="4" width="14" height="12" rx="1"/><path d="M15 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.3" r="1.8"/><circle cx="18" cy="18.3" r="1.8"/>', s); },
+  repeat: function (s) { return Icon._wrap('<polyline points="17 2 21 6 17 10"/><path d="M3 12V9a3 3 0 013-3h15"/><polyline points="7 22 3 18 7 14"/><path d="M21 12v3a3 3 0 01-3 3H3"/>', s); },
+  flag: function (s) { return Icon._wrap('<path d="M4.5 15.2s1.2-1 4-1 4.7 1.8 7.5 1.8 3.5-.8 3.5-.8V4.2s-.8.8-3.5.8-4.7-1.8-7.5-1.8-4 1-4 1z"/><line x1="4.5" y1="21.5" x2="4.5" y2="4.2"/>', s); }
+};
+
 /* ═══════════════ NAV + ROUTER ═══════════════ */
 /* Home carries the whole analysis: Dashboard / Calls & stores / Order vs delivery / Team, all of it
    period-switchable. The month roll-up that used to be its own tab lives inside it now. */
 var TABS = [
-  { v:'pjp',   g:'', t:'PJP' },
-  { v:'home',  g:'', t:'Summary' },
-  { v:'plan',  g:'', t:'Plan' },
-  { v:'field', g:'', t:'Field' },
-  { v:'stk',   g:'', t:'Stock' },
+  { v:'pjp',   g:Icon.calendar(), t:'PJP' },
+  { v:'home',  g:Icon.grid(), t:'Summary' },
+  { v:'plan',  g:Icon.clipboard(), t:'Plan' },
+  { v:'field', g:Icon.pin(), t:'Field' },
+  { v:'stk',   g:Icon.box(), t:'Stock' },
   /* 'sec' (the old "Orders" tab) is gone: the same orders are adjusted in Sec order and chased in
      Tracker, and its one unique table — the distributor's primary-order shortfall — is now a
      "Primary Order" tab in the EOD workbook. The route and module stay so old links still land. */
-  { v:'fin',   g:'', t:'Sec order' },
-  { v:'posm',  g:'', t:'POSM' },
-  { v:'eod',   g:'', t:'EOD' },
-  { v:'tada',  g:'', t:'TA/DA' },
-  { v:'mydata', g:'', t:'My data' }
+  { v:'fin',   g:Icon.fileText(), t:'Sec order' },
+  { v:'posm',  g:Icon.tag(), t:'POSM' },
+  { v:'eod',   g:Icon.moon(), t:'EOD' },
+  { v:'tada',  g:Icon.card(), t:'TA/DA' },
+  { v:'mydata', g:Icon.database(), t:'My data' }
   /* Tracker and Approvals are VIEWS of the Summary screen now, not tabs of their own — they are both
      "where does my stuff stand", which is what Summary is for. Router.go still accepts 'trk' and 'appr'
      and lands on the right view, so every existing link into them keeps working. */
@@ -3820,11 +3891,11 @@ var TABS = [
    somewhere sensible.
    The full salesman strip appears only while previewing a rep, which is exactly when it is useful. */
 var ADMIN_TABS = [
-  { v:'admin',  g:'', t:'Summary' },
-  { v:'appr',   g:'', t:'Approvals' },
-  { v:'ausers', g:'', t:'Users' },
-  { v:'adata',  g:'', t:'Data' },
-  { v:'aprev',  g:'', t:'Preview' }
+  { v:'admin',  g:Icon.grid(), t:'Summary' },
+  { v:'appr',   g:Icon.checkCircle(), t:'Approvals' },
+  { v:'ausers', g:Icon.users(), t:'Users' },
+  { v:'adata',  g:Icon.database(), t:'Data' },
+  { v:'aprev',  g:Icon.eye(), t:'Preview' }
 ];
 var Nav = {
   hidden:[],
@@ -3875,7 +3946,7 @@ var Nav = {
   },
   build: function () {
     var list = Auth.isAdmin() ? ADMIN_TABS.slice()
-             : (Preview.on ? [{ v:'admin', g:'', t:'Admin' }].concat(TABS) : TABS.slice());
+             : (Preview.on ? [{ v:'admin', g:Icon.grid(), t:'Admin' }].concat(TABS) : TABS.slice());
     /* ── every tab is on the bar ──
        Nothing hides behind "More" any more: the strip slides. Nav.after scrolls the current tab into
        view after every render, and an arrow on the edge says there is more that way — a rep should
@@ -5558,8 +5629,10 @@ var Home = {
        the actual dashboard below the fold. */
     var TV = [['dash', 'Dashboard'], ['trk', 'Tracker'], ['appr', 'Approvals'],
               ['notif', 'Notification']];
+    var TV_ICON = { dash:Icon.grid(15), trk:Icon.target(15), appr:Icon.checkCircle(15), notif:Icon.bell(15) };
     var SV = [['overview', 'Overview'], ['calls', 'Calls & Stores'],
               ['ord', 'Order v/s Delivery'], ['team', 'Me v/s Team']];
+    var SV_ICON = { overview:Icon.list(14), calls:Icon.phone(14), ord:Icon.truck(14), team:Icon.users(14) };
     var top = Home.top(), sub = Home.sub();
     /* Tracker and Approvals are not measured over a period, and neither is the team table, so the date
        selector and the KPI strip would be answering a question none of them asks */
@@ -5569,13 +5642,13 @@ var Home = {
         var n = x[0] === 'appr' ? Nav.counts().appr : x[0] === 'notif' ? Nav.counts().notif : 0;
         return '<button class="' + (top === x[0] ? 'on' : '') + '"' +
           (top === x[0] ? ' data-on="1"' : '') + ' onclick="Home.go(\'' + x[0] + '\')">' +
-          esc(x[1]) + (n ? '<span class="badge">' + (n > 99 ? '99+' : n) + '</span>' : '') + '</button>';
+          TV_ICON[x[0]] + ' ' + esc(x[1]) + (n ? '<span class="badge">' + (n > 99 ? '99+' : n) + '</span>' : '') + '</button>';
       }).join('') + '</div>' + (own ? '' :
       '<div class="snav" id="hm_sub">' +
         SV.map(function (x) {
           return '<button class="' + (sub === x[0] ? 'on' : '') + '"' +
             (sub === x[0] ? ' data-on="1"' : '') + ' onclick="Home.go(\'' + x[0] + '\')">' +
-            esc(x[1]) + '</button>'; }).join('') + '</div>' +
+            SV_ICON[x[0]] + ' ' + esc(x[1]) + '</button>'; }).join('') + '</div>' +
       (sub === 'team' ? '' :
       '<div class="seg" style="margin-top:10px">' +
         [['D', 'Today'], ['W', 'Days'], ['M', 'Month']].map(function (p) {
@@ -12172,6 +12245,7 @@ var Trk = {
     Trk.kind = was; Trk.posmSub = wasSub;
     return out;
   },
+  KIND_ICON:{ ord:Icon.fileText(15), ns:Icon.pin(15), pq:Icon.tag(15), poi:Icon.repeat(15) },
   navHtml: function () {
     /* one count per type — of its OWN open items, not of whichever tab happens to be showing.
        Outer .card div deliberately left OPEN — see call sites. */
@@ -12181,16 +12255,16 @@ var Trk = {
         var n = openBy[c[0]] || 0;
         return '<button class="' + (Trk.kind === c[0] ? 'on' : '') + '"' +
           (Trk.kind === c[0] ? ' data-on="1"' : '') + ' onclick="Trk.go(\'' + c[0] + '\')">' +
-          esc(c[1]) + (n ? '<span class="bdg">' + n + '</span>' : '') + '</button>'; }).join('') + '</div>';
+          Trk.KIND_ICON[c[0]] + ' ' + esc(c[1]) + (n ? '<span class="bdg">' + n + '</span>' : '') + '</button>'; }).join('') + '</div>';
   },
   /* Requirement vs Audit — the only two things POSM ever is. A store that needs POSM and one that
      doesn't are different jobs (one has an ASM to chase, one is just a fact on file), so they get
      separate sections rather than living in one list with a "why is this here" status. */
   posmSubNav: function () {
-    var subs = [['audit', 'Audit'], ['req', 'Requirement']];
+    var subs = [['audit', 'Audit', Icon.checkCircle(14)], ['req', 'Requirement', Icon.flag(14)]];
     return '<div class="seg" style="margin:10px 0">' + subs.map(function (s) {
       return '<button type="button" class="' + (Trk.posmSub === s[0] ? 'on' : '') +
-        '" onclick="Trk.posmSet(\'' + s[0] + '\')">' + esc(s[1]) + '</button>'; }).join('') + '</div>';
+        '" onclick="Trk.posmSet(\'' + s[0] + '\')">' + s[2] + ' ' + esc(s[1]) + '</button>'; }).join('') + '</div>';
   },
   /* Orders: Closed/All used to be a chip here too, but PO vs Invoice now IS that view — a second
      copy of the same distinction was one screen too many. This list is always just the open ones.
