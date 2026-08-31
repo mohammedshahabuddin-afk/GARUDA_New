@@ -3726,6 +3726,12 @@ var Gate = {
     if (Auth.isAdmin()) return true;
     if (Bypass.on()) return true;                  /* the sequence is one of the waived rules */
     var l = Gate.level();
+    /* ── a day started but never closed blocks every NEW day ──
+       adjusting an order that already exists is exempt, same spirit as the field/stk exemptions
+       right below; EOD itself is exempt too (see the 'eod' case) — that is the one screen this
+       has to leave open, or the pending day could never be closed at all. */
+    var pending = Gate.pendingPrevDay();
+    if (pending && !Field.editPo && ['plan', 'field', 'stk', 'sec', 'posm'].indexOf(v) >= 0) return false;
     if (v === 'plan')  return l >= 1;
     /* same exception as the shelf below: an order that exists can always be adjusted */
     if (v === 'field') return !!Field.editPo || (Gate.fieldDay() && l >= 2);
@@ -3741,8 +3747,10 @@ var Gate = {
     /* ── closing a day that never had a beat in it ──
        Level 3 means "a store was saved today", which a Meeting / Leave / Weekly Off / Holiday day can
        never reach — so gating EOD on it used to lock those days out of being closed at all. On a
-       non-field day the saved-and-notified plan IS the whole day, so EOD opens straight off it. */
-    if (v === 'eod') return Gate.fieldDay() ? l >= 3 : l >= 2;
+       non-field day the saved-and-notified plan IS the whole day, so EOD opens straight off it.
+       A pending unclosed day overrides all of that — EOD has to be reachable to close it regardless
+       of what today's own (not-yet-started) level happens to be. */
+    if (v === 'eod') return pending ? true : (Gate.fieldDay() ? l >= 3 : l >= 2);
     /* adjusting an order that already exists is not part of today's sequence — a rep gets that call
        whether or not he has punched anything since */
     if (v === 'fin') return true;
@@ -3771,6 +3779,21 @@ var Gate = {
     }
     return true;
   },
+  /* ── the oldest day that was started but never closed ──
+     "Started" = the plan went out (StartAt/NotifiedAt, same test as Plan.started). "Closed" = an Eod
+     row exists for that EmpCode+Date. A rep cannot begin a new day's Plan/Field until this is empty —
+     the whole point being that a day always ends with an EOD report before the next one starts. Only
+     PAST days count: today's own not-yet-closed work is not "pending", it is just today. */
+  pendingPrevDay: function () {
+    var code = DB.me.code, t = today();
+    var days = DB.mine('DayPlan').filter(function (p) {
+      return p.Date && p.Date < t && (p.StartAt || p.NotifiedAt);
+    }).sort(function (a, b) { return a.Date < b.Date ? -1 : a.Date > b.Date ? 1 : 0; });
+    for (var i = 0; i < days.length; i++) {
+      if (!DB.find('Eod', code + '_' + days[i].Date)) return days[i];
+    }
+    return null;
+  },
   /* ── is today a day spent on a beat? ──
      Self Working / ME Sales Team / BA Supervisor are; Meeting / Activity, Leave, Sick Leave, Weekly
      Off and HO Holiday are not. The day's own saved plan decides it, falling back to what the approved
@@ -3782,6 +3805,9 @@ var Gate = {
   },
   why: function (v) {
     var l = Gate.level();
+    var pending = Gate.pendingPrevDay();
+    if (pending && !Field.editPo && ['plan', 'field', 'stk', 'sec', 'posm'].indexOf(v) >= 0)
+      return dmy(pending.Date) + ' ka din close nahi hua — pehle uska EOD report bhejo, tabhi naya din shuru hoga.';
     /* the day itself has no store visit in it — say so, and say the one way to change that, instead of
        repeating a sequence message the rep can never satisfy today */
     if (!Gate.fieldDay() && ['field', 'stk', 'sec', 'posm'].indexOf(v) >= 0 && !Field.editPo)
@@ -3941,6 +3967,7 @@ var Nav = {
   /* a tab that needs attention RIGHT NOW gets a dot: the PJP window is open and the plan is not
      approved yet, which is a deadline the rep cannot see anywhere else */
   hot: function (v) {
+    if (v === 'eod' && !Auth.isAdmin()) { try { return !!Gate.pendingPrevDay(); } catch (e) { return false; } }
     if (v !== 'pjp' || Auth.isAdmin()) return false;
     try { return Pjp.winOpen() && !Pjp.approvedFor(Pjp.winMonth()); } catch (e) { return false; }
   },
@@ -5574,7 +5601,12 @@ var Home = {
     var pjp = DB.pjpFor(code, t);
     var l = Gate.level();
     var ps = Gate.pjpState();
-    var next = l === 0 ? (
+    var pending = Gate.pendingPrevDay();
+    /* a day left open takes priority over everything else the hero would normally suggest — there is
+       nothing else worth doing until it is closed */
+    var next = pending ? { t:'Purana din band karo', v:'eod',
+        s:dmy(pending.Date) + ' ka EOD abhi tak save nahi hua — pehle wahi close karo, tabhi aaj ka kaam shuru hoga' }
+      : l === 0 ? (
         ps.s === 'pending'? { t:'PJP HOD ke paas hai', v:'appr',
                                 s:(monthName(ps.month) || ps.month) + ' ka plan bheja hua hai — aapka bhara hua data safe hai, approval ka wait karo' }
       : ps.s === 'rejected' ? { t:'PJP reject hua', v:'pjp', s:'PJP tab me reason dekho aur dusra plan bhejo' }
@@ -7046,26 +7078,25 @@ var Plan = {
       ['BBlunt (BB)', num(DB.cfg('BB', .25))], ['Aqualogica (AQ)', num(DB.cfg('AQ', .15))],
       ['Dr. Sheth\'s (DRS)', num(DB.cfg('DRS', .1))], ['ME Color Care (CC)', num(DB.cfg('CC', .1))]];
   },
-  /* the EFFECTIVE target for TODAY — what every screen and calculation should actually use. If
-     today's plan was saved with a customised split (PlanJson.tgt, same row count as the live
+  /* the EFFECTIVE target for ANY day — what every screen and calculation should actually use. If
+     that day's plan was saved with a customised split (PlanJson.tgt, same row count as the live
      default), that is what is in effect; otherwise it is simply the plain default. This is the ONE
      place that decides which of the two a reader gets, so the EOD screen, the Excel workbook, the
-     WhatsApp card and the Plan screen's own read-back can never disagree. */
-  dayTgt: function () {
+     WhatsApp card, the day-wise Tracker report and the Plan screen's own read-back can never disagree. */
+  tgtFor: function (date, code) {
     var def = Plan.tgt();
     try {
-      var pj = JSON.parse(Plan.row().PlanJson || '{}') || {};
-      if (Array.isArray(pj.tgt) && pj.tgt.length === def.length) return pj.tgt;
+      var p = DB.find('DayPlan', (code || DB.me.code) + '_' + date);
+      var pj = p && p.PlanJson ? JSON.parse(p.PlanJson) : null;
+      if (pj && Array.isArray(pj.tgt) && pj.tgt.length === def.length) return pj.tgt;
     } catch (e) {}
     return def;
   },
+  dayTgt: function () { return Plan.tgtFor(today()); },
   custSum: function () {
     var s = 0; Object.keys(Plan.custVals).forEach(function (k) { s += num(Plan.custVals[k]); }); return s;
   },
   custDefTotal: function () { return Plan.tgt().reduce(function (a, x) { return a + x[1]; }, 0); },
-  /* how far the rows on screen are from the total they are required to add up to — 0 means Save is
-     allowed; a tiny float residue (well under a paisa of a lakh) still counts as matching */
-  custGap: function () { return Math.round((Plan.custSum() - Plan.custDefTotal()) * 10000) / 10000; },
   custOpen: function () {
     var seed = Plan.dayTgt();
     Plan.custVals = {};
@@ -7083,8 +7114,8 @@ var Plan = {
      read-only (nothing customised): the plain default, exactly as before.
      read-only (customised and saved): dayTgt()'s values, with every row that differs from the plain
        default picked out in amber — the "what I changed for myself" the HOD sees at a glance.
-     editing: one input per row, seeded from dayTgt(), with a running total banner that turns green
-       only once it exactly matches the default total — Save plan is refused otherwise. */
+     editing: one input per row, seeded from dayTgt(). The total is shown for reference only — it no
+     longer has to match the default; the rep's own total is what gets saved. */
   tgtHtml: function () {
     var def = Plan.tgt(), saved = Plan.dayTgt(), defTot = Plan.custDefTotal();
     var h = '<div class="tw" style="margin-top:12px"><table><thead><tr><th>Brand</th>' +
@@ -7096,12 +7127,11 @@ var Plan = {
           'type="number" step="0.01" min="0" value="' + num(Plan.custVals[i]).toFixed(2) +
           '" oninput="Plan.custSet(' + i + ',this.value)"></td></tr>';
       }).join('');
-      var sum = Plan.custSum(), gap = Plan.custGap(), ok = Math.abs(gap) < 0.005;
-      h += '<tr class="tot"><td><b>TOTAL</b></td><td class="num"><b style="color:' +
-        (ok ? 'var(--ok)' : 'var(--bad)') + '">' + sum.toFixed(2) + '</b></td></tr></tbody></table></div>' +
-        '<div class="hint" style="margin-top:6px">Total <b>' + defTot.toFixed(2) + ' L</b> hi rehna chahiye — ' +
-        (ok ? 'match ho gaya, save karo.' : 'abhi ' + (gap > 0 ? '+' : '') + gap.toFixed(2) + ' L ' +
-          (gap > 0 ? 'zyada hai' : 'kam hai') + ', kisi aur brand se adjust karo.') + '</div>' +
+      var sum = Plan.custSum();
+      h += '<tr class="tot"><td><b>TOTAL</b></td><td class="num"><b>' + sum.toFixed(2) +
+        '</b></td></tr></tbody></table></div>' +
+        '<div class="hint" style="margin-top:6px">Default total <b>' + defTot.toFixed(2) +
+        ' L</b> tha — ab total kuch bhi ho sakta hai, jo bharoge wahi save hoga.</div>' +
         '<div class="btns" style="margin-top:8px">' +
         '<button class="btn ghost sm" onclick="Plan.custCancel()">Cancel</button></div>';
     } else {
@@ -7255,13 +7285,6 @@ var Plan = {
       if (bad) { toast(bad); return null; }
       if (field && !town) { toast('Town / City chuno'); return null; }
       if (field && !beat) { toast('Beat / Market chuno'); return null; }
-      /* a redistribution, not a new total — the plan cannot save while the rows underneath it add up
-         to anything else */
-      if (Plan.custOn && Math.abs(Plan.custGap()) >= 0.005) {
-        toast('Target total ' + Plan.custDefTotal().toFixed(2) + ' L hi rehna chahiye — abhi ' +
-          Plan.custSum().toFixed(2) + ' L hai');
-        return null;
-      }
     }
     /* the bracket answers travel as JSON so they can be read back into the same inputs */
     var d = {};
@@ -7276,10 +7299,9 @@ var Plan = {
     var same = function (a, b) { return String(a || '').toUpperCase().trim() === String(b || '').toUpperCase().trim(); };
     var off = !pjp || !same(ww, Pjp.ww(pjp.Ww)) || (field && (!same(town, pjp.Town) || !same(beat, pjp.Beat)));
     var r = Plan.row();
-    /* only a CONFIRMED, matching customisation is ever written — an editor left open with a
-       mismatched total (or one caught mid-edit by a quiet auto-save) falls back to dayTgt(), i.e.
-       whatever was last actually saved, so an in-progress edit can never corrupt it */
-    var custOk = Plan.custOn && Math.abs(Plan.custGap()) < 0.005;
+    /* the customised rows are written whatever they add up to — the rep's own call, not required to
+       match the default total any more */
+    var custOk = Plan.custOn;
     var wasCust = Plan.custOn;
     return DB.save('DayPlan', { Id:Plan.id(), Date:t, Zone:e.Zone || '', Hq:e.HQ || '',
       WorkingWith:ww, WwDetail:JSON.stringify(d), Town:town, Beat:beat, State:state,
@@ -7394,9 +7416,50 @@ var Plan = {
   }
 };
 
+/* ═══════════════ RETAIL TAXONOMY — Channel Type → Store Category → Store Sub-category ═══════════════
+   From the 12 Aug '26 retailer-master spec (Store Summary sheet). Used to build the cascading pickers
+   on a brand-new outlet (Master_Stores has no row for it yet, so there is nothing to read a live list
+   off) — the existing-store FILTER reads its options straight from Master_Stores instead, since that
+   has to reflect whatever the sheet actually holds. "To Be Deleted" GT rows from the spec are legacy
+   clean-up, not a channel a rep would ever pick for a live outlet, so they are left out here. */
+var STORE_TAX = [
+  ['Platinum', 'Mega BA stores', 'Mega BA'],
+  ['Platinum', 'Beauty VWD stores', 'RBA'],
+  ['Platinum', 'Beauty VWD stores', 'SRBA'],
+  ['Platinum', 'Retail Chain', 'Retail Chain'],
+  ['Platinum', 'Retail Chain', 'BMA'],
+  ['Platinum', 'Retail Chain', 'ROP (Platinum 2.0)'],
+  ['Titanium', 'Pure BA Stores', 'BA Store'],
+  ['Wholesale', 'Wholesale Traders', 'Wholesale']
+];
+var Tax = {
+  uniq: function (a) { var s = {}, o = []; a.forEach(function (x) {
+    x = String(x == null ? '' : x).trim(); if (x && !s[x.toUpperCase()]) { s[x.toUpperCase()] = 1; o.push(x); } });
+    return o.sort(); },
+  chans: function () { return Tax.uniq(STORE_TAX.map(function (x) { return x[0]; })); },
+  cats: function (chan) {
+    return Tax.uniq(STORE_TAX.filter(function (x) { return !chan || x[0] === chan; })
+      .map(function (x) { return x[1]; })); },
+  subs: function (chan, cat) {
+    return Tax.uniq(STORE_TAX.filter(function (x) { return (!chan || x[0] === chan) && (!cat || x[1] === cat); })
+      .map(function (x) { return x[2]; })); }
+};
+
 /* ═══════════════ FIELD — store loop ═══════════════ */
 var Field = {
   store:null, lines:[], mode:'order', ns:{ front:'', inside:'' },
+  /* the existing-store filter — Channel Type / Store Category / Store Sub-category, straight off
+     Master_Stores (independent AND filters, applied together with the name/code search) */
+  stFilt:{ chan:'', cat:'', sub:'' },
+  stfOpts: function (col) {
+    var s = {}, o = [];
+    DB.myStores().forEach(function (st) {
+      var v = String(st[col] || '').trim();
+      if (v && !s[v.toUpperCase()]) { s[v.toUpperCase()] = 1; o.push(v); }
+    });
+    return o.sort();
+  },
+  stfSet: function (k, v) { Field.stFilt[k] = v; Field.filterStores(); },
   /* set only when Sec order sent us here to extend an existing order */
   editPo:'',
   /* ── has this visit cleared its gate? ──
@@ -7477,6 +7540,17 @@ var Field = {
     var sN = 0;                       /* step numbers are counted, not written, because the photo
                                      step disappears for a telephonic order */
     var h = '<div class="card"><h3><span class="ic">' + (++sN) + '</span>Store select karo</h3>' +
+      '<div class="row three" style="margin-top:10px">' +
+        '<div><label class="f">Channel Type</label><select class="in" id="f_chan" onchange="Field.stfSet(\'chan\',this.value)">' +
+          '<option value="">Sab</option>' + Field.stfOpts('ChannelType').map(function (x) {
+            return '<option' + (x === Field.stFilt.chan ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select></div>' +
+        '<div><label class="f">Store Category</label><select class="in" id="f_scat" onchange="Field.stfSet(\'cat\',this.value)">' +
+          '<option value="">Sab</option>' + Field.stfOpts('StoreCategory').map(function (x) {
+            return '<option' + (x === Field.stFilt.cat ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select></div>' +
+        '<div><label class="f">Store Sub-category</label><select class="in" id="f_ssub" onchange="Field.stfSet(\'sub\',this.value)">' +
+          '<option value="">Sab</option>' + Field.stfOpts('StoreSubCategory').map(function (x) {
+            return '<option' + (x === Field.stFilt.sub ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select></div>' +
+      '</div>' +
       '<input class="in" id="f_search" placeholder=" Store name ya code" oninput="Field.filterStores()" style="margin-top:10px">' +
       '<div id="f_stores" class="slist"></div>';
     if (Field.store) h += '<div class="banner g" style="margin-top:10px"><span></span><div><b>' + esc(Field.store.StoreName) + '</b><br>' +
@@ -7572,13 +7646,17 @@ var Field = {
     return o.sort(); },
   filterStores: function () {
     var q = val('f_search').toUpperCase(), box = $('f_stores'); if (!box) return;
+    var f = Field.stFilt;
     var list = DB.myStores().filter(function (s) {
+      if (f.chan && String(s.ChannelType || '').trim() !== f.chan) return false;
+      if (f.cat && String(s.StoreCategory || '').trim() !== f.cat) return false;
+      if (f.sub && String(s.StoreSubCategory || '').trim() !== f.sub) return false;
       return !q || String(s.StoreName).toUpperCase().indexOf(q) >= 0 || String(s.CompanyCode).toUpperCase().indexOf(q) >= 0; });
     box.innerHTML = I18n.tr(list.length ? list.slice(0, 60).map(function (s, i) {
       return '<div class="lrow" onclick="Field.pick(' + DB.myStores().indexOf(s) + ')" style="cursor:pointer">' +
         '<div class="m"><div class="t">' + esc(s.StoreName) + '</div><div class="s">' + esc(s.City || '') + ' · ' +
-        esc(s.StoreType || '') + ' · ' + esc(s.CompanyCode || '') + '</div></div><span class="pill p-blue">Select</span></div>';
-    }).join('') : UI.empty('', q ? 'Koi store nahi mila' : 'Aapke naam par koi store mapped nahi hai'));
+        esc(s.StoreType || '') + (s.ChannelType ? ' · ' + esc(s.ChannelType) : '') + ' · ' + esc(s.CompanyCode || '') + '</div></div><span class="pill p-blue">Select</span></div>';
+    }).join('') : UI.empty('', q || f.chan || f.cat || f.sub ? 'Koi store nahi mila' : 'Aapke naam par koi store mapped nahi hai'));
   },
   pick: function (i) {
     /* an index that no longer exists (the store list changed under a stale render) must not take the
@@ -7861,7 +7939,18 @@ var Field = {
   },
 
   /* ---------- new outlet ---------- */
-  nsState:'', nsTownAdd:false,
+  nsState:'', nsTownAdd:false, nsChan:'', nsCat:'',
+  /* Channel Type -> Store Category -> Store Sub-category, same cascade as state -> town below */
+  nsSetChan: function (v) {
+    Field.nsGrab();
+    Field.nsChan = v; Field.nsCat = ''; Field.nsDraft.n_scat = ''; Field.nsDraft.n_ssub = '';
+    render();
+  },
+  nsSetCat: function (v) {
+    Field.nsGrab();
+    Field.nsCat = v; Field.nsDraft.n_ssub = '';
+    render();
+  },
   /* the picked state decides which towns are even offered — this is the SAME cascade
      Plan.statesOf/townsOf already runs for Change-PJP and day-edit, just for THIS rep only
      (Plan.states()/towns() are the no-code shorthand for "the logged-in rep") */
@@ -7916,12 +8005,24 @@ var Field = {
       (gaps.length ? '<div class="hint" style="margin-top:5px;color:#b7791f">! ' + gaps.length +
         ' distributor aapke store me hai par Master_Distributors me nahi (' + esc(gaps.slice(0, 3).join(', ')) +
         (gaps.length > 3 ? ' …' : '') + ') — isliye list me nahi dikh rahe. Admin ko batao.</div>' : '') +
-      '<div class="row two"><div><label class="f">Store name <span class="req">*</span></label>' +
-          '<input class="in" id="n_name" value="' + esc(Field.nsD('n_name')) + '"></div>' +
-        '<div><label class="f">Store type</label><select class="in" id="n_type">' +
-          ['BA Store', 'MEGA BA', 'Chemist', 'Cosmetics', 'General Trade'].map(function (x) {
-            return '<option' + (x === Field.nsD('n_type') ? ' selected' : '') + '>' + x + '</option>';
-          }).join('') + '</select></div></div>' +
+      '<label class="f">Store name <span class="req">*</span></label>' +
+        '<input class="in" id="n_name" value="' + esc(Field.nsD('n_name')) + '">' +
+      '<div class="row three">' +
+        '<div><label class="f">Channel Type <span class="req">*</span></label>' +
+          '<select class="in" id="n_chan" onchange="Field.nsSetChan(this.value)">' +
+          '<option value="">Select…</option>' +
+          Tax.chans().map(function (x) { return '<option' + (x === Field.nsChan ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') +
+          '</select></div>' +
+        '<div><label class="f">Store Category <span class="req">*</span></label>' +
+          '<select class="in" id="n_scat" onchange="Field.nsSetCat(this.value)">' +
+          '<option value="">' + (Field.nsChan ? 'Select…' : '— pehle Channel Type chuno —') + '</option>' +
+          Tax.cats(Field.nsChan).map(function (x) { return '<option' + (x === Field.nsCat ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') +
+          '</select></div>' +
+        '<div><label class="f">Store Sub-category <span class="req">*</span></label>' +
+          '<select class="in" id="n_ssub">' +
+          '<option value="">' + (Field.nsCat ? 'Select…' : '— pehle Store Category chuno —') + '</option>' +
+          Tax.subs(Field.nsChan, Field.nsCat).map(function (x) { return '<option' + (x === Field.nsD('n_ssub') ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') +
+          '</select></div></div>' +
       '<div class="row two">' +
         '<div><label class="f">State <span class="req">*</span></label>' +
           '<select class="in" id="n_state" onchange="Field.nsSetState(this.value)">' +
@@ -8005,7 +8106,7 @@ var Field = {
      wipe every box on the form, because the values only ever lived in the DOM. Now every handler
      snapshots the form into nsDraft first, and every box renders out of it. */
   nsDraft:{},
-  NS_FIELDS:['n_db','n_name','n_type','n_addr','n_pin','n_beat','n_cat','n_owner','n_mob',
+  NS_FIELDS:['n_db','n_name','n_ssub','n_addr','n_pin','n_beat','n_cat','n_owner','n_mob',
              'n_day','n_turn','n_inv','n_sugg','n_int','n_class','n_comp','n_cdisp','n_cmarg',
              'n_bacost','n_beaut','n_beaut_brands','n_reason'],
   /* The option lists the images do not spell out. Kept here, in one place, so they are one line to
@@ -8020,10 +8121,12 @@ var Field = {
   nsD: function (id) { var v = Field.nsDraft[id]; return v === undefined || v === null ? '' : String(v); },
   nsGrab: function () {
     Field.NS_FIELDS.forEach(function (id) { var e = $(id); if (e) Field.nsDraft[id] = e.value; });
-    var t = $('n_town'), ts = $('n_town_sel'), st = $('n_state');
+    var t = $('n_town'), ts = $('n_town_sel'), st = $('n_state'), ch = $('n_chan'), sc = $('n_scat');
     if (t) Field.nsDraft.n_town = t.value;
     if (ts) Field.nsDraft.n_town_sel = ts.value;
     if (st) Field.nsDraft.n_state = st.value;
+    if (ch) Field.nsChan = ch.value;
+    if (sc) Field.nsCat = sc.value;
     Field.nsOrdGrab();
   },
   nsNum: function (id, label, ph) {
@@ -8149,9 +8252,13 @@ var Field = {
     Field.nsGrab();                       /* one snapshot, then everything reads off the draft */
     var name = val('n_name'), state = val('n_state'),
         town = Field.nsTownAdd ? val('n_town') : ($('n_town_sel') ? $('n_town_sel').value : ''),
-        db = val('n_db'), reason = val('n_reason');
+        db = val('n_db'), reason = val('n_reason'),
+        chan = Field.nsChan, scat = Field.nsCat, ssub = val('n_ssub');
     if (!db) return toast('Distributor select karo');
     if (!name) return toast('Store name bharo');
+    if (!chan) return toast('Channel Type select karo');
+    if (!scat) return toast('Store Category select karo');
+    if (!ssub) return toast('Store Sub-category select karo');
     if (!state) return toast('State select karo');
     if (!town) return toast('Town select karo');
     if (!reason) return toast('Reason likho');
@@ -8187,7 +8294,11 @@ var Field = {
     var id = 'EM' + st + new Date().getFullYear() + p2(DB.rows('NewStores').length + 1);
     DB.save('NewStores', { StoreId:id, Date:today(),
       /* both written from the master row, so the code and the name can never disagree */
-      DbCode:String(dbo.Code || db), DbName:dbo.Name || '', StoreType:val('n_type'),
+      DbCode:String(dbo.Code || db), DbName:dbo.Name || '',
+      /* ChannelType/StoreCategory/StoreSubCategory are the canonical fields, matching Master_Stores'
+         own three-level classification; StoreType is kept in step (= the sub-category) purely so a
+         reader that still asks for the old single field never comes back empty */
+      ChannelType:chan, StoreCategory:scat, StoreSubCategory:ssub, StoreType:ssub,
       StoreName:name, State:state, Town:town, Address:val('n_addr'), Pincode:val('n_pin'),
       Beat:val('n_beat'), Category:val('n_cat'), OwnerName:val('n_owner'), OwnerMobile:val('n_mob'),
       DaySales:num(val('n_day')), MonthlyTurnover:num(val('n_turn')),
@@ -8211,7 +8322,7 @@ var Field = {
         Cam.upload(id, name);
         Log.add('NewStore', 'Created', id, name + ' · ' + town);
         Cam.clear(['front','inside']); Field.ns = { front:'', inside:'' };
-        Field.nsState = ''; Field.nsTownAdd = false;
+        Field.nsState = ''; Field.nsTownAdd = false; Field.nsChan = ''; Field.nsCat = '';
         /* a saved outlet must leave a CLEAN form behind — the draft is the form now, so it is the
            thing that has to be emptied, or the next outlet starts pre-filled with the last one */
         Field.nsDraft = {}; Field.nsOrdYes = ''; Field.nsOrd = [];
@@ -11926,8 +12037,19 @@ var Posm = {
 
 /* ═══════════════ EOD ═══════════════ */
 var Eod = {
-  agg: function () {
-    var t = today(), code = DB.me.code;
+  /* ── which day is this screen closing? ──
+     Normally today. But a day that was started and never closed blocks every new day (see
+     Gate.pendingPrevDay) — and the only way OUT of that is to close the old day's own EOD, which this
+     screen has to be able to do without becoming "today's" report. Every reader below (agg, saved,
+     the screen, the save, the WhatsApp/mail/Excel exports) goes through this one function, so none of
+     them can end up disagreeing about which day is actually being closed. */
+  closeDate: function () {
+    var p = Gate.pendingPrevDay();
+    return p ? p.Date : today();
+  },
+  agg: function (t) {
+    t = t || Eod.closeDate();
+    var code = DB.me.code;
     var ord = DB.mine('SecOrders').filter(function (r) { return toISO(r.Date) === t; });
     var lines = DB.mine('SecOrderLines').filter(function (r) { return toISO(r.Date) === t; });
     var ns = DB.mine('NewStores').filter(function (r) { return toISO(r.Date) === t; });
@@ -11952,11 +12074,18 @@ var Eod = {
      flag, which Posm.closeDay() also sets (on its own, before the rep ever reaches this screen's Save
      button). Reusing that flag here used to draw the image the moment "close day" was tapped from
      POSM, with numbers that could still change before the real save. */
-  saved: function () { return !!DB.find('Eod', DB.me.code + '_' + today()); },
+  saved: function () { return !!DB.find('Eod', DB.me.code + '_' + Eod.closeDate()); },
   html: function () {
     var a = Eod.agg(), saved = DB.find('Eod', DB.me.code + '_' + a.t);
-    var h = UI.head('', 'EOD — din close karo', 'Sab figures automatic hain. Check karke save karo, phir report bhejo.');
-    if (Gate.locked()) h += '<div class="banner g"><span></span><div><b>Din close ho gaya</b>' +
+    var backdated = a.t !== today();
+    var h = UI.head('', 'EOD — din close karo', backdated ? '' :
+      'Sab figures automatic hain. Check karke save karo, phir report bhejo.');
+    /* the day that is blocking everything else — this banner has to say so loudly, since the rep
+       landed here because Plan/Field refused him, not because he chose EOD himself */
+    if (backdated) h += '<div class="banner w"><span>!</span><div><b>' + dmy(a.t) +
+      ' ka din band nahi hua tha</b><br><span style="font-weight:500">Naya din shuru karne se pehle ' +
+      'ISI purane din ka EOD save karo — figures neeche ' + dmy(a.t) + ' ke hain, aaj ke nahi.</span></div></div>';
+    if (!backdated && Gate.locked()) h += '<div class="banner g"><span></span><div><b>Din close ho gaya</b>' +
       (Store.get(K.lock, {}).at ? ' (' + esc(Store.get(K.lock, {}).at) + ')' : '') +
       '.<div class="btns"><button class="btn sm ghost" onclick="Field.reopen()"> Dobara kholo</button></div></div></div>';
 
@@ -12018,7 +12147,7 @@ var Eod = {
   /* ONE brand-wise builder for the screen, the image and the workbook, so the three can never
      disagree about a brand's target or its achievement. */
   brandRows: function (a) {
-    var tgt = Plan.dayTgt(), rows = [], tT = 0, tA = 0;
+    var tgt = Plan.tgtFor(a.t), rows = [], tT = 0, tA = 0;
     tgt.forEach(function (x) {
       var got = 0;
       Object.keys(a.brand).forEach(function (b) { if (Eod.match(b, x[0])) got += num(a.brand[b]); });
@@ -12056,14 +12185,21 @@ var Eod = {
     return b.indexOf('DERMA') >= 0 || b.indexOf('TDC') >= 0;   /* TDC rows */
   },
   save: function (el) {
-    var a = Eod.agg();
+    var a = Eod.agg(), backdated = a.t !== today();
     return Busy.run('eod_' + a.t, el, 'Save ho raha hai…', function () { return DB.save('Eod', { Id:DB.me.code + '_' + a.t, Date:a.t, Sc:a.sc, Tc:a.tc, Pc:a.pc, Nso:a.ns.length,
       PosmCount:a.pa.length, MslCount:a.msl, OrderValue:a.value, NsvLakh:+a.nsv.toFixed(4),
       BrandJson:JSON.stringify(a.brand), EodJson:JSON.stringify({ plan:a.plan, orders:a.ord.length }),
       Remarks:val('eod_rm'), ClosedAt:new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }) })
       .then(function () { return Dfr.push(); })
-      .then(function () { Gate.lock('eod'); Log.add('EOD', 'Saved', a.t, a.tc + ' visits');
-        render(); Nav.build(); toast('EOD save — din close ho gaya'); }); });
+      .then(function () {
+        /* a backdated close is not TODAY closing — Gate.lock('eod') would wrongly mark a day that
+           has not even started yet as done */
+        if (!backdated) Gate.lock('eod');
+        Log.add('EOD', 'Saved', a.t, a.tc + ' visits');
+        render(); Nav.build();
+        toast(backdated ? dmy(a.t) + ' ka EOD save ho gaya — ab naya din shuru kar sakte ho'
+                        : 'EOD save — din close ho gaya');
+      }); });
   },
   msg: function () {
     var a = Eod.agg(), p = a.plan;
@@ -12128,7 +12264,7 @@ var Trk = {
      filtered view of the very rows already sitting on the Orders tab, so it said the same thing
      twice. It now lives in the Notification centre (Notif.TAT_DAYS), which is where every other
      "somebody should chase this" line already goes. */
-  KINDS:[['ord', 'Orders'], ['ns', 'New outlets'], ['pq', 'POSM'], ['poi', 'PO vs Invoice']],
+  KINDS:[['ord', 'Orders'], ['ns', 'New outlets'], ['pq', 'POSM'], ['poi', 'PO vs Invoice'], ['tva', 'Target vs Achieved']],
   TAB:{ ord:'SecOrders', ns:'NewStores', pq:'PosmRequirement' },
   /* one status list per type, in the order the work actually moves */
   ST:{
@@ -12245,7 +12381,7 @@ var Trk = {
     Trk.kind = was; Trk.posmSub = wasSub;
     return out;
   },
-  KIND_ICON:{ ord:Icon.fileText(15), ns:Icon.pin(15), pq:Icon.tag(15), poi:Icon.repeat(15) },
+  KIND_ICON:{ ord:Icon.fileText(15), ns:Icon.pin(15), pq:Icon.tag(15), poi:Icon.repeat(15), tva:Icon.target(15) },
   navHtml: function () {
     /* one count per type — of its OWN open items, not of whichever tab happens to be showing.
        Outer .card div deliberately left OPEN — see call sites. */
@@ -12274,6 +12410,7 @@ var Trk = {
   noChips: function () { return Trk.kind === 'ord' || (Trk.kind === 'pq' && Trk.posmSub === 'audit'); },
   html: function () {
     if (Trk.kind === 'poi') return Trk.poiHtml();
+    if (Trk.kind === 'tva') return Trk.tvaHtml();
     var all = Trk.rows();
     var open = all.filter(function (r) { return !Trk.shut(r); });
     var noChips = Trk.noChips();
@@ -12712,6 +12849,40 @@ var Trk = {
       (r.remark ? '<tr><td>Reason</td><td><b>' + esc(r.remark) + '</b></td></tr>' : '') +
       '</table>';
     UI.sheet(r.store || 'Order detail', h);
+  },
+
+  /* ── Target vs Achieved, day-wise ──
+     One row per day of the month: that day's own target (whatever the rep planned — default or
+     customised, see Tgt.daywise) against what was actually booked. A blank target means no plan was
+     ever saved for that day, not a target of zero. */
+  tvaMonth: '',
+  tvaSetMonth: function (v) { Trk.tvaMonth = v; render(); },
+  tvaHtml: function () {
+    var mo = Trk.tvaMonth || today().slice(0, 7);
+    var rows = Tgt.daywise(mo);
+    var h = UI.head('', 'Tracker', 'Har din ka target — jo plan hua tha, ya default — aur us din ka actual NSV, aamne-saamne.');
+    var tT = 0, tA = 0;
+    rows.forEach(function (r) { tT += r.target; tA += r.got; });
+    h += '<div class="kpis k3">' + UI.kpi(lakh(tT) + 'L', 'Month target', 'b') +
+      UI.kpi(lakh(tA) + 'L', 'Achieved', 'g') +
+      UI.kpi(tT > 0 ? Math.round(tA / tT * 100) + '%' : '—', 'Overall', '') + '</div>';
+    h += Trk.navHtml() + '</div>';
+    h += '<div class="card"><label class="f">Month</label><input class="in" type="month" value="' +
+      esc(mo) + '" onchange="Trk.tvaSetMonth(this.value)"></div>';
+    if (!rows.length) return h + '<div class="card">' + UI.empty('', 'Is month me kuch nahi hai') + '</div>';
+    h += '<div class="tw"><table><thead><tr><th>Date</th><th class="num">Target ₹L</th>' +
+      '<th class="num">Achieved ₹L</th><th class="num">%</th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        if (!r.target && !r.got) return '<tr><td>' + dmy(r.date) + '</td><td class="num">—</td>' +
+          '<td class="num">—</td><td class="num">—</td></tr>';
+        return '<tr><td>' + dmy(r.date) + '</td><td class="num">' + lakh(r.target) + '</td>' +
+          '<td class="num">' + lakh(r.got) + '</td><td class="num"><span class="pill ' +
+          (r.pct >= 100 ? 'p-ok' : r.pct > 0 ? 'p-warn' : 'p-bad') + '">' + r.pct + '%</span></td></tr>';
+      }).join('') +
+      '<tr class="tot"><td><b>TOTAL</b></td><td class="num"><b>' + lakh(tT) + '</b></td>' +
+      '<td class="num"><b>' + lakh(tA) + '</b></td><td class="num"><b>' +
+      (tT > 0 ? Math.round(tA / tT * 100) : 0) + '%</b></td></tr></tbody></table></div>';
+    return h;
   }
 };
 
@@ -12814,6 +12985,40 @@ var Tgt = {
     });
     out._other = other;
     return out;
+  },
+  /* ── day-wise target vs achieved ──
+     Now that a rep's daily target can legitimately differ from the plain default (Plan's "Customize
+     my target" no longer forces the total to match — see Plan.save), the day-by-day trend is the only
+     way to see whether that freedom is being used sensibly. One row per day of the month up to today:
+     the target actually PLANNED for that day (that day's own saved DayPlan.PlanJson.tgt — the plain
+     default if nothing was customised, exactly Plan.dayTgt()'s own fallback) against what was really
+     booked that day. */
+  daywise: function (mo, code) {
+    mo = Tgt.mon(mo);
+    var me = String(code || DB.me.code || '').toUpperCase();
+    var t = today(), y = +mo.slice(0, 4), m = +mo.slice(5, 7);
+    var inMonth = new Date(y, m, 0).getDate();
+    var lastDay = (mo === t.slice(0, 7)) ? +t.slice(8, 10) : inMonth;
+    var byDay = {};
+    DB.rows('SecOrders').forEach(function (o) {
+      if (String(o.EmpCode || '').toUpperCase() !== me) return;
+      var d = toISO(o.Date); if (!d || d.slice(0, 7) !== mo) return;
+      if (/cancel|no.?order/i.test(String(o.Status || ''))) return;
+      var v = 0;
+      Sec.lines(o).forEach(function (l) { v += num(l.Value) * .6 / 1e5; });
+      byDay[d] = (byDay[d] || 0) + v;
+    });
+    var rows = [];
+    for (var day = 1; day <= lastDay; day++) {
+      var d2 = mo + '-' + p2(day);
+      var plan = DB.find('DayPlan', me + '_' + d2);
+      /* a day with no plan at all never had a target — Plan.tgtFor would fall back to the plain
+         default here, which reads as a target for a day the rep never even planned */
+      var target = plan ? Plan.tgtFor(d2, me).reduce(function (a, x) { return a + num(x[1]); }, 0) : 0;
+      var got = num(byDay[d2]);
+      rows.push({ date:d2, target:target, got:got, pct:target > 0 ? Math.round(got / target * 100) : 0 });
+    }
+    return rows;
   },
   /* the whole picture for one month, ready to render anywhere */
   rows: function (mo, code) {
