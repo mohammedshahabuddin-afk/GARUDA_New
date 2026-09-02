@@ -2953,12 +2953,10 @@ I18n.D.en = I18n.EN = {
   'Billing Done — poora order':'Billing Done — the full order',
   /* ── Partial Order: no approval needed (this round's change) ── */
   'Save karo':'Save',
-  'Koi approval nahi chahiye — save karne par HOD ko dikh jayega (Notifications aur PO vs Invoice me), zaroorat pade to wo khud check kar lega.':
-    'No approval needed — once saved, the HOD will see it (in Notifications and PO vs Invoice); they can check it themselves if needed.',
-  'Save ho gaya — HOD ko dikh jayega':'Saved — the HOD will see it',
+  'Koi approval nahi chahiye — seedha PO vs Invoice me record ho jayega.':
+    'No approval needed — recorded straight into PO vs Invoice.',
+  'Save ho gaya — PO vs Invoice me record ho gaya':'Saved — recorded in PO vs Invoice',
   'Recorded — approval nahi chahiye':'Recorded — no approval needed',
-  'HOD ko dikh jayega — koi approve/reject nahi karna, sirf record hai. Kuch galat lage to HOD khud dekh lega.':
-    'The HOD will see this — nothing to approve or reject, it is just a record. If something looks off, the HOD can look into it themselves.',
   'PO me kitna order tha, uske against kitna mila — dono side by side. Ye screen sirf dikhane ke liye hai; Partial Order seedha record ho jaata hai, Full invoice HOD approve karta hai.':
     'How much was ordered against the PO, and how much actually came — side by side. This screen is read-only; a Partial Order is recorded directly, a Full invoice is approved by the HOD.',
   'Sirf record ke liye — koi approval nahi chahiye. Kuch galat lage to seedha rep se ya PO vs Invoice screen se cross-check kar lo.':
@@ -4892,38 +4890,51 @@ var Card = {
       y += 10;
 
       var top = y, x0 = P, bw = iw, ry = y;
+      var c1x = x0 + bw * 0.68, c2x = x0 + bw - 12;
       /* the box height is arithmetic, so the rounded clip can be set BEFORE the rows are painted —
-         otherwise the dark TOTAL band and the green MTD band square off the bottom corners */
-      var boxH = 6 * 24 + 26 + Math.max(0, d.rows.length - 6) * 26 + 30 + 30;
+         otherwise the dark TOTAL band and the green MTD band square off the bottom corners.
+         +22 is the new column-header row. */
+      var boxH = 22 + 6 * 24 + 26 + Math.max(0, d.rows.length - 6) * 26 + 30 + 30;
       if (!dry) { g.save(); Card.rr(g, x0, top, bw, boxH, 9); g.clip(); }
       var line = function (yy) { if (dry) return; g.strokeStyle = C.row; g.lineWidth = 1;
         g.beginPath(); g.moveTo(x0, yy + .5); g.lineTo(x0 + bw, yy + .5); g.stroke(); };
-      var row = function (label, val, o) {
+
+      /* ── always two columns — Company Plan and My Plan ──
+         An un-customised day simply has the same number in both; the point is the columns are
+         always there to compare, not that they appear only once something has changed. */
+      var hdrH = 22;
+      if (!dry) fill(C.tile, x0, ry, bw, hdrH);
+      Card.fnt(g, '700', 10);
+      put('Company Plan', c1x, ry + hdrH / 2 + 3.5, C.meta, 'right');
+      put('My Plan', c2x, ry + hdrH / 2 + 3.5, C.meta, 'right');
+      ry += hdrH; line(ry);
+
+      var row = function (label, v1, v2, o) {
         o = o || {};
         var h = o.h || 24;
         if (o.bg) fill(o.bg, x0, ry, bw, h);
         Card.fnt(g, o.lw || '400', o.fs || 12.5);
         put(label, x0 + 12, ry + h / 2 + 4.5, o.col || C.sub);
         Card.fnt(g, o.vw || '700', o.fs || 12.5);
-        put(o.raw ? val : num(val).toFixed(2), x0 + bw - 12, ry + h / 2 + 4.5, o.col || C.sub, 'right');
+        put(num(v1).toFixed(2), c1x, ry + h / 2 + 4.5, o.col2 || o.col || C.sub, 'right');
+        put(num(v2).toFixed(2), c2x, ry + h / 2 + 4.5, o.col || C.sub, 'right');
         ry += h;
         if (!o.last) line(ry);
       };
-      /* a customised day shows "company plan → mine" in the value slot instead of a bare number,
-         but only on the rows that actually differ — an unchanged brand still reads as one figure */
-      var dual = function (mine, plan) {
-        return (d.customized && Math.abs(mine - plan) > 0.005)
-          ? plan.toFixed(2) + ' → ' + mine.toFixed(2) : num(mine).toFixed(2);
-      };
       d.rows.forEach(function (x, i) {
-        var shown = dual(x[1], (d.rowsDefault[i] || x)[1]);
-        if (i < 6) row(x[0], shown, { fs:12, vw:'500', raw:true });
-        else row(x[0], shown, { fs:13, lw:'600', col:C.ink, h:26, raw:true });
-        if (i === 5) row('TDC — Total', dual(d.tdc, d.tdcDefault), { fs:13, lw:'800', vw:'800', col:C.dark, bg:C.band, h:26, raw:true });
+        var plan = (d.rowsDefault[i] || x)[1];
+        if (i < 6) row(x[0], plan, x[1], { fs:12, vw:'500' });
+        else row(x[0], plan, x[1], { fs:13, lw:'600', col:C.ink, h:26 });
+        if (i === 5) row('TDC — Total', d.tdcDefault, d.tdc, { fs:13, lw:'800', vw:'800', col:C.dark, bg:C.band, h:26 });
       });
-      row('TOTAL ORDER / DAY', dual(d.tot, d.totDefault), { fs:13.5, lw:'800', vw:'800', col:'#ffffff', bg:C.dark, h:30, raw:true });
-      row('MTD @24 Working Days', d.mtd, { fs:13, lw:'800', vw:'800', col:'#ffffff', bg:C.green, h:30,
-                                           raw:true, last:true });
+      row('TOTAL ORDER / DAY', d.totDefault, d.tot, { fs:13.5, lw:'800', vw:'800', col:'#ffffff', bg:C.dark, h:30 });
+      /* MTD is a month-to-date figure derived off My Plan alone — no company-vs-mine split to show */
+      var mtdH = 30;
+      if (!dry) fill(C.green, x0, ry, bw, mtdH);
+      Card.fnt(g, '800', 13);
+      put('MTD @24 Working Days', x0 + 12, ry + mtdH / 2 + 4.5, '#ffffff');
+      put(d.mtd, c2x, ry + mtdH / 2 + 4.5, '#ffffff', 'right');
+      ry += mtdH;
       if (!dry) {
         g.restore();                                       /* end the rounded clip */
         g.strokeStyle = C.line; g.lineWidth = 1;
@@ -7132,7 +7143,14 @@ var Plan = {
     Plan.custOn = true; render();
   },
   custCancel: function () { Plan.custOn = false; Plan.custVals = {}; render(); },
-  custSet: function (i, v) { Plan.custVals[i] = num(v); render(); },
+  /* no render() here on purpose — a full re-render on every keystroke destroys and recreates the
+     input mid-type (focus and cursor position both go with it), which is exactly what made typing a
+     number feel broken while the up/down spinners still worked (each click is a discrete, completed
+     event; typing is not). Just the total needs to move live, so it is patched directly. */
+  custSet: function (i, v) {
+    Plan.custVals[i] = num(v);
+    var t = $('pl_cust_tot'); if (t) t.textContent = Plan.custSum().toFixed(2);
+  },
   /* the customised array in the exact shape dayTgt()/PlanJson.tgt expect — labels from the default,
      values from what is on screen right now */
   custRows: function () {
@@ -7161,7 +7179,7 @@ var Plan = {
       }).join('');
       var sum = Plan.custSum();
       h += '<tr class="tot"><td><b>TOTAL</b></td><td class="num"><b>' + defTot.toFixed(2) + '</b></td>' +
-        '<td class="num"><b>' + sum.toFixed(2) + '</b></td></tr></tbody></table></div>' +
+        '<td class="num"><b id="pl_cust_tot">' + sum.toFixed(2) + '</b></td></tr></tbody></table></div>' +
         '<div class="hint" style="margin-top:6px">Company plan total <b>' + defTot.toFixed(2) +
         ' L</b> hai — My Target ka total kuch bhi ho sakta hai, jo bharoge wahi save hoga.</div>' +
         '<div class="btns" style="margin-top:8px">' +
@@ -11571,12 +11589,10 @@ var Sec = {
     Sec.lines(o).forEach(function (l) { m[String(l.Sku)] = num(l.Units); });
     return m;
   },
-  /* `skipApproval` — a Partial Order recorded from the Tracker is a FACT the rep is logging, not an
-     ask: no HOD decision is due on it, so it never enters the InvoiceStatus/Approvals pipeline (it
-     still shows up in PO vs Invoice and, for admin/HOD, in Notifications + Data Lookup — just with
-     nothing to approve). Full billing (the 'Billing Done' path) is unchanged and still raises a
-     Pending invoice for the HOD to sign off. */
-  setBilling: function (po, type, per, remark, skipApproval) {
+  /* Billing — Full or Partial — is a FACT the rep is recording, never an ask: orders are the
+     employee's own responsibility end to end, so no HOD decision is ever due on it. It still shows
+     up in PO vs Invoice and, for admin/HOD, in Data Lookup — just with nothing to approve. */
+  setBilling: function (po, type, per, remark) {
     var o = DB.find('SecOrders', po); if (!o) return Promise.resolve();
     var lines = Sec.lines(o);
     var map = (type === 'Full') ? Sec.fullMap(o) : (per || {});
@@ -11596,9 +11612,8 @@ var Sec = {
       BillingRemark:type === 'Full' ? '' : String(remark || ''),
       InvoiceNo:o.InvoiceNo || Sec.invNo(po),
       InvoiceAt:now,
-      /* a re-raised invoice is a NEW claim on the HOD's attention — unless this save is explicitly
-         a no-approval record, in which case there is no claim to raise at all */
-      InvoiceStatus:skipApproval ? '' : 'Pending',
+      /* never a claim on anyone's attention — see the note on setBilling above */
+      InvoiceStatus:'',
       InvoiceHodBy:'', InvoiceHodRole:'', InvoiceHodAt:'', InvoiceRemarks:''
     }), { quiet:true });
   },
@@ -12598,8 +12613,8 @@ var Trk = {
         '<div class="s">' + num(o.BilledUnits) + ' / ' + r.units + ' units · ' +
           inr(o.BilledValue) + ' · ' + esc(o.BillingType || '') + '</div></div>' +
         '<span class="pill ' + pill + '">' + word + '</span></div>' +
-        (noApproval ? '<div class="hint" style="margin-bottom:0">HOD ko dikh jayega — koi approve/' +
-          'reject nahi karna, sirf record hai. Kuch galat lage to HOD khud dekh lega.</div>' : '') +
+        (noApproval ? '<div class="hint" style="margin-bottom:0">Koi approval nahi chahiye — seedha ' +
+          'PO vs Invoice me record ho jayega.</div>' : '') +
         (o.InvoiceRemarks ? '<div class="banner ' + (/reject/i.test(st) ? 'r' : 'b') +
           '" style="margin-bottom:0"><span></span><div><b>HOD ka message</b><br>' +
           '<span style="font-weight:500">' + esc(o.InvoiceRemarks) + '</span></div></div>' : '') +
@@ -12654,8 +12669,8 @@ var Trk = {
       '<div class="btns" style="margin-top:8px"><button class="btn ok sm" ' +
         'onclick="Trk.saveBilling(\'' + q + '\',\'' + id + '\',' + lines.length + ',this)">' +
         'Save karo</button></div>' +
-      '<div class="hint" style="margin-top:6px">Koi approval nahi chahiye — save karne par HOD ko dikh ' +
-        'jayega (Notifications aur PO vs Invoice me), zaroorat pade to wo khud check kar lega.</div>' +
+      '<div class="hint" style="margin-top:6px">Koi approval nahi chahiye — seedha ' +
+        'PO vs Invoice me record ho jayega.</div>' +
       '</div>';
     return h;
   },
@@ -12691,11 +12706,10 @@ var Trk = {
     if (tot <= 0) return toast('Kam se kam ek SKU ka supplied qty bharo — sab zero hai');
     if (!rm) return toast('Kyun kam mila — reason likhna zaroori hai');
     Busy.run('tkbill_' + id, el, 'Save ho raha hai…', function () {
-      /* skipApproval = true — this is a record, not a request; no InvoiceStatus, no Approvals entry */
-      return Sec.setBilling(key, 'Partial', per, rm, true).then(function () {
+      return Sec.setBilling(key, 'Partial', per, rm).then(function () {
         Log.add('Tracker', 'Partial supply', key, tot + ' / ' + num(o.TotUnits) + ' units — ' + rm);
         render();
-        toast('Save ho gaya — HOD ko dikh jayega', 3800);
+        toast('Save ho gaya — PO vs Invoice me record ho gaya', 3800);
       });
     });
   },
@@ -12717,10 +12731,9 @@ var Trk = {
     }
     /* Billing Done now always means the order billed IN FULL — a short delivery is its own status
        ('Partial Order') picked directly off this same dropdown, not a toggle nested under this one.
-       skipApproval:true — same as Partial Order, this is the rep recording a fact, not raising a
-       request; the HOD sees it (Notifications, PO vs Invoice, Data Lookup) but decides nothing. */
+       Same as Partial Order, this is the rep recording a fact — no HOD decision is due on it. */
     if (k === 'ord' && s === 'Billing Done') {
-      return Sec.setStatus(key, s).then(function () { return Sec.setBilling(key, 'Full', null, '', true); })
+      return Sec.setStatus(key, s).then(function () { return Sec.setBilling(key, 'Full', null, ''); })
         .then(function () { Log.add('Tracker', 'Invoice Full', key, ''); render(); toast('Billing Done — poora order'); });
     }
     if (k === 'ord') return Sec.setStatus(key, s);
@@ -14553,12 +14566,12 @@ var Appr = {
   filter:'open', kindF:'all',
   open:{},
   /* Store openings and POSM requirements are NOT approvals any more — the rep opens the outlet, asks
-     his ASM himself and records the stage in the Tracker tab. They deliberately do not appear here. */
-  KINDS:[['PJP', 'PJP'], ['Plan change', 'Plan change'],
-         ['Order', 'Orders'], ['Invoice', 'Invoice'], ['Billing recorded', 'Billing recorded'], ['TA/DA', 'TA/DA']],
+     his ASM himself and records the stage in the Tracker tab. They deliberately do not appear here.
+     Orders/Invoice/Billing recorded are gone from this list too — orders are the employee's own
+     responsibility end to end, never an HOD's to decide (or even watch) from this queue. */
+  KINDS:[['PJP', 'PJP'], ['Plan change', 'Plan change'], ['TA/DA', 'TA/DA']],
   /* one flat pastel tag per TYPE — never red/green, those are reserved for pass/fail elsewhere */
-  KCLS:{ 'PJP':'k-pjp', 'Plan change':'k-plan', 'Order':'k-ord', 'Invoice':'k-ord',
-         'Billing recorded':'k-ord', 'TA/DA':'k-tada' },
+  KCLS:{ 'PJP':'k-pjp', 'Plan change':'k-plan', 'TA/DA':'k-tada' },
   kcls: function (k) { return Appr.KCLS[k] || 'k-pjp'; },
 
   ts: function (v) {
@@ -14614,7 +14627,7 @@ var Appr = {
 
   /* Admin/HOD can decide right here, through the SAME handlers the Admin console uses — so the two
      screens can never disagree. Without this an HOD saw "HOD ke paas hai" and had no way to act. */
-  ACTABLE:['pjp','dev','tada','inv'],
+  ACTABLE:['pjp','dev','tada'],
   /* A partially rejected request is WITH THE REP: he has days to fix and re-send. Until he does,
      there is nothing for an HOD to approve or reject — and a stray tap would decide a month whose
      rejected days have already been changed underneath it. */
@@ -14624,7 +14637,6 @@ var Appr = {
     if (kind === 'pjp')  return ok ? Admin.pjpOk(key) : Admin.pjpNo(key);
     if (kind === 'dev')  return Admin.devOk(key, ok ? 1 : 0);
     if (kind === 'tada') return Admin.tadaOk(key, ok);
-    if (kind === 'inv')  return Admin.invOk(key, ok ? 1 : 0);
   },
   btns: function (o, big) {
     if (!Appr.can(o)) return '';
@@ -14719,84 +14731,13 @@ var Appr = {
     });
 
     /* NewStores and PosmRequirement used to be listed here for HOD approval. They are now purely the
-       employee's own follow-up — see the Tracker tab — so nothing about them belongs in a queue. */
-
-    /* Orders are not approvals, but an HOD chasing billing needs the same one screen.
-       Only shown to admin/HOD, and the action is a status change, not approve/reject. */
-    if (admin) DB.rows('SecOrders').forEach(function (o) {
-      var s2 = String(o.Status || ''), map = /Billing/.test(s2) ? 'approved'
-        : /Cancel/.test(s2) ? 'rejected' : /No Order/.test(s2) ? 'rejected' : 'pending';
-      out.push({ id:'so_' + Appr.jid(o.PoNumber), icon:'', kind:'Order', go:'trk',
-        status:map, act:'so', key:o.PoNumber, statusText:s2,
-        title:'Order — ' + (o.StoreName || ''),
-        emp:o.EmpName || '',
-        sent:o.Ts || '', sentAlt:o.Date || o.LastSync || '',
-        done:o.HodAt || o.DeliveredAt || '', by:o.HodBy || '', role:o.HodRole || '', note:o.Remarks || '',
-        rows:[['PO', o.PoNumber || '—'], ['Date', dmy(o.Date)],
-              ['Status', s2 || '—'],
-              ['SKU / Units', num(o.TotSku) + ' / ' + num(o.TotUnits)],
-              ['MRP value', inr(o.TotValue)],
-              ['NSV', lakh(o.TotNsvLakh) + ' L']],
-        sum:(s2 || 'Pending') + ' · ' + num(o.TotSku) + ' SKU / ' + num(o.TotUnits) +
-          ' units · ' + inr(o.TotValue),
-        tip:'' });
-    });
-
-    /* ══ INVOICES ══
-       Raised by the rep from the Tracker the moment he records what the distributor actually billed,
-       and decided here. Unlike the Order rows above this is a real approval, so it is shown to BOTH
-       sides: the rep needs to see that his invoice came back rejected, and the HOD needs to decide
-       it. An order with no invoice raised against it never appears. */
-    pick('SecOrders').filter(function (o) { return !!o.InvoiceStatus; }).forEach(function (o) {
-      var st = Appr.norm(o.InvoiceStatus);
-      var po = num(o.TotUnits), bi = num(o.BilledUnits), gap = po - bi;
-      out.push({ id:'inv_' + Appr.jid(o.PoNumber), icon:'', kind:'Invoice', go:'trk', status:st,
-        act:'inv', key:o.PoNumber,
-        title:'Invoice — ' + (o.StoreName || ''),
-        emp:o.EmpName || '',
-        sent:o.InvoiceAt || '', sentAlt:o.StatusAt || o.Ts || o.Date || '',
-        done:o.InvoiceHodAt || '', by:o.InvoiceHodBy || '', role:o.InvoiceHodRole || '',
-        note:o.InvoiceRemarks || '',
-        rows:[['Invoice no', o.InvoiceNo || '—'], ['PO', o.PoNumber || '—'],
-              ['Store', o.StoreName || '—'], ['Distributor', o.DbName || '—'],
-              ['Type', o.BillingType || 'Full'],
-              ['PO units', String(po)], ['Invoiced units', String(bi)],
-              ['Gap', gap > 0 ? gap + ' units' : 'Koi gap nahi'],
-              ['Invoice value', inr(o.BilledValue)],
-              ['Order value', inr(o.TotValue)],
-              ['Kyun kam bana', o.BillingRemark || '—']],
-        sum:bi + ' / ' + po + ' units · ' + inr(o.BilledValue) +
-          (gap > 0 ? ' · ' + gap + ' units short' : ' · poora invoice'),
-        tip:st === 'rejected' ? 'Orders tab me invoice theek karke dobara bhejo.' : '' });
-    });
-
-    /* ══ BILLING RECORDED — informational only, no approval needed ══
-       The rep records what the distributor actually billed — Full via 'Billing Done', Partial via
-       the SKU table (Trk.saveBilling / Trk.setSt, both skipApproval:true — never sets InvoiceStatus,
-       so it never lands in the Invoice block above). This is FYI for the HOD, not a decision: shown
-       to admin/HOD only, next to the Orders feed it already reads, with the reason right there to
-       cross-check — and the same rows are browsable later in the Admin Data tab's Data Lookup
-       (Orders category). Covers BOTH billing types now; only an OLD invoice raised before this
-       change (which still carries a real InvoiceStatus) shows under Invoice above instead. */
-    if (admin) DB.rows('SecOrders').filter(function (o) {
-      return o.BillingType && !o.InvoiceStatus;
-    }).forEach(function (o) {
-      var po2 = num(o.TotUnits), bi2 = num(o.BilledUnits), gap2 = po2 - bi2;
-      out.push({ id:'psup_' + Appr.jid(o.PoNumber), icon:'', kind:'Billing recorded', go:'trk',
-        status:'recorded', act:'psup', key:o.PoNumber,
-        title:(o.BillingType === 'Partial' ? 'Partial billing — ' : 'Full billing — ') + (o.StoreName || ''),
-        emp:o.EmpName || '',
-        sent:o.InvoiceAt || o.StatusAt || '', sentAlt:o.Ts || o.Date || '',
-        done:'', by:'', role:'', note:'',
-        rows:[['PO', o.PoNumber || '—'], ['Store', o.StoreName || '—'], ['Distributor', o.DbName || '—'],
-              ['Billing type', o.BillingType], ['Ordered units', String(po2)], ['Billed units', String(bi2)],
-              ['Gap', gap2 > 0 ? gap2 + ' units short' : 'Koi gap nahi'],
-              ['Billed value', inr(o.BilledValue)], ['Order value', inr(o.TotValue)],
-              ['Reason', o.BillingRemark || '—']],
-        sum:bi2 + ' / ' + po2 + ' units · ' + inr(o.BilledValue) +
-          (gap2 > 0 ? ' · ' + gap2 + ' units short' : ''),
-        tip:'' });
-    });
+       employee's own follow-up — see the Tracker tab — so nothing about them belongs in a queue.
+       Orders, invoices and billing records used to show up here too — an Order/Invoice/Billing
+       recorded feed, the last of those two actually decidable by an HOD. Orders are now the
+       employee's own responsibility end to end (Sec.setBilling never raises a Pending invoice any
+       more — see its own comment), so none of the three belong in this queue any more either. An
+       HOD who needs to see order/billing history still has it in Tracker's PO vs Invoice screen and
+       the Admin Data tab's Data Lookup (Orders category) — just not as something to decide. */
 
     pick('TaDa').forEach(function (r) {
       out.push({ id:'tada_' + Appr.jid(r.Id), icon:'', kind:'TA/DA', go:'home', status:Appr.norm(r.Status),
@@ -14973,14 +14914,6 @@ var Appr = {
       if (o.note) h += '<div class="banner ' + (o.status === 'rejected' ? 'r' : 'b') + '" style="margin-top:10px">' +
         '<span></span><div><b>HOD ka message</b><br><span style="font-weight:500">' + esc(o.note) + '</span></div></div>';
       if (o.tip) h += '<div class="hint" style="margin-top:8px">' + esc(o.tip) + '</div>';
-      if (Auth.isAdmin() && o.act === 'so') {
-        h += '<label class="f">Order status badlo</label>' +
-          '<select class="in" onclick="event.stopPropagation()"' +
-          ' onchange="event.stopPropagation();Admin.setOrder(&quot;' + Appr.q(o.key) + '&quot;,this.value)">' +
-          ['Order in Process','Billing Done','Partial Order','Cancel Order'].map(function (x) {
-            return '<option value="' + x + '"' + (x === o.statusText ? ' selected' : '') + '>' + x + '</option>'; }).join('') +
-          '</select>';
-      }
       /* the big pair is the way IN to a PJP; with the month already open the decision bar under the
          day list is the only place a decision is made */
       if (o.act !== 'pjp' && o.act !== 'tada') h += Appr.btns(o, true);
@@ -14998,94 +14931,13 @@ var Appr = {
 
 
   /* ══ what is actually IN this request ══
-     The timeline says when it moved; this says what it is. An order shows its SKU lines with MRP,
-     units, value and NSV — the numbers an HOD is deciding on — and a claim shows the days it is made
-     of. Nobody should have to leave the queue to find out what they are approving. */
+     The timeline says when it moved; this says what it is. A claim shows the days it is made of.
+     Nobody should have to leave the queue to find out what they are approving. */
   detail: function (o) {
-    if (o.act === 'so') return Appr.orderDetail(o);
-    /* an invoice IS its SKU list — "5 of the 10" is only checkable line by line */
-    if (o.act === 'inv') return Appr.invDetail(o);
     /* an HOD gets Tada.hodView below — the same days, with a deduction box on each. Printing both
        would be the same table twice. */
     if (o.act === 'tada') return Auth.isAdmin() ? '' : Appr.tadaDetail(o);
     return '';
-  },
-  /* the invoice, SKU by SKU, against the order — the only view in which an approver can actually
-     verify "he ordered 10, the distributor billed 5" */
-  invDetail: function (o) {
-    var ord = DB.rows('SecOrders').filter(function (x) {
-      return String(x.PoNumber) === String(o.key); })[0];
-    if (!ord) return '';
-    var lines = Sec.lines(ord), per = Sec.billed(ord);
-    var hasPer = Object.keys(per).length > 0, full = String(ord.BillingType || 'Full') === 'Full';
-    if (!lines.length) return '<div class="hint" style="margin-top:8px">Is order ki SKU lines nahi mili — Sync karo.</div>';
-    var u = 0, b2 = 0, v = 0, bv = 0;
-    var body = lines.map(function (l) {
-      var q = num(l.Units);
-      var bq = hasPer ? Math.max(0, Math.min(num(per[String(l.Sku)]), q)) : (full ? q : 0);
-      var lv = num(l.Value), ivv = q ? Math.round(bq * (lv / q)) : 0;
-      u += q; b2 += bq; v += lv; bv += ivv;
-      var g = q - bq;
-      return '<tr' + (g > 0 ? ' class="bad"' : '') + '><td><b class="nm">' +
-        esc(l.SkuName || l.Sku || '—') + '</b><div class="hint">' + esc(l.Brand || '') + '</div></td>' +
-        '<td class="num">' + q + '</td><td class="num">' + bq + '</td>' +
-        '<td class="num">' + (g > 0 ? g : '—') + '</td>' +
-        '<td class="num">' + inr(lv) + '</td><td class="num">' + inr(ivv) + '</td></tr>';
-    }).join('');
-    return '<div class="sec-title" style="margin-top:12px">Invoice — SKU by SKU</div>' +
-      '<div class="tw"><table><thead><tr><th>SKU</th><th class="num">Order</th>' +
-      '<th class="num">Invoice</th><th class="num">Gap</th><th class="num">Order value</th>' +
-      '<th class="num">Invoice value</th></tr></thead><tbody>' + body +
-      '<tr class="tot"><td><b>TOTAL</b></td><td class="num"><b>' + u + '</b></td>' +
-      '<td class="num"><b>' + b2 + '</b></td>' +
-      '<td class="num"><b>' + (u - b2 > 0 ? (u - b2) : '—') + '</b></td>' +
-      '<td class="num"><b>' + inr(v) + '</b></td><td class="num"><b>' + inr(bv) + '</b></td>' +
-      '</tr></tbody></table></div>' +
-      (hasPer || full ? '' : '<div class="hint" style="margin-top:6px">Purana invoice — SKU-wise ' +
-        'detail us waqt save nahi hoti thi.</div>');
-  },
-  orderDetail: function (o) {
-    var ord = DB.rows('SecOrders').filter(function (x) {
-      return String(x.PoNumber) === String(o.key); })[0];
-    if (!ord) return '';
-    var lines = [];
-    try { lines = JSON.parse(ord.LinesJson || '[]') || []; } catch (e) {}
-    if (!lines.length) lines = DB.rows('SecOrderLines').filter(function (l) {
-      return String(l.PoNumber) === String(o.key); });
-
-    var h = '<div class="sec-title" style="margin-top:12px">Order detail</div>' +
-      '<table class="ap-t">' +
-      '<tr><td>Store</td><td><b>' + esc(ord.StoreName || '—') + '</b></td></tr>' +
-      '<tr><td>Store code / city</td><td><b>' + esc(ord.CompanyCode || '—') + ' · ' +
-        esc(ord.City || '—') + '</b></td></tr>' +
-      '<tr><td>Distributor</td><td><b>' + esc(ord.DbName || '—') + '</b></td></tr>' +
-      '<tr><td>Visit type</td><td><b>' + esc(ord.Source || '—') + '</b></td></tr>' +
-      (ord.Reason ? '<tr><td>Reason</td><td><b>' + esc(ord.Reason) + '</b></td></tr>' : '') +
-      (ord.Remarks ? '<tr><td>Remarks</td><td><b>' + esc(ord.Remarks) + '</b></td></tr>' : '') +
-      '</table>';
-
-    if (!lines.length) return h + '<div class="hint" style="margin-top:8px">Is order me koi SKU nahi — ' +
-      'ye Cancel Order wala visit hai.</div>';
-
-    /* NSV computed fresh from Value (× 0.6), not read off l.NsvLakh — a freshly-punched order's
-       LinesJson never carries that field, so reading it here silently showed 0 per SKU. */
-    var u = 0, v = 0, nsv = 0;
-    lines.forEach(function (l) { u += num(l.Units); v += num(l.Value); nsv += num(l.Value) * .6 / 1e5; });
-    h += '<div class="tw" style="margin-top:10px"><table><thead><tr><th>SKU</th>' +
-      '<th class="num">MRP</th><th class="num">Qty</th><th class="num">MRP value</th>' +
-      '<th class="num">NSV ₹L</th></tr></thead><tbody>' +
-      lines.map(function (l) {
-        return '<tr><td><b class="nm">' + esc(l.SkuName || l.Sku || '—') + '</b>' +
-          '<div class="hint">' + esc(l.Brand || '') + (l.Category ? ' · ' + esc(l.Category) : '') +
-          (l.MslStatus ? ' · ' + esc(l.MslStatus) : '') + ' · ' + esc(l.Sku || '') + '</div></td>' +
-          '<td class="num">' + inr(l.Mrp) + '</td>' +
-          '<td class="num">' + num(l.Units) + '</td>' +
-          '<td class="num">' + inr(l.Value) + '</td>' +
-          '<td class="num">' + lakh(num(l.Value) * .6 / 1e5) + '</td></tr>'; }).join('') +
-      '<tr class="tot"><td><b>TOTAL — ' + lines.length + ' SKU</b></td><td></td>' +
-      '<td class="num"><b>' + u + '</b></td><td class="num"><b>' + inr(v) + '</b></td>' +
-      '<td class="num"><b>' + lakh(nsv) + '</b></td></tr></tbody></table></div>';
-    return h;
   },
   /* the claim, day by day — the same table the rep filled, read-only, with deductions shown in red */
   tadaDetail: function (o) {
@@ -16946,47 +16798,9 @@ var Admin = {
      generic Appr.act() contract: both buttons open the claim instead of deciding it unread. */
   tadaOk: function (id) { return Tada.jump(id); },
 
-  /* ORDER STATUS — an HOD chasing billing should not have to open the sheet.
-     Goes through Sec.commit so the line rows and totals stay in step. */
-  /* ══ the invoice decision ══
-     The rep raises the invoice in his Tracker; this is where it is signed off. Approving freezes it
-     (Trk.billingHtml goes read-only), rejecting sends it back with a reason the rep sees on the same
-     card he raised it from. Nothing about the ORDER changes either way — an invoice is a claim
-     about what the distributor billed, not a status of the order. */
-  invOk: function (po, ok) {
-    var o = DB.find('SecOrders', po); if (!o) return;
-    if (Busy.busy('inv_' + po)) return;
-    var ask = ok ? Promise.resolve('') : UI.prompt({ icon:'', title:'Invoice reject karein?',
-      danger:true, msg:'<b>' + esc(o.StoreName || '') + '</b> — ' + esc(o.PoNumber || '') +
-        '<br>Invoice: <b>' + num(o.BilledUnits) + ' / ' + num(o.TotUnits) + ' units</b>' +
-        '<br>Reject ke baad rep dobara invoice bana kar bhej sakta hai.',
-      label:'Reject reason', placeholder:'e.g. invoice copy se number match nahi kar raha',
-      multiline:true, required:true, requiredMsg:'Reason likhna zaroori hai', ok:'Reject karo' });
-    ask.then(function (rem) {
-      if (!ok && !rem) return;
-      Busy.run('inv_' + po, null, '', function () {
-        return DB.save('SecOrders', Object.assign({}, o, {
-          InvoiceStatus:ok ? 'Approved' : 'Rejected',
-          InvoiceHodBy:DB.me.name, InvoiceHodRole:Admin.role(),
-          InvoiceHodAt:new Date().toISOString(),
-          InvoiceRemarks:String(rem || '')
-        })).then(function () {
-          Log.add('Invoice', (ok ? 'Approved' : 'Rejected') + ' by ' + Admin.role(), po, o.StoreName);
-          Appr.bust(); render(); Nav.build();
-          toast(ok ? 'Invoice approve ho gaya' : 'Invoice reject ho gaya');
-        });
-      });
-    });
-  },
-  setOrder: function (po, st) {
-    var o = DB.find('SecOrders', po); if (!o) return;
-    var lines = Sec.lines(o);          /* JSON, or rebuilt from the SecOrderLines rows */
-    var nu = Object.assign({}, o, Admin.stamp(), { Status:st,
-      DeliveredAt:st === 'Billing Done' ? new Date().toISOString() : (o.DeliveredAt || '') });
-    Sec.commit(nu, lines, ' ' + o.StoreName + ' \u2192 ' + st).then(function () {
-      Log.add('Order', 'Status ' + st + ' by ' + Admin.role(), po, o.StoreName);
-    });
-  },
+  /* Orders/invoices/billing are no longer an HOD's to decide, or even watch from a queue — see
+     Appr.rows(). setOrder/invOk used to live here for exactly that; both are gone with their only
+     callers. An HOD who needs order history still has Tracker's PO vs Invoice and Data Lookup. */
 
   /* ══════════ PJP REVIEW — the day-by-day plan, for the person who has to decide ══════════
      ONE renderer, used by the Approvals card AND the Admin console's PJP tab, so the two can never
