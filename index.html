@@ -3698,7 +3698,11 @@ var Gate = {
     var code = DB.me.code, t = today();
     var pjp = DB.pjpMonth(code, t.slice(0, 7)).length > 0 ||
               DB.mine('PjpDraft').some(function (d) { return /approved/i.test(d.Status || ''); });
-    if (!pjp) return 0;
+    /* a bypassed rep with literally no PJP for the month can still plan and work today (see
+       Plan.html's byNoPjp path) — level has to track that real progress instead of freezing at 0
+       forever just because the month has no PJP to point to, or the Home hero keeps telling him to
+       "make a PJP" after he has already planned, notified and started working */
+    if (!pjp && !Bypass.on()) return 0;
     var plan = DB.find('DayPlan', code + '_' + t);
     if (!plan || !plan.PlanAt) return 1;
     if (!plan.NotifiedAt) return 1;
@@ -7021,7 +7025,15 @@ var Plan = {
        non-field day, which is sometimes garbage left over from an old row) only confused the screen
        into looking like two different plans at once. A non-field day shows nothing here at all — the
        Working With line and its own bracket below (Meeting type, Duration, Remark…) is the whole story. */
-    if (!pjp && !r.OffPjp) {
+    /* ── bypass, and there is no PJP to fall back on at all ──
+       The normal escape hatch for "the master is wrong for today" is Change PJP — but that raises a
+       Deviation an HOD has to approve, which is exactly the sequence bypass exists to skip. A
+       bypassed rep with no PJP for the whole month would otherwise be stuck at the plain banner
+       below with no way to even ENTER a plan. So bypass gets its own, lighter path: pick Working
+       With (and, on a field day, State/Town/Beat) right here and save straight away — no approval
+       wait, same as every other bypassed action. */
+    var byNoPjp = !pjp && !r.OffPjp && Bypass.on();
+    if (!pjp && !r.OffPjp && !byNoPjp) {
       /* short, and it says what the master actually holds — a rep who sees "no plan" on a day the
          sheet clearly has needs the fact, not a paragraph */
       var near = DB.pjpNear(DB.me.code, t);
@@ -7029,6 +7041,21 @@ var Plan = {
         'Is month ka PJP update nahi hai. Kuch galat lage to admin se baat karo.' +
         (near.has ? '<br><span style="font-weight:500">Master me is month ke ' + near.has +
           ' din hain — aaj ka nahi.</span>' : '') + '</div></div>';
+    } else if (byNoPjp) {
+      h += '<div class="banner b" style="margin-top:8px"><span>i</span><div><b>Bypass ON</b><br>' +
+        '<span style="font-weight:500">Is month ka PJP master me nahi hai — bypass ki wajah se seedha ' +
+        'aaj ka plan khud bana sakte ho, HOD approval ki zaroorat nahi.</span></div></div>' +
+        '<label class="f" style="margin-top:10px">Working With</label>' +
+        '<select class="in" id="pl_ww" onchange="Plan.setWw(this.value)">' +
+        Plan.WW.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (ww === o[0] ? ' selected' : '') + '>' +
+          esc(o[1]) + '</option>'; }).join('') + '</select>';
+      if (field) {
+        var bst = Plan.pickVal('state') || (Plan.states()[0] || '');
+        var btw = Plan.pickVal('town');
+        h += '<label class="f" style="margin-top:8px">State</label>' + Plan.pickSel('state', Plan.states(), bst) +
+          '<label class="f" style="margin-top:8px">Town / City</label>' + Plan.pickSel('town', Plan.towns(bst), btw) +
+          '<label class="f" style="margin-top:8px">Beat / Market</label>' + Plan.pickSel('beat', Plan.beats(btw), Plan.pickVal('beat'));
+      }
     } else if (field) {
       h += '<div style="margin-top:10px"><label class="f">State</label>' +
         '<input class="in lk" readonly value="' + esc(Plan.stateFor(r, pjp, shTown) || '—') + '"></div>' +
@@ -7041,11 +7068,13 @@ var Plan = {
             ' · <i>No focus brand for today, make the most of whatever you can</i>') + '</div>' : '');
     }
 
-    /* Working With is part of the approved plan, so it is displayed, not offered as a dropdown. The
-       hidden input keeps Plan.save reading from ONE place whichever way the value was chosen. */
-    h += '<label class="f" style="margin-top:14px">Working With</label>' +
+    /* Working With is part of the approved plan, so it is normally displayed, not offered as a
+       dropdown — the hidden input keeps Plan.save reading from ONE place whichever way the value
+       was chosen. A bypassed no-PJP day already rendered a REAL, visible select with this same id
+       above, so it is not redeclared here — a duplicate id would just make the later one dead. */
+    h += (byNoPjp ? '' : '<label class="f" style="margin-top:14px">Working With</label>' +
       '<input class="in lk" readonly value="' + esc(Plan.wwFull(r, ww)) + '">' +
-      '<input type="hidden" id="pl_ww" value="' + esc(ww) + '">' +
+      '<input type="hidden" id="pl_ww" value="' + esc(ww) + '">') +
       /* the ONE place that used to render Meeting-type/duration, Remark, Leave-reason etc. was the
          Change-PJP popup — a day already approved AS a Meeting/Leave day had no such popup open,
          so there was nothing on screen to satisfy Plan.check()'s requirement for it. Same fields,
