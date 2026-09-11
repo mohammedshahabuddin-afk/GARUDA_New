@@ -2961,17 +2961,147 @@ I18n.D.en = I18n.EN = {
     'How much was ordered against the PO, and how much actually came — side by side. This screen is read-only; a Partial Order is recorded directly, a Full invoice is approved by the HOD.',
   'Sirf record ke liye — koi approval nahi chahiye. Kuch galat lage to seedha rep se ya PO vs Invoice screen se cross-check kar lo.':
     'Just a record — no approval needed. If something looks off, cross-check directly with the rep or on the PO vs Invoice screen.',
-  'Order tab kholo':'Open the order tab'
+  'Order tab kholo':'Open the order tab',
+
+  /* ── the work-date and no-WhatsApp bypass, and the HR attendance sheet ── */
+  'Us din ka PJP: ':'That day’s PJP: ',
+  'Us din ka PJP master me nahi mila':'That day’s PJP was not found in the master',
+  'Kis din ka data bhar rahe ho?':'Which day are you filling in?',
+  'Bypass ON hai — purane din ka kaam bhi bhar sakte ho. Aaj ka bharna ho to isse chhed-chhad mat karo.':'Bypass is ON — you can fill in an earlier day too. Leave this alone if you are recording today.',
+  'Purane din ka data bhara ja raha hai':'You are filling in an earlier day',
+  'Jo bhi save karoge wo isi din par jayega, aaj par nahi.':'Everything you save will go onto that day, not today.',
+  'Aaj par wapas':'Back to today',
+  'Aaj par wapas aa gaye':'Back on today',
+  'Purane din ka data bhar rahe ho — upar dekho':'You are filling in an earlier day — see the top of the screen',
+  'Purane din ka Plan':'Plan for an earlier day',
+  'WhatsApp nahi bhej pa rahe? Bypass ON hai — din bina bheje bhi shuru kar sakte ho. Sheet me likha jayega ki message nahi gaya.':'Cannot send on WhatsApp? Bypass is ON — you can start the day without sending. The sheet will record that the message did not go.',
+  'Bina WhatsApp ke din shuru karo':'Start the day without WhatsApp',
+  'Din shuru kar rahe hain…':'Starting the day…',
+  'Ye sirf bypass ke saath hota hai':'This only works with a bypass',
+  'Din shuru — Field khul gaya (WhatsApp nahi bheja)':'Day started — Field is open (no WhatsApp sent)',
+  'Purane din ka data bhi bhar sakte ho — upar se din chuno':'You can fill in earlier days too — pick the day at the top',
+  'WhatsApp bheje bina bhi din shuru kar sakte ho':'You can start the day without sending WhatsApp',
+  '· photo, tab-order, purani date aur WhatsApp — sab optional':'· photo, tab order, back-dating and WhatsApp — all optional',
+  'Is cycle me koi employee nahi mila':'No employee found in this cycle',
+  'HR attendance sheet':'HR attendance sheet',
+
+  /* ── the strings the 20 ported issues added ── */
+  /* pre-existing, found by the sweep: 'pehle' alone was being matched and the run came out as
+     "— inside Channel Type chuno —". The whole run needs its own key. */
+  '— pehle Channel Type chuno —':'— choose a Channel Type first —',
+  '— pehle Store Category chuno —':'— choose a Store Category first —',
+  'Abhi aapka apna target chal raha hai.':'Your own target is in effect.',
+  'Abhi company plan chal raha hai. Apna target bharna optional hai.':'The company plan is in effect. Setting your own target is optional.',
+  'Mera target badlo':'Change my target',
+  'Company plan wapas lena hai?':'Go back to the company plan?',
+  'Aapka apna target hat jayega aur company plan ke numbers wapas aa jayenge.':'Your own target will be removed and the company plan numbers will come back.',
+  'Haan, company plan lo':'Yes, use the company plan',
+  'Rehne do':'Leave it',
+  'Company plan wapas lag gaya':'The company plan is back',
+  'Ye outlet interested hai?':'Is this outlet interested?',
+  'Haan — interested':'Yes — interested',
+  'Nahi — interested nahi':'No — not interested',
+  'Ye chunna zaroori hai — iske baad hi baaki form khulega.':'This has to be chosen — the rest of the form opens after it.',
+  'Interested nahi':'Not interested',
+  'Sirf reason aur photo chahiye — baaki survey chhod do. Visit phir bhi record hoga.':'Only the reason and a photo are needed — skip the rest of the survey. The visit is still recorded.',
+  'Ye outlet interested hai ya nahi — chuno':'Choose whether this outlet is interested',
+  'Kyun interested nahi hai, likho':'Write why they are not interested',
+  '15-digit GSTIN, agar hai':'15-digit GSTIN, if any',
+  'GST number 15 character ka hota hai — sahi bharo ya khali chhod do':'A GST number is 15 characters — enter it correctly or leave it blank',
+  '16 · Brand — kaunse chahiye':'16 · Brand — which ones',
+  '(ek se zyada chun sakte ho)':'(you can pick more than one)',
+  'Abhi koi brand nahi chuna':'No brand chosen yet',
+  '← Wapas Field me':'← Back to Field',
+  'Kab tak chalega?':'Until when?',
+  'Khali chhoda to hamesha ke liye chalega — tareekh daalna behtar hai.':'Left blank it runs forever — setting a date is better.',
+  'Bypass khatam':'Bypass expired',
+  'Purani date ke liye admin se bypass maango':'Ask your admin for a bypass to use an older date'
 };
 
 /* ═══════════════ STORE — cache + offline queue ═══════════════ */
 /* ntf is a PREFIX, not a key: the read receipts are stored per employee code (K.ntf + '_' + code),
    because a phone in the market gets handed around and one rep's dismissals are not another's. */
-var K = { sess:'g2_session', cache:'g2_cache', queue:'g2_queue', users:'g2_users', pulled:'g2_pulled', lock:'g2_lock', navoff:'g2_navoff', ntf:'g2_ntf' };
+var K = { sess:'g2_session', cache:'g2_cache', queue:'g2_queue', users:'g2_users', pulled:'g2_pulled', lock:'g2_lock', navoff:'g2_navoff', ntf:'g2_ntf', prev:'g2_prev', wday:'g2_wday' };
 var Store = {
   get: function (k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
   set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
   del: function (k) { try { localStorage.removeItem(k); } catch (e) {} }
+};
+
+
+/* ═══════════════ BIG — the offline mirror, in IndexedDB ═══════════════
+   The mirror is this rep's whole world: every master they can see plus every transactional row they
+   own. Measured against the live data it is around 7 MB. localStorage on the phones this runs on
+   tops out near 4.75 MB. So setItem threw QuotaExceededError, Store.set caught it and returned
+   false, and nothing was listening — the app LOOKED like it had an offline cache and did not have
+   one. Every cold open re-pulled the entire sheet, and a rep with no signal had nothing at all.
+
+   IndexedDB has no such ceiling, and it stores the object itself rather than a JSON string, so
+   saving no longer means serialising megabytes on the main thread. The cost is that reading it is
+   asynchronous, which is why DB.boot() now returns a promise.
+
+   Everything degrades: private mode, a blocked database, an old browser — open() resolves null and
+   the app runs exactly as it does today, from the network, with the small keys still in
+   localStorage. */
+var Big = {
+  NAME:'garuda', ST:'kv', _p:null,
+  open: function () {
+    if (Big._p) return Big._p;
+    Big._p = new Promise(function (res) {
+      var done = false, fin = function (v) { if (!done) { done = true; res(v); } };
+      /* a database that is blocked (another tab mid-upgrade) never fires either handler, and the
+         app must not hang on the splash screen waiting for it */
+      setTimeout(function () { fin(null); }, 2500);
+      try {
+        if (typeof indexedDB === 'undefined') return fin(null);
+        var rq = indexedDB.open(Big.NAME, 1);
+        rq.onupgradeneeded = function () {
+          try { rq.result.createObjectStore(Big.ST); } catch (e) {}
+        };
+        rq.onsuccess = function () { fin(rq.result); };
+        rq.onerror = rq.onblocked = function () { fin(null); };
+      } catch (e) { fin(null); }
+    });
+    return Big._p;
+  },
+  get: function (k) {
+    return Big.open().then(function (db) {
+      if (!db) return null;
+      return new Promise(function (res) {
+        try {
+          var r = db.transaction(Big.ST, 'readonly').objectStore(Big.ST).get(k);
+          r.onsuccess = function () { res(r.result === undefined ? null : r.result); };
+          r.onerror = function () { res(null); };
+        } catch (e) { res(null); }
+      });
+    })['catch'](function () { return null; });
+  },
+  set: function (k, v) {
+    return Big.open().then(function (db) {
+      if (!db) return false;
+      return new Promise(function (res) {
+        try {
+          var tx = db.transaction(Big.ST, 'readwrite');
+          tx.objectStore(Big.ST).put(v, k);
+          tx.oncomplete = function () { res(true); };
+          tx.onerror = tx.onabort = function () { res(false); };
+        } catch (e) { res(false); }
+      });
+    })['catch'](function () { return false; });
+  },
+  del: function (k) {
+    return Big.open().then(function (db) {
+      if (!db) return false;
+      return new Promise(function (res) {
+        try {
+          var tx = db.transaction(Big.ST, 'readwrite');
+          tx.objectStore(Big.ST)['delete'](k);
+          tx.oncomplete = function () { res(true); };
+          tx.onerror = tx.onabort = function () { res(false); };
+        } catch (e) { res(false); }
+      });
+    })['catch'](function () { return false; });
+  }
 };
 
 /* ═══════════════ API ═══════════════ */
@@ -3039,17 +3169,40 @@ var DB = {
         ActivityLog:'Id', Photos:'Key', Notify:'Id' },
 
   boot: function () {
-    var c = Store.get(K.cache, null);
-    if (c) { DB.m = c.m || {}; DB.t = c.t || {}; DB.me = c.me || null; DB.pulledAt = c.at || 0;
-      DB.mAt = c.mAt || 0; DB.mver = c.mver || 0; DB.counts = c.counts || {};
-      /* a device can go straight from this cached copy into a fully offline day without ever
-         reaching pull()'s own DB.fix() call — so a phone that boots offline still gets the same
-         column-name normalisation (whitespace/case fixes, the retailer-master rename backfill)
-         as one that syncs first */
-      DB.fix(); }
+    return Big.get(K.cache).then(function (c) {
+      /* ONE-TIME MIGRATION: on a device where the mirror happened to fit, the old copy is still in
+         localStorage. Move it across, then drop it either way — the quota it was holding is needed
+         by the small keys (session, queue, language) that still live there. */
+      if (!c) c = Store.get(K.cache, null);
+      Store.del(K.cache);
+      if (c) { DB.m = c.m || {}; DB.t = c.t || {}; DB.me = c.me || null; DB.pulledAt = c.at || 0;
+        DB.mAt = c.mAt || 0; DB.mver = c.mver || 0; DB.counts = c.counts || {};
+        /* a device can go straight from this cached copy into a fully offline day without ever
+           reaching pull()'s own DB.fix() call — so a phone that boots offline still gets the same
+           column-name normalisation (whitespace/case fixes, the retailer-master rename backfill)
+           as one that syncs first */
+        DB.fix();
+        DB.cache(true); }
+      return !!c;
+    });
   },
-  cache: function () { Store.set(K.cache, { m:DB.m, t:DB.t, me:DB.me, at:DB.pulledAt,
-    mAt:DB.mAt, mver:DB.mver, counts:DB.counts }); },
+  /* ── DEBOUNCED, because this used to run on the main thread on every save ──
+     A single screen save calls DB.cache() more than once, and each call serialised the ENTIRE
+     mirror synchronously — that was the freeze between tapping Save and the screen responding.
+     The writes now coalesce into one, off the critical path, and a page being hidden forces it out
+     immediately so nothing is lost to a swipe-away. Pass true to write right now. */
+  cacheT:null,
+  /* the cache stores the REAL signed-in user, never the rep currently being previewed - otherwise
+     an admin who closes the app mid-preview reopens it as somebody else */
+  snap: function () { return { m:DB.m, t:DB.t,
+    me:(typeof Preview !== 'undefined' && Preview.on) ? Preview.real : DB.me,
+    at:DB.pulledAt, mAt:DB.mAt, mver:DB.mver, counts:DB.counts }; },
+  cache: function (now) {
+    if (DB.cacheT) { clearTimeout(DB.cacheT); DB.cacheT = null; }
+    if (now === true) return Big.set(K.cache, DB.snap());
+    DB.cacheT = setTimeout(function () { DB.cacheT = null; Big.set(K.cache, DB.snap()); }, 400);
+    return true;
+  },
 
   /* ── LOAD TIME, WITHOUT TRADING AWAY CORRECTNESS ──
      The rule stays "the sheet always wins". What changed is only how much travels:
@@ -3104,7 +3257,14 @@ var DB = {
         DB.pjpDupes = dup;
       }
       DB.TXN.forEach(function (k) { if (r[k]) DB.t[k] = r[k]; });
-      DB.me = r.me || DB.me;
+      /* ── a sync must NOT end a preview ──
+         `r.me` is whoever the DEVICE is authenticated as, which during a preview is the ADMIN, not
+         the rep being looked at. Assigning it here silently dropped the admin back into their own
+         identity on the next background pull (every 3 minutes, and on every tab open via DB.maybe)
+         while the screen still said Preview. The preview's own identity is the one thing a pull may
+         not touch; everything else about the response applies exactly as before. */
+      if (typeof Preview !== 'undefined' && Preview.on) { Preview.real = r.me || Preview.real; }
+      else DB.me = r.me || DB.me;
       DB.pulledAt = Date.now();
       DB.cache();
       /* the sheet is the truth: drop anything this device is holding that no longer exists there */
@@ -3152,14 +3312,31 @@ var DB = {
      few KB instead of the whole master set. */
   maybe: function () { if (!DB.fresh() && Api.online()) DB.pull(false, { txn:true }).then(render); },
 
-  rows: function (tab) { return (DB.t[tab] || []).slice(); },
+  /* ── every dashboard, tracker and export reads its rows through here ──
+     …which is exactly why the test-user rule lives here and nowhere else: one definition, so no two
+     screens can disagree about whether HCPLTEST's fake month counts.
+     It only ever subtracts for an ADMIN/HOD — a rep's cache holds nothing but his own rows, so the
+     filter is skipped outright on his device and costs nothing. The test user looking at his own
+     screens sees everything, as does an admin previewing him (Auth.isAdmin() is false in a
+     preview). Use rowsAll() where the point IS to see a named person's raw rows. */
+  rows: function (tab) {
+    var all = DB.t[tab] || [];
+    if (!all.length || DB.meIsTest() || typeof Auth === 'undefined' || !Auth.isAdmin()) return all.slice();
+    return all.filter(DB.keepRow);
+  },
+  /* unfiltered — for the console's drill-down into ONE named employee, and for editing a row by key.
+     Hiding the test user there would mean an admin could not inspect or repair the very data the
+     test user exists to produce. */
+  rowsAll: function (tab) { return (DB.t[tab] || []).slice(); },
   mine: function (tab) {
     var me = (DB.me && DB.me.code) || '';
     return DB.rows(tab).filter(function (r) { return !r.EmpCode || String(r.EmpCode).toUpperCase() === me.toUpperCase(); });
   },
+  /* by key: always unfiltered — this answers "give me THIS row", not "give me the team's rows",
+     so an admin opening or repairing a test user's record must still get it back */
   find: function (tab, key) {
     var kc = DB.KEY[tab], v = String(key);
-    var a = DB.rows(tab);
+    var a = DB.rowsAll(tab);
     for (var i = 0; i < a.length; i++) if (String(a[i][kc]) === v) return a[i];
     return null;
   },
@@ -3244,14 +3421,26 @@ var DB = {
     if (d) return d;
     var u = (DB.m.LoginConfig || []).filter(function (x) { return String(x.Code).toUpperCase() === String(code).toUpperCase(); })[0];
     return u ? toISO(u.DateofJoining) : (DB.me && DB.me.doj ? toISO(DB.me.doj) : ''); },
-  /* my stores = Master_Stores where EmAsm is me (name or code); fallback: all */
+  /* my stores = Master_Stores where EmAsm is me (name or code); fallback: all
+     MEMOISED. This scans Master_Stores — 7,000+ rows — and it is called 17 times across the app,
+     several of them inside render loops (the store picker called it 61 times per keystroke). The
+     answer only changes when a pull replaces the master or the signed-in user changes, so it is
+     computed once per those and handed back by reference afterwards. Holding the identity stable
+     also matters on its own: Field.pick(i) indexes into this array, so a fresh copy each call would
+     be a correctness risk, not only a slow one.
+     DB.fix() clears the memo, because it rewrites the mapping column in place after a pull. */
+  _msAll:null, _msMe:null, _ms:null,
   myStores: function () {
-    var me = (DB.me.name || '').toUpperCase().replace(/\s+/g, ' ').trim(), code = (DB.me.code || '').toUpperCase();
-    var all = DB.m.Master_Stores || [];
+    var all = DB.m.Master_Stores || [], who = (DB.me && DB.me.code ? DB.me.code : '') + '|' + (DB.me && DB.me.name ? DB.me.name : '');
+    if (DB._ms && DB._msAll === all && DB._msMe === who) return DB._ms;
+    var me = ((DB.me && DB.me.name) || '').toUpperCase().replace(/\s+/g, ' ').trim();
+    var code = ((DB.me && DB.me.code) || '').toUpperCase();
     var mine = all.filter(function (s) { var a = String(s.EmAsm || '').toUpperCase().replace(/\s+/g, ' ').trim();
       return a && (a === me || a === code); });
-    return mine.length ? mine : all;
+    DB._msAll = all; DB._msMe = who; DB._ms = mine.length ? mine : all;
+    return DB._ms;
   },
+  msBust: function () { DB._ms = null; DB._msAll = null; DB._msMe = null; },
   /* one distributor, by code, from Master_Distributors — the authority on what a distributor IS */
   distByCode: function (code) {
     var q = String(code == null ? '' : code).trim().toUpperCase();
@@ -3314,6 +3503,53 @@ var DB = {
     return gaps;
   },
   products: function () { return DB.m.Master_Products || []; },
+
+  /* ── the TEST USER is not a salesman ──
+     HCPLTEST exists so the app can be demonstrated and rehearsed against a complete, self-contained
+     world (see seedTestData in backend.gs): ten stores, three distributors, a month of orders. Every
+     one of those rows is FAKE, and while they sat in the team aggregates the admin's Summary,
+     Tracker, Me-v/s-Team and every export were reporting a coverage and an order value that included
+     work nobody did.
+     The rule is narrow on purpose: the rows are still there, still sync, and the test user's OWN
+     screens are completely unaffected — he sees his own data exactly as any rep does. They are only
+     dropped from a view that is ABOUT SOMEBODY ELSE, i.e. an admin or HOD looking across the team.
+     One definition, so no report can quietly disagree with another. */
+  TEST_CODES:['HCPLTEST'],
+  TEST_NAMES:['TEST USER'],
+  isTestCode: function (code) {
+    return DB.TEST_CODES.indexOf(String(code == null ? '' : code).trim().toUpperCase()) >= 0;
+  },
+  /* is the person LOOKING at this screen the test user? then nothing is hidden from them */
+  meIsTest: function () { return DB.isTestCode((DB.me && DB.me.code) || ''); },
+  /* one row: keep it? */
+  keepRow: function (r) {
+    if (!r || DB.meIsTest()) return true;
+    if (r.EmpCode !== undefined && DB.isTestCode(r.EmpCode)) return false;
+    if (r.Code !== undefined && DB.isTestCode(r.Code)) return false;
+    var nm = String(r.EmpName == null ? '' : r.EmpName).trim().toUpperCase();
+    return DB.TEST_NAMES.indexOf(nm) < 0;
+  },
+  /* a list of transactional or master rows, with the test user's taken out. Safe to call from a
+     rep's own screen: their own rows are never the test user's, so it is a no-op there. */
+  noTest: function (rows) {
+    if (!rows || !rows.length || DB.meIsTest()) return rows || [];
+    return rows.filter(DB.keepRow);
+  },
+  /* ── MOU: Measurement of Unit (issue 14) ──
+     "10 gm" / "50 ml" / "Pack of 3" - what one unit of this SKU actually is. Without it a line
+     reading "3 units" is ambiguous to everyone downstream. It comes from the product master, whose
+     column has been spelt several ways across uploads, so every plausible name is accepted and an
+     absent column simply reads blank rather than breaking the line. */
+  MOU_COLS:['Mou', 'MOU', 'Uom', 'UOM', 'Unit', 'Units', 'PackSize', 'Pack Size', 'Size',
+            'Measurement', 'MeasurementOfUnit', 'Grammage'],
+  mou: function (p) {
+    if (!p) return '';
+    for (var i = 0; i < DB.MOU_COLS.length; i++) {
+      var v = p[DB.MOU_COLS[i]];
+      if (v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim();
+    }
+    return '';
+  },
   /* ── one comparison for every code in the app ──
      A code arrives from three places (LoginConfig, Master_Employees, a pasted master column) and any
      of them can carry a space or a different case. Nothing may depend on which. */
@@ -3324,6 +3560,7 @@ var DB = {
   /* trim the codes and ISO the dates on the masters everything is matched against. Called once per
      pull, before the de-dupe. */
   fix: function () {
+    DB.msBust();          /* this rewrites the mapping column in place; any memo is now stale */
     ['Master_PJP', 'Master_Employees', 'Master_Phasing'].forEach(function (t) {
       (DB.m[t] || []).forEach(function (r) {
         /* the retailer-master rename (12 Aug '26 spec) renames Master_PJP's own employee column
@@ -3624,6 +3861,10 @@ var Preview = {
       doj:toISO(e.DateofJoining), bypass:Admin.isBypass(lc), bypassBy:lc.BypassBy || '',
       bypassNote:lc.BypassNote || '' };
     Preview.reset();
+    /* remembered, so a reload - or the phone killing a backgrounded tab - comes back INTO the
+       preview instead of silently dropping the admin into their own console half way through
+       looking at somebody's day. Only Exit clears it. */
+    Store.set(K.prev, { code:e.Code });
     document.body.classList.add('prev');
     Nav.build(); Router.go('home');
     /* pull fresh so "beech din ka scene" is genuinely current, not whatever was cached */
@@ -3640,8 +3881,14 @@ var Preview = {
     Cam.clear();
     Flush.clear();                       /* nothing of the admin's is pending a save */
   },
+  /* the only way out, and therefore the only thing that forgets it */
   stop: function () {
-    DB.me = Preview.real; Preview.on = false;
+    Store.del(K.prev);
+    /* Exit with nothing to go back to would blank DB.me outright, and every screen reads DB.me.code.
+       It can happen for real: start() bails out when the employee is not in the master (a code that
+       has since been removed), leaving `real` unset while an Exit button is still on screen. */
+    if (Preview.real) DB.me = Preview.real;
+    Preview.on = false;
     Preview.reset();
     document.body.classList.remove('prev');
     Nav.build(); Router.go('admin'); toast('Preview band');
@@ -3673,11 +3920,13 @@ var Bypass = {
   /* what it waives, in the rep's language — used by the Home strip and the admin's confirm dialog */
   WAIVES:['Photo compulsory nahi rahegi (gallery se bhi chalega)',
           'Tab ka order (PJP → Plan → Notify → Field) nahi rokega',
-          'PJP adhoora bhi bhej sakte ho, window ke bahar bhi'],
+          'PJP adhoora bhi bhej sakte ho, window ke bahar bhi',
+          'Purane din ka data bhi bhar sakte ho — upar se din chuno',
+          'WhatsApp bheje bina bhi din shuru kar sakte ho'],
   strip: function () {
     if (!Bypass.on()) return '';
     return '<div class="strip w"><span class="g"></span><div class="m"><b>Bypass ON</b>' +
-      '<i>· photo aur tab-order optional hain' + (Bypass.by() ? ' · ' + esc(Bypass.by()) : '') +
+      '<i>· photo, tab-order, purani date aur WhatsApp — sab optional' + (Bypass.by() ? ' · ' + esc(Bypass.by()) : '') +
       (Bypass.note() ? ' · ' + esc(Bypass.note()) : '') + '</i></div>' +
       '<button class="btn ghost" onclick="Bypass.info()">Kya kya?</button></div>';
   },
@@ -3690,12 +3939,78 @@ var Bypass = {
   }
 };
 
+/* ═══════════════ WORK DATE — which day is being filled in ═══════════════
+   Normally there is nothing to decide: a rep records today, and `today()` is the answer everywhere.
+
+   A bypass exists for the rep who could NOT record it on the day — a dead phone, a mid-cycle
+   joiner, a week of visits punched from a diary afterwards. Letting him past the gates but still
+   stamping every row with today's date produced a sheet that was wrong in a new way: the work
+   showed up on the wrong day, and the day he actually worked stayed empty and read as Absent.
+
+   So a live bypass lets him say WHICH DAY he is filling in, and everything that records the work
+   uses it: the day plan, orders, new outlets, POSM, the DFR and the EOD. `today()` still means
+   today — for the clock, for "is this in the future", and for every timestamp. Only the DATE OF THE
+   WORK moves.
+
+   Never the future, and never without a bypass. The choice is remembered so a re-render or a reload
+   does not silently drop him back onto today mid-entry, and it is shown as a loud red bar on every
+   screen, because entering Tuesday's work believing it is Wednesday is the one mistake this feature
+   can cause. */
+var Work = {
+  d:'',
+  boot: function () { Work.d = String(Store.get(K.wday, '') || ''); },
+  can: function () { return Bypass.on(); },
+  /* a stored back-date must not outlive the bypass that allowed it: if the grant expires overnight,
+     the rep is on today again the next time anything asks, with nothing to un-set by hand */
+  guard: function () { if (Work.d && !Work.can()) { Work.d = ''; Store.del(K.wday); } },
+  /* on = a bypass is live AND a past day has been chosen */
+  on: function () { Work.guard(); return Work.can() && !!Work.d && Work.d < today(); },
+  day: function () { return Work.on() ? Work.d : today(); },
+  set: function (v) {
+    var d = toISO(v);
+    if (!Work.can()) { toast('Purani date ke liye admin se bypass maango', 4000); return render(); }
+    if (d && d > today()) { toast('Aage ki date nahi chal sakti'); return render(); }
+    Work.d = (!d || d === today()) ? '' : d;
+    Store.set(K.wday, Work.d);
+    /* the whole app keys off this date — the plan row, the gate, every list on every screen */
+    Nav.build(); render();
+    toast(Work.on() ? 'Purane din ka data bhar rahe ho \u2014 upar dekho'
+                    : 'Aaj par wapas aa gaye', 3200);
+  },
+  clear: function () { Work.set(''); },
+  /* the bar. Two shapes: an offer while it is off, a warning while it is on. */
+  bar: function () {
+    if (!Work.can()) return '';
+    if (!Work.on()) {
+      return '<div class="card" style="padding:10px"><label class="f">Kis din ka data bhar rahe ho?</label>' +
+        '<input class="in" type="date" max="' + today() + '" value="' + today() +
+        '" onchange="Work.set(this.value)">' +
+        '<div class="hint" style="margin-top:5px">Bypass ON hai \u2014 purane din ka kaam bhi bhar sakte ho. ' +
+        'Aaj ka bharna ho to isse chhed-chhad mat karo.</div></div>';
+    }
+    /* the date is its own run - a value spliced into a sentence makes the whole sentence
+       untranslatable, and the date needs no translating */
+    return '<div class="banner w" style="border-color:var(--bad)"><span>!</span><div>' +
+      '<b>Purane din ka data bhara ja raha hai</b>' +
+      '<div style="font-weight:700;margin-top:2px">' + esc(dmy(Work.d)) + '</div>' +
+      '<span style="font-weight:500">Jo bhi save karoge wo isi din par jayega, aaj par nahi.</span>' +
+      '<div class="btns" style="margin-top:8px">' +
+      '<input class="in" type="date" max="' + today() + '" value="' + esc(Work.d) +
+      '" onchange="Work.set(this.value)" style="width:auto;flex:1 1 140px">' +
+      '<button class="btn ghost sm" style="width:auto" onclick="Work.clear()">Aaj par wapas</button>' +
+      '</div></div></div>';
+  }
+};
+/* the date every RECORD OF WORK is stamped with. today() still means today. */
+function wday() { return Work.day(); }
+
 /* ═══════════════ WORKFLOW GATE ═══════════════ */
 var Gate = {
   /* 0 base · 1 PJP ok → Plan · 2 plan saved+notified → Field · 3 field activity → SEC/POSM/EOD */
   level: function () {
     if (Auth.isAdmin()) return 3;
-    var code = DB.me.code, t = today();
+    /* the day being filled in, which is today unless a bypassed rep has said otherwise */
+    var code = DB.me.code, t = wday();
     var pjp = DB.pjpMonth(code, t.slice(0, 7)).length > 0 ||
               DB.mine('PjpDraft').some(function (d) { return /approved/i.test(d.Status || ''); });
     /* a bypassed rep with literally no PJP for the month can still plan and work today (see
@@ -3801,8 +4116,8 @@ var Gate = {
      Off and HO Holiday are not. The day's own saved plan decides it, falling back to what the approved
      master says before a plan exists. */
   fieldDay: function () {
-    var r = DB.find('DayPlan', (DB.me.code || '') + '_' + today()) || {};
-    var pjp = DB.pjpFor(DB.me.code, today());
+    var r = DB.find('DayPlan', (DB.me.code || '') + '_' + wday()) || {};
+    var pjp = DB.pjpFor(DB.me.code, wday());
     return Pjp.isField(Pjp.ww(r.WorkingWith || (pjp ? pjp.Ww : '') || 'Self Working'));
   },
   why: function (v) {
@@ -4383,7 +4698,10 @@ var Xl = {
       /* every second data row carries the band version of its own format, so a row reads straight
          across without losing its number formatting */
       bTxt:20, bInt:21, bMoney:22, bDec:23, bPct:24, bDate:25, bWrap:26, dtm:30,
-      K:27, V:28, T2:29 },
+      K:27, V:28, T2:29,
+      /* the HR attendance grid: a date row, a blue weekday header, a yellow Sunday header, a
+         bordered centred day cell, and the bordered header over the fixed left-hand columns */
+      hrTop:31, hrDay:32, hrSun:33, hrCell:34, hrHead:35 },
   /* the band twin of a style — used on alternate rows */
   BAND:{ 0:20, 4:20, 5:21, 6:22, 7:23, 8:24, 9:25, 19:26 },
   band: function (c) {
@@ -4516,13 +4834,15 @@ var Xl = {
       '<fill><patternFill patternType="solid"><fgColor rgb="FFFDF6E7"/><bgColor indexed="64"/></patternFill></fill>' +
       '<fill><patternFill patternType="solid"><fgColor rgb="FFFDEEEC"/><bgColor indexed="64"/></patternFill></fill>' +
       '<fill><patternFill patternType="solid"><fgColor rgb="FFF7F9FD"/><bgColor indexed="64"/></patternFill></fill>' +   /* 7 band */
-      '<fill><patternFill patternType="solid"><fgColor rgb="FFF1F5FF"/><bgColor indexed="64"/></patternFill></fill></fills>' +  /* 8 title */
+      '<fill><patternFill patternType="solid"><fgColor rgb="FFF1F5FF"/><bgColor indexed="64"/></patternFill></fill>' +   /* 8 title */
+      '<fill><patternFill patternType="solid"><fgColor rgb="FF00B0F0"/><bgColor indexed="64"/></patternFill></fill>' +   /* 9 HR day */
+      '<fill><patternFill patternType="solid"><fgColor rgb="FFFFFF00"/><bgColor indexed="64"/></patternFill></fill></fills>' +  /* 10 HR Sunday */
     '<borders count="3"><border/>' +
       '<border><top style="thin"><color rgb="FFB8C4DA"/></top></border>' +
       '<border><left style="thin"><color rgb="FFB8C4DA"/></left><right style="thin"><color rgb="FFB8C4DA"/></right>' +
         '<top style="thin"><color rgb="FFB8C4DA"/></top><bottom style="thin"><color rgb="FFB8C4DA"/></bottom></border></borders>' +
     '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
-    '<cellXfs count="31">' +
+    '<cellXfs count="36">' +
       '<xf xfId="0"/>' +                                                                  /* 0 default */
       '<xf xfId="0" fontId="3" applyFont="1"/>' +                                          /* 1 title */
       '<xf xfId="0" fontId="2" fillId="2" borderId="2" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">' +
@@ -4559,6 +4879,18 @@ var Xl = {
         '<alignment vertical="center"/></xf>' +
       /* 30 date-time */
       '<xf xfId="0" numFmtId="166" applyNumberFormat="1"/>' +
+      /* 31–35 the HR attendance grid. Every cell is bordered and centred, because the sheet is read
+         across a row and down a column at the same time and an unruled grid cannot be followed. */
+      '<xf xfId="0" fontId="1" borderId="2" applyFont="1" applyBorder="1" applyAlignment="1">' +
+        '<alignment horizontal="center" vertical="center"/></xf>' +                       /* 31 date row */
+      '<xf xfId="0" fontId="1" fillId="9" borderId="2" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">' +
+        '<alignment horizontal="center" vertical="center"/></xf>' +                       /* 32 weekday */
+      '<xf xfId="0" fontId="1" fillId="10" borderId="2" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">' +
+        '<alignment horizontal="center" vertical="center"/></xf>' +                       /* 33 Sunday */
+      '<xf xfId="0" borderId="2" applyBorder="1" applyAlignment="1">' +
+        '<alignment horizontal="center" vertical="center"/></xf>' +                       /* 34 day cell */
+      '<xf xfId="0" fontId="1" borderId="2" applyFont="1" applyBorder="1" applyAlignment="1">' +
+        '<alignment horizontal="center" vertical="center" wrapText="1"/></xf>' +          /* 35 fixed header */
     '</cellXfs>' +
     '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
   },
@@ -4724,7 +5056,7 @@ var Card = {
 
   /* ---------- what goes on the card ---------- */
   data: function () {
-    var t = today(), r = Plan.row(), pjp = DB.pjpFor(DB.me.code, t), e = DB.emp(DB.me.code) || {};
+    var t = wday(), r = Plan.row(), pjp = DB.pjpFor(DB.me.code, t), e = DB.emp(DB.me.code) || {};
     var s = Auth.session() || {};
     var dev0 = Plan.dev();          /* the day's own Change-PJP request, when there is one */
     var ww = r.WorkingWith || (pjp ? Pjp.ww(pjp.Ww) : 'Self Working');
@@ -5624,7 +5956,9 @@ var Home = {
 
   /* ══ the screen ══ */
   html: function () {
-    var t = today(), code = DB.me.code;
+    /* the day being filled in — Gate.level() already reasons about it, so the header has to name
+       it too or the two halves of this card describe different days */
+    var t = wday(), code = DB.me.code;
     var plan = DB.find('DayPlan', code + '_' + t);
     var pjp = DB.pjpFor(code, t);
     var l = Gate.level();
@@ -5662,8 +5996,9 @@ var Home = {
       '<h3 style="color:#fff;font-size:21px;margin:5px 0 3px;letter-spacing:-.02em">Namaste, ' +
         esc((DB.me.name || '').split(' ')[0]) + '</h3>' +
       '<div style="font-size:12.5px;opacity:.92;line-height:1.5">' +
-        (pjp ? 'Aaj ka PJP: <b>' + esc(pjp.Town || '—') + ' · ' + esc(pjp.Beat || '—') + '</b>'
-             : 'Aaj ka PJP master me nahi mila') + '</div>' +
+        (pjp ? (Work.on() ? 'Us din ka PJP: ' : 'Aaj ka PJP: ') +
+                 '<b>' + esc(pjp.Town || '—') + ' · ' + esc(pjp.Beat || '—') + '</b>'
+             : (Work.on() ? 'Us din ka PJP master me nahi mila' : 'Aaj ka PJP master me nahi mila')) + '</div>' +
       /* the next action, inset on the hero — the one thing to tap */
       '<div style="margin-top:12px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.22);' +
         'padding:12px;border-radius:12px">' +
@@ -5678,6 +6013,9 @@ var Home = {
       '</div>';
 
     h += Bypass.strip();
+    /* the day being filled in — offered on Home, where the rep starts, and repeated as a warning on
+       the Plan screen so it cannot be missed once it is on */
+    h += Work.bar();
 
     /* ══ TWO LEVELS OF NAVIGATION ══
        Level 1 — Dashboard · Tracker · Approvals: three genuinely different screens.
@@ -6756,9 +7094,9 @@ var Pjp = {
 
 /* ═══════════════ PLAN — today ═══════════════ */
 var Plan = {
-  id: function () { return DB.me.code + '_' + today(); },
+  id: function () { return DB.me.code + '_' + wday(); },
   row: function () { return DB.find('DayPlan', Plan.id()) || {}; },
-  dev: function () { return DB.find('Deviation', DB.me.code + '_' + today()); },
+  dev: function () { return DB.find('Deviation', DB.me.code + '_' + wday()); },
 
   /* ── Working-With options, labelled the way the previous app labelled them ── */
   WW:[['Self Working','Self Working'], ['ME Sales Team','With ME Sales Team'],
@@ -6968,7 +7306,7 @@ var Plan = {
   picked:null,                 /* {state, town, beat} captured by the Change-PJP popup */
 
   html: function () {
-    var t = today(), pjp = DB.pjpFor(DB.me.code, t), r = Plan.row(), dev = Plan.dev();
+    var t = wday(), pjp = DB.pjpFor(DB.me.code, t), r = Plan.row(), dev = Plan.dev();
     var ww = Plan.ww(), field = Pjp.isField(ww);
     var pend = dev && /pending/i.test(dev.Status || '');
 
@@ -6999,7 +7337,9 @@ var Plan = {
           '<button class="btn ghost" onclick="Router.go(\'appr\')">Meri requests</button></div></div>';
     }
 
-    var h = UI.head('', 'Aaj ka Plan', dmy(t) + ' · plan save karke HOD ko notify karo — tabhi Field khulega.');
+    var h = UI.head('', Work.on() ? 'Purane din ka Plan' : 'Aaj ka Plan',
+      dmy(t) + ' · plan save karke HOD ko notify karo — tabhi Field khulega.');
+    h += Work.bar();
 
     /* ── ONE card, and it is READ-ONLY. This is what the HOD approved; the only way to alter any of it
           — including Working With — is the Change PJP button, which opens a request. ── */
@@ -7127,6 +7467,16 @@ var Plan = {
         '<span class="who">' + esc(Plan.recips()) + '</span></button>' +
       '<button class="btn ghost" onclick="Card.zoom()" ' + (r.PlanAt ? '' : 'disabled') + '>Preview</button>' +
       '</div>' +
+      /* ── the bypass escape hatch ──
+         Without this a bypassed rep who cannot send the message never gets a NotifiedAt, so the gate
+         stays shut AND the attendance sheet reads the day as Absent. It is deliberately the quieter
+         of the two buttons: sending the message is still the normal way to start a day. */
+      (Bypass.on() && !r.NotifiedAt && r.PlanAt
+        ? '<div class="hint" style="margin-top:10px">WhatsApp nahi bhej pa rahe? Bypass ON hai — ' +
+          'din bina bheje bhi shuru kar sakte ho. Sheet me likha jayega ki message nahi gaya.</div>' +
+          '<div class="btns" style="margin-top:6px">' +
+          '<button class="btn ghost sm" onclick="Plan.startNoWa(this)">Bina WhatsApp ke din shuru karo</button></div>'
+        : '') +
       '</div>';
     return h;
   },
@@ -7172,6 +7522,31 @@ var Plan = {
     Plan.custOn = true; render();
   },
   custCancel: function () { Plan.custOn = false; Plan.custVals = {}; render(); },
+  /* ── the other half of the choice ──
+     There was a way in and no way back: once a day's target had been customised, the rep could
+     re-edit the numbers but could never say "actually, use the company plan". This writes the
+     default straight back, so the two options are genuinely two options. */
+  custReset: function () {
+    UI.confirm({ title:'Company plan wapas lena hai?', icon:'',
+      msg:'Aapka apna target hat jayega aur company plan ke numbers wapas aa jayenge.',
+      ok:'Haan, company plan lo', cancel:'Rehne do' }).then(function (yes) {
+      if (!yes) return;
+      Plan.custOn = false; Plan.custVals = {};
+      var r = Plan.row();
+      DB.save('DayPlan', Object.assign({}, r, {
+        PlanJson:JSON.stringify(Object.assign({}, Plan.planJson(r), { tgt:Plan.tgt() })) }))
+        .then(function () { render(); toast('Company plan wapas lag gaya'); });
+    });
+  },
+  /* whatever else PlanJson is carrying, so writing `tgt` never drops a sibling key */
+  planJson: function (r) {
+    try { return JSON.parse((r && r.PlanJson) || '{}') || {}; } catch (e) { return {}; }
+  },
+  /* is this day running the company plan, or the rep's own numbers? */
+  custIsOn: function () {
+    var def = Plan.tgt(), saved = Plan.dayTgt();
+    return def.some(function (x, i) { return Math.abs(num((saved[i] || x)[1]) - x[1]) > 0.005; });
+  },
   /* no render() here on purpose — a full re-render on every keystroke destroys and recreates the
      input mid-type (focus and cursor position both go with it), which is exactly what made typing a
      number feel broken while the up/down spinners still worked (each click is a discrete, completed
@@ -7224,8 +7599,21 @@ var Plan = {
       var tot = saved.reduce(function (a, x) { return a + num(x[1]); }, 0);
       h += '<tr class="tot"><td><b>TOTAL</b></td><td class="num"><b>' + defTot.toFixed(2) + '</b></td>' +
         '<td class="num"><b>' + tot.toFixed(2) + '</b></td></tr></tbody></table></div>' +
+        /* two named options, always both on screen, with the one in effect marked - rather than a
+           single button that only ever led one way */
+        /* one whole sentence per text run, no <b> splitting it and no value spliced in — see
+           I18n.tr: it can only translate what sits between a > and a < */
+        '<div class="hint" style="margin-top:8px">' + (Plan.custIsOn()
+            ? 'Abhi aapka apna target chal raha hai.'
+            : 'Abhi company plan chal raha hai. Apna target bharna optional hai.') +
+        '</div>' +
+        /* which one is in effect is said by the button STYLE, not by a tick glued to the label —
+           a label with a tick on it is a different dictionary key from the same label without */
         '<div class="btns" style="margin-top:8px">' +
-        '<button class="btn ghost sm" onclick="Plan.custOpen()">Customize my target</button></div>';
+        '<button class="btn ' + (Plan.custIsOn() ? 'ghost' : '') + ' sm"' +
+          (Plan.custIsOn() ? ' onclick="Plan.custReset()"' : ' disabled') + '>Company plan</button>' +
+        '<button class="btn ' + (Plan.custIsOn() ? '' : 'ghost') + ' sm" onclick="Plan.custOpen()">' +
+          (Plan.custIsOn() ? 'Mera target badlo' : 'Customize my target') + '</button></div>';
     }
     return h;
   },
@@ -7238,7 +7626,7 @@ var Plan = {
 
   /* ── Change PJP: a popup, not a second form on the page ── */
   changeOpen: function () {
-    var t = today(), pjp = DB.pjpFor(DB.me.code, t), r = Plan.row();
+    var t = wday(), pjp = DB.pjpFor(DB.me.code, t), r = Plan.row();
     var ex = Plan.dev();
     if (ex && /pending/i.test(ex.Status || '')) return toast('Request already sent — HOD approval ka wait karo');
     if (!Plan.left(ex)) return toast('Aaj ' + Plan.MAXCHG + ' change ho chuke hain — kal se naya din', 4200);
@@ -7277,7 +7665,7 @@ var Plan = {
      the day row already saved on DayPlan, the published Master_PJP row, or the rep's own draft for the
      month. HQ only when nothing says otherwise. */
   station: function () {
-    var t = today(), r = Plan.row(), dev = Plan.dev();
+    var t = wday(), r = Plan.row(), dev = Plan.dev();
     if (dev && /approved/i.test(String(dev.Status || '')) && dev.NewStation) return Pjp.stn(dev.NewStation);
     if (r && r.Station) return Pjp.stn(r.Station);
     var m = DB.pjpFor(DB.me.code, t);
@@ -7354,7 +7742,7 @@ var Plan = {
     return '';
   },
   save: function (quiet, el) {
-    var t = today(), pjp = DB.pjpFor(DB.me.code, t), e = DB.emp(DB.me.code) || {};
+    var t = wday(), pjp = DB.pjpFor(DB.me.code, t), e = DB.emp(DB.me.code) || {};
     var ww = val('pl_ww') || Plan.ww(), field = Pjp.isField(ww);
     var town = field ? Plan.pickVal('town') : '';
     var beat = field ? Plan.pickVal('beat') : '';
@@ -7384,13 +7772,21 @@ var Plan = {
     var wasCust = Plan.custOn;
     return DB.save('DayPlan', { Id:Plan.id(), Date:t, Zone:e.Zone || '', Hq:e.HQ || '',
       WorkingWith:ww, WwDetail:JSON.stringify(d), Town:town, Beat:beat, State:state,
-      Focus:field ? (pjp && pjp.Focus ? pjp.Focus : Pjp.focusFor(t)) : '', Week:pjp ? (pjp.Week || '') : '',
+      /* MasterFocus is the authority and it is edited every month; Master_PJP.Focus is a copy taken
+         when the plan was published and goes stale the moment the admin updates the week. Reading
+         the copy FIRST is what made a corrected focus never reach the day plan. The published value
+         is still the fallback, for a month MasterFocus has no row for. */
+      Focus:field ? (Pjp.focusFor(t) || (pjp && pjp.Focus) || '') : '', Week:pjp ? (pjp.Week || '') : '',
       Station:Plan.station(), OffPjp:off ? 'Yes' : '', Approval:off ? (Plan.dev() ? Plan.dev().Status : 'Pending') : 'PJP',
       ScTarget:field ? (num(val('pl_sc')) || 7) : 0, NsoTarget:field ? num(val('pl_nso')) : 0,
       PosmTarget:field ? num(val('pl_posm')) : 0,
       PlanJson:JSON.stringify({ tgt:custOk ? Plan.custRows() : Plan.dayTgt() }),
       PlanAt:r.PlanAt || new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }),
       NotifiedAt:r.NotifiedAt || '', StartAt:r.StartAt || '' }, { quiet:!!quiet }).then(function () {
+      /* station/city for today's TA/DA come straight off THIS plan — see Tada.autoSaveToday. Quiet
+         or not, the plan just moved, so today's claim day should never be left pointing at stale
+         station/city until the rep happens to open the TA/DA tab himself. */
+      Tada.autoSaveToday();
       if (!quiet) {
         if (wasCust) { Plan.custOn = false; Plan.custVals = {}; }
         Log.add('Plan', 'Saved', t, (town || ww) + (beat ? ' / ' + beat : '')); toast('Plan save ho gaya'); render(); Nav.build();
@@ -7399,12 +7795,17 @@ var Plan = {
   },
   /* text-only send. The Plan screen no longer offers it (the morning message is the image) — it stays
      as the automatic fallback inside Card.send for a device that cannot attach a file. */
+  /* ── stamp FIRST, then share ──
+     This used to open WhatsApp and stamp NotifiedAt afterwards. On a phone `window.open` hands the
+     tab to another app: the page is frozen or discarded before the save runs, so NotifiedAt was
+     never written - and the rep came back to "Plan HOD ko bhejo" still on screen and the Field tab
+     still shut, having just sent the plan. There is no cancel signal from a native share to wait
+     for, so the honest order is to record the send and then perform it. */
   notify: function (el) {
     var r = Plan.row();
     if (!r.PlanAt) return toast('Pehle plan save karo');
-    Share.wa(Plan.msg());
     return Busy.run('notify_' + today(), el, 'Bhej raha hai…', function () {
-      return Plan.markNotified();
+      return Plan.markNotified().then(function () { Share.wa(Plan.msg()); });
     });
   },
   /* Notifying the HOD is what unlocks the Field tab, so the stamp lives in ONE place — both the image
@@ -7412,20 +7813,43 @@ var Plan = {
      THIS is the start of the day: StartAt is the full timestamp of the moment the plan went out, and
      every "din shuru" count in the app reads it (falling back to NotifiedAt for older rows). */
   started: function (r) { return !!(r && (r.StartAt || r.NotifiedAt)); },
-  markNotified: function () {
+  /* ── the day can be STARTED without sending the message (bypass only) ──
+     Notifying the HOD on WhatsApp is what starts the day for everybody else, and that is the right
+     rule: the message IS the notification. But a bypass is granted precisely to the rep who cannot
+     complete the normal flow, and for him the requirement had a sting in its tail — with no
+     NotifiedAt the gate never left level 1, and, worse, Plan.started() stayed false, so the
+     Attendance and HR sheets recorded a day he worked as ABSENT.
+     This records the same stamps with no share, and says so in the sheet's own Remarks so nobody
+     later reads it as a message that was sent. */
+  startNoWa: function (el) {
+    if (!Bypass.on()) return toast('Ye sirf bypass ke saath hota hai');
+    var r = Plan.row();
+    if (!r.PlanAt) return toast('Pehle plan save karo');
+    return Busy.run('startnowa_' + wday(), el, 'Din shuru kar rahe hain\u2026', function () {
+      return Plan.markNotified(true);
+    });
+  },
+  markNotified: function (noWa) {
     var r = Plan.row();
     if (!r.PlanAt) return Promise.resolve(null);
     return DB.save('DayPlan', Object.assign({}, r, {
       NotifiedAt:new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }),
-      StartAt:r.StartAt || new Date().toISOString() }))
+      StartAt:r.StartAt || new Date().toISOString(),
+      /* an honest record: the day started, the message did not go */
+      Remarks:noWa ? String(r.Remarks ? r.Remarks + ' · ' : '') + 'Bypass: WhatsApp ke bina shuru'
+                   : (r.Remarks || '') }))
       .then(function () {
-        Log.add('Plan', 'Notified', today(), 'day start');
+        /* the app is about to be handed to WhatsApp and may not get another turn - put the stamp
+           in durable storage NOW rather than on the debounced timer */
+        DB.cache(true);
+        Log.add('Plan', noWa ? 'Started (no WhatsApp)' : 'Notified', wday(), 'day start');
         render(); Nav.build();
-        toast('Plan bhej diya — din shuru, Field khul gaya');
+        toast(noWa ? 'Din shuru — Field khul gaya (WhatsApp nahi bheja)'
+                   : 'Plan bhej diya — din shuru, Field khul gaya');
       });
   },
   msg: function () {
-    var r = Plan.row(), t = today();
+    var r = Plan.row(), t = wday();
     var L = ['*GARUDA — Daily Plan*', dmy(t) + ' · ' + DB.me.name + ' (' + DB.me.code + ')', ''];
     L.push('Working With : ' + (Plan.wwFull(r) || '—'));
     L.push('Town / Beat  : ' + (r.Town || '—') + ' / ' + (r.Beat || '—'));
@@ -7461,7 +7885,7 @@ var Plan = {
   /* Driven by the Change-PJP popup: it captured state/town/beat into Plan.picked while it was still
      mounted, and hands the reason in here. */
   sendDev: function (el, reason) {
-    var t = today(), pjp = DB.pjpFor(DB.me.code, t);
+    var t = wday(), pjp = DB.pjpFor(DB.me.code, t);
     var p = Plan.picked || {};
     var nw = p.ww || Plan.ww(), fld = Pjp.isField(nw);
     var town = fld ? (p.town || '') : '', beat = fld ? (p.beat || '') : '';
@@ -7736,13 +8160,23 @@ var Field = {
   filterStores: function () {
     var q = val('f_search').toUpperCase(), box = $('f_stores'); if (!box) return;
     var f = Field.stFilt;
-    var list = DB.myStores().filter(function (s) {
-      if (f.chan && String(s.ChannelType || '').trim() !== f.chan) return false;
-      if (f.cat && String(s.StoreCategory || '').trim() !== f.cat) return false;
-      if (f.sub && String(s.StoreSubCategory || '').trim() !== f.sub) return false;
-      return !q || String(s.StoreName).toUpperCase().indexOf(q) >= 0 || String(s.CompanyCode).toUpperCase().indexOf(q) >= 0; });
-    box.innerHTML = I18n.tr(list.length ? list.slice(0, 60).map(function (s, i) {
-      return '<div class="lrow" onclick="Field.pick(' + DB.myStores().indexOf(s) + ')" style="cursor:pointer">' +
+    /* the whole list ONCE. This used to re-derive it inside the map as well — DB.myStores() per
+       rendered row, each one a full scan of Master_Stores plus a linear indexOf — which is what
+       made typing in the search box stutter. The row's index is carried along instead. */
+    var all = DB.myStores();
+    var list = [];
+    for (var si = 0; si < all.length && list.length < 60; si++) {
+      var s = all[si];
+      if (f.chan && String(s.ChannelType || '').trim() !== f.chan) continue;
+      if (f.cat && String(s.StoreCategory || '').trim() !== f.cat) continue;
+      if (f.sub && String(s.StoreSubCategory || '').trim() !== f.sub) continue;
+      if (q && String(s.StoreName).toUpperCase().indexOf(q) < 0 &&
+               String(s.CompanyCode).toUpperCase().indexOf(q) < 0) continue;
+      list.push({ s:s, at:si });
+    }
+    box.innerHTML = I18n.tr(list.length ? list.map(function (e) {
+      var s = e.s;
+      return '<div class="lrow" onclick="Field.pick(' + e.at + ')" style="cursor:pointer">' +
         '<div class="m"><div class="t">' + esc(s.StoreName) + '</div><div class="s">' + esc(s.City || '') + ' · ' +
         esc(s.StoreType || '') + (s.ChannelType ? ' · ' + esc(s.ChannelType) : '') + ' · ' + esc(s.CompanyCode || '') + '</div></div><span class="pill p-blue">Select</span></div>';
     }).join('') : UI.empty('', q || f.chan || f.cat || f.sub ? 'Koi store nahi mila' : 'Aapke naam par koi store mapped nahi hai'));
@@ -7800,7 +8234,7 @@ var Field = {
     if (reason === 'Other' && !String(rem || '').trim())
       return toast('Other chuna hai — Remarks me reason likho', 4000);
     /* no PO for a visit that produced no order — see Field.novId */
-    var t = today(), po = Field.novId(s);
+    var t = wday(), po = Field.novId(s);
     var order = { PoNumber:po, Date:t, Source:'Store Visit', StoreType:s.StoreType || '',
       ClientId:String(s.ClientId || ''), CompanyCode:String(s.CompanyCode || ''), StoreName:s.StoreName,
       City:s.City || '', State:s.State || '', DbCode:String(s.DbCode || ''), DbName:s.DbName || '',
@@ -7830,7 +8264,7 @@ var Field = {
      the same Photos row instead of adding another */
   visitId: function (s) {
     s = s || Field.store || {};
-    return (DB.me.code || '') + '_' + today() + '_' + String(s.CompanyCode || s.ClientId || 'NA');
+    return (DB.me.code || '') + '_' + wday() + '_' + String(s.CompanyCode || s.ClientId || 'NA');
   },
   prods: function () {
     var b = val('f_brand'), m = val('f_msl'), q = val('f_psearch').toUpperCase();
@@ -7884,7 +8318,7 @@ var Field = {
     var ex = Field.lines.filter(function (l) { return l.Sku === String(p.Code); })[0];
     if (ex) { ex.Units = num(ex.Units) + 1; ex.Value = num(ex.Units) * num(p.MRP); }
     else Field.lines.push({ Sku:String(p.Code), SkuName:p.Name, Brand:p.Brand, Category:p.Category,
-      SubCategory:p.SubCategory, Mrp:num(p.MRP), Units:1, Value:num(p.MRP), MslStatus:p.MslStatus || '' });
+      SubCategory:p.SubCategory, Mou:DB.mou(p), Mrp:num(p.MRP), Units:1, Value:num(p.MRP), MslStatus:p.MslStatus || '' });
     Field.renderLines();
     /* jump to the line that was just added — the list of products is long and the rep could not see
        whether the tap had registered */
@@ -7908,7 +8342,8 @@ var Field = {
       tu += num(l.Units); tv += num(l.Value);
       return '<div class="oline"><div class="oline-h"><div class="m">' +
           '<div class="t">' + esc(l.SkuName) + '</div>' +
-          '<div class="hint">' + esc(l.Brand || '') + ' · MRP ' + inr(l.Mrp) + '</div></div>' +
+          '<div class="hint">' + esc(l.Brand || '') +
+            (l.Mou ? ' · ' + esc(l.Mou) : '') + ' · MRP ' + inr(l.Mrp) + '</div></div>' +
           /* small, top-right — it used to be a full-width button that wrapped onto its own line */
           '<button class="oline-x" onclick="Field.del(' + i + ')">Remove</button></div>' +
         '<div class="oline-n">' +
@@ -7950,7 +8385,7 @@ var Field = {
   photoMeta: function () {
     var s = Field.store || {};
     return { module:'Visit', store:s.StoreName || '', companyCode:s.CompanyCode || '',
-             recordId:Field.visitId(s), date:today() };
+             recordId:Field.visitId(s), date:wday() };
   },
   submit: function (el) {
     if (Busy.busy('order')) return toast('Ruko — order save ho raha hai');
@@ -7965,7 +8400,7 @@ var Field = {
     if (noOrder && !val('f_rsn')) return toast('Reason select karo');
     if (!noOrder && Field.lines.some(function (l) { return !num(l.Units); })) return toast('Har product ki units bharo');
 
-    var s = Field.store, t = today();
+    var s = Field.store, t = wday();
     var po = Field.po(s), tu = 0, tv = 0;
     Field.lines.forEach(function (l) { tu += num(l.Units); tv += num(l.Value); });
     var nsv = tv * .6 / 1e5;
@@ -8142,11 +8577,33 @@ var Field = {
           esc(Field.nsD('n_owner')) + '"></div>' +
         '<div><label class="f">Owner mobile</label><input class="in" id="n_mob" inputmode="numeric" value="' +
           esc(Field.nsD('n_mob')) + '"></div></div>' +
+      /* GST is OPTIONAL and deliberately says so (issue 10): plenty of these outlets are
+         unregistered, and a field marked required is a field that gets a fake number typed into it.
+         Validated only if something was entered. */
+      '<label class="f">GST number <span class="hint">(optional)</span></label>' +
+        '<input class="in" id="n_gst" placeholder="15-digit GSTIN, agar hai" maxlength="15" ' +
+        'style="text-transform:uppercase" value="' + esc(Field.nsD('n_gst')) + '">' +
+
+      /* ── Interested or not (issue 9) ── */
+      '<div class="sec-title">Ye outlet interested hai?</div>' +
+      '<div class="seg">' +
+        '<button type="button" class="' + (Field.nsInterest === 'Interested' ? 'on' : '') +
+          '" onclick="Field.nsSetInterest(\'Interested\')">Haan \u2014 interested</button>' +
+        '<button type="button" class="' + (Field.nsNo() ? 'on' : '') +
+          '" onclick="Field.nsSetInterest(\'Not interested\')">Nahi \u2014 interested nahi</button></div>' +
+      (Field.nsInterest ? '' : '<div class="hint" style="margin-top:6px">Ye chunna zaroori hai \u2014 ' +
+        'iske baad hi baaki form khulega.</div>') +
+      (Field.nsNo()
+        ? '<div class="banner b" style="margin-top:10px"><span></span><div><b>Interested nahi</b><br>' +
+          '<span style="font-weight:500">Sirf reason aur photo chahiye \u2014 baaki survey chhod do. ' +
+          'Visit phir bhi record hoga.</span></div></div>'
+        : '') +
 
       /* ── the survey, in the customer's own numbering ──
          Section headings, because eleven money boxes in a row is a wall. The numbers are the ones the
          business already uses for these questions, so a rep reading the printed form and a rep
          reading this screen are answering the same thing. */
+      (Field.nsNo() ? '' :
       '<div class="sec-title">Sales & business potential</div>' +
       '<div class="row two">' +
         Field.nsNum('n_day', '9 · Day-wise sales avg (₹ MRP)') +
@@ -8154,9 +8611,9 @@ var Field = {
       '<div class="row two">' +
         Field.nsNum('n_inv', '20 · Committed inventory hold (₹ MRP)') +
         Field.nsNum('n_sugg', '21 · Suggested monthly business with us (₹)') + '</div>' +
+      Field.nsBrandHtml() +
       '<div class="row two">' +
-        Field.nsSel('n_int', '16 · Brand', Field.NS_INTEREST) +
-        Field.nsSel('n_class', '17 · Outlet class', Field.NS_CLASS) + '</div>' +
+        Field.nsSel('n_class', '17 · Outlet class', Field.NS_CLASS) + '<div></div></div>' +
 
       '<div class="sec-title">Competitor & cost</div>' +
       '<div><label class="f">11 · Existing competitor brand name <span class="hint">(if any)</span></label>' +
@@ -8180,7 +8637,7 @@ var Field = {
         '<input class="in" id="n_beaut_brands" placeholder="e.g. Mamaearth, The Derma Co." value="' +
         esc(Field.nsD('n_beaut_brands')) + '"></div>' +
 
-      Field.nsOrderHtml() +
+      Field.nsOrderHtml()) +
 
       '<div class="sec-title">Baaki detail</div>' +
       '<label class="f">Kyun add kar rahe ho? <span class="req">*</span></label>' +
@@ -8197,9 +8654,44 @@ var Field = {
      wipe every box on the form, because the values only ever lived in the DOM. Now every handler
      snapshots the form into nsDraft first, and every box renders out of it. */
   nsDraft:{},
-  NS_FIELDS:['n_db','n_name','n_ssub','n_addr','n_pin','n_beat','n_cat','n_owner','n_mob',
-             'n_day','n_turn','n_inv','n_sugg','n_int','n_class','n_comp','n_cdisp','n_cmarg',
+  NS_FIELDS:['n_db','n_name','n_ssub','n_addr','n_pin','n_beat','n_cat','n_owner','n_mob','n_gst',
+             'n_day','n_turn','n_inv','n_sugg','n_class','n_comp','n_cdisp','n_cmarg',
              'n_bacost','n_beaut','n_beaut_brands','n_reason'],
+  /* ── Interested / Not Interested (issue 9) ──
+     A visit to a prospective outlet has two honest outcomes and they need different amounts of
+     paperwork. "Interested" is the full survey, unchanged. "Not interested" is a dead end: the only
+     things worth recording are WHY and a photo, and demanding turnover figures and a competitor cost
+     breakdown for a shop that said no is how a rep learns to type zeroes into everything.
+     Either way the visit IS recorded - a Not-Interested outlet is a real result, not a blank. */
+  nsInterest:'',
+  nsSetInterest: function (v) { Field.nsGrab(); Field.nsInterest = v; render(); },
+  nsNo: function () { return Field.nsInterest === 'Not interested'; },
+  /* ── brands as a MULTI-select (issue 11) ──
+     Question 16 asks which of our brands the outlet wants. It was one dropdown, so an outlet that
+     wanted three had to be recorded as wanting one. Checkboxes, stored as a list. */
+  nsBrands:{},
+  nsBrandToggle: function (b) {
+    Field.nsGrab();
+    if (Field.nsBrands[b]) delete Field.nsBrands[b]; else Field.nsBrands[b] = 1;
+    render();
+  },
+  nsBrandList: function () {
+    return Field.NS_BRANDS.filter(function (b) { return !!Field.nsBrands[b]; });
+  },
+  nsBrandHtml: function () {
+    var picked = Field.nsBrandList();
+    return '<div><label class="f">16 \u00b7 Brand \u2014 kaunse chahiye ' +
+      '<span class="hint">(ek se zyada chun sakte ho)</span></label>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">' +
+      Field.NS_BRANDS.map(function (b) {
+        var on = !!Field.nsBrands[b];
+        return '<button type="button" class="btn ' + (on ? '' : 'ghost') + ' xs" style="width:auto"' +
+          ' onclick="Field.nsBrandToggle(\'' + b.replace(/'/g, "\\'") + '\')">' +
+          (on ? '\u2713 ' : '') + esc(b) + '</button>'; }).join('') +
+      '</div>' +
+      '<div class="hint" style="margin-top:4px">' +
+        (picked.length ? esc(picked.join(', ')) : 'Abhi koi brand nahi chuna') + '</div></div>';
+  },
   /* The option lists the images do not spell out. Kept here, in one place, so they are one line to
      change — and deliberately plain, because a wrong option is worse than a short list. */
   /* which brand the outlet actually wants to stock — same brand names the rest of the app uses
@@ -8355,18 +8847,25 @@ var Field = {
     if (!ssub) return toast('Store Sub-category select karo');
     if (!state) return toast('State select karo');
     if (!town) return toast('Town select karo');
-    if (!reason) return toast('Reason likho');
-    if (val('n_beaut') === 'Yes' && !val('n_beaut_brands'))
+    if (!Field.nsInterest) return toast('Ye outlet interested hai ya nahi \u2014 chuno');
+    if (!reason) return toast(Field.nsNo() ? 'Kyun interested nahi hai, likho' : 'Reason likho');
+    /* optional, but if it IS filled it has to be a real GSTIN shape - a half-typed number in this
+       column is worse than an empty one, because downstream it reads as a registered outlet */
+    var gst = val('n_gst').toUpperCase().trim();
+    if (gst && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gst))
+      return toast('GST number 15 character ka hota hai \u2014 sahi bharo ya khali chhod do', 4200);
+    /* everything below here is the full survey, which a Not-Interested visit does not fill in */
+    if (!Field.nsNo() && val('n_beaut') === 'Yes' && !val('n_beaut_brands'))
       return toast('Beauty Advisor/Promoter available hai to brand names likho');
     /* ── the opening order ──
        Answering the question is compulsory (a blank is not "no"), and answering Haan means the lines
        have to be real: a brand, units and an MRP value. A half-filled line saved as an order is a
        number somebody downstream would add up. Units and value are independent inputs — value is
        NEVER units × a per-unit MRP, it is the total worth the rep was actually told. */
-    if (Field.nsOrdYes !== 'Yes' && Field.nsOrdYes !== 'No')
+    if (!Field.nsNo() && Field.nsOrdYes !== 'Yes' && Field.nsOrdYes !== 'No')
       return toast('Order liya ya nahi — Haan / Nahi chuno');
     var oline = [], ounits = 0, ovalue = 0;
-    if (Field.nsOrdYes === 'Yes') {
+    if (!Field.nsNo() && Field.nsOrdYes === 'Yes') {
       var bad = '';
       (Field.nsOrd || []).forEach(function (r, i) {
         var b = String(r.brand || '').trim(), q = num(r.units), v = num(r.value);
@@ -8386,7 +8885,7 @@ var Field = {
     if (!dbo) return toast('Ye distributor Master_Distributors me nahi mila — admin se add karwao', 4200);
     var st = String((DB.emp(DB.me.code) || {}).Zone || 'XX').slice(0, 2).toUpperCase();
     var id = 'EM' + st + new Date().getFullYear() + p2(DB.rows('NewStores').length + 1);
-    DB.save('NewStores', { StoreId:id, Date:today(),
+    DB.save('NewStores', { StoreId:id, Date:wday(),
       /* both written from the master row, so the code and the name can never disagree */
       DbCode:String(dbo.Code || db), DbName:dbo.Name || '',
       /* ChannelType/StoreCategory/StoreSubCategory are the canonical fields, matching Master_Stores'
@@ -8395,12 +8894,17 @@ var Field = {
       ChannelType:chan, StoreCategory:scat, StoreSubCategory:ssub, StoreType:ssub,
       StoreName:name, State:state, Town:town, Address:val('n_addr'), Pincode:val('n_pin'),
       Beat:val('n_beat'), Category:val('n_cat'), OwnerName:val('n_owner'), OwnerMobile:val('n_mob'),
+      Gst:gst, Interested:Field.nsInterest,
       DaySales:num(val('n_day')), MonthlyTurnover:num(val('n_turn')),
       /* the survey, questions 11–21 */
       CompetitorBrand:val('n_comp'), CompetitorDisplayPay:num(val('n_cdisp')),
       CompetitorMargin:num(val('n_cmarg')), BaCost:num(val('n_bacost')),
       TotalCost:num(val('n_cdisp')) + num(val('n_cmarg')) + num(val('n_bacost')),
-      InterestedFor:val('n_int'), OutletClass:val('n_class'),
+      /* InterestedFor stays as the single headline brand so every existing reader keeps working;
+         BrandsJson is the full multi-select answer */
+      InterestedFor:Field.nsNo() ? 'Not interested' : (Field.nsBrandList()[0] || ''),
+      BrandsJson:JSON.stringify(Field.nsBrandList()),
+      OutletClass:val('n_class'),
       BeauticianAvailable:val('n_beaut'),
       BeauticianBrands:val('n_beaut') === 'Yes' ? val('n_beaut_brands') : '',
       CommittedInventory:num(val('n_inv')), SuggestedBusiness:num(val('n_sugg')),
@@ -8417,6 +8921,7 @@ var Field = {
         Log.add('NewStore', 'Created', id, name + ' · ' + town);
         Cam.clear(['front','inside']); Field.ns = { front:'', inside:'' };
         Field.nsState = ''; Field.nsTownAdd = false; Field.nsChan = ''; Field.nsCat = '';
+        Field.nsInterest = ''; Field.nsBrands = {};
         /* a saved outlet must leave a CLEAN form behind — the draft is the form now, so it is the
            thing that has to be emptied, or the next outlet starts pre-filled with the last one */
         Field.nsDraft = {}; Field.nsOrdYes = ''; Field.nsOrd = [];
@@ -8560,6 +9065,21 @@ var Stk = {
         esc(i.st) + '\',\'' + esc(i.db) + '\',1)">Stock refresh</button></div></div></div>';
   },
 
+  /* a Back button (issue 12). The rep arrives here from Field, adds products, and had no way out
+     except the bottom nav - which on a long product list is a scroll away. It sits ABOVE every early
+     return on purpose: the states with no way forward (the day is closed, no store picked, the stock
+     read failed) are exactly the ones a rep is most likely to be stuck on. */
+  backBtn: function () {
+    return '<div class="btns" style="margin:0 0 8px"><button class="btn ghost sm" style="width:auto" ' +
+      'onclick="Stk.back()">\u2190 Wapas Field me</button></div>';
+  },
+  /* nothing is thrown away: the lines added here already live on Field.lines */
+  back: function () {
+    Stk.open = '';
+    Router.go('field');
+    toast(Field.lines && Field.lines.length
+      ? Field.lines.length + ' line order me hai' : 'Field tab', 2200);
+  },
   store: function () { return Field.store; },
   ids: function () {
     var s = Field.store || {};
@@ -8685,7 +9205,7 @@ var Stk = {
     var ex = Field.lines.filter(function (x) { return String(x.Sku) === String(code); })[0];
     if (ex) { ex.Units = q; ex.Value = q * num(p.MRP); }
     else Field.lines.push({ Sku:String(p.Code), SkuName:p.Name, Brand:p.Brand, Category:p.Category,
-      SubCategory:p.SubCategory, Mrp:num(p.MRP), Units:q, Value:q * num(p.MRP),
+      SubCategory:p.SubCategory, Mou:DB.mou(p), Mrp:num(p.MRP), Units:q, Value:q * num(p.MRP),
       MslStatus:p.MslStatus || '' });
     Stk.open = ''; delete Stk.qty[code];
     render();
@@ -8725,10 +9245,11 @@ var Stk = {
   },
 
   html: function () {
-    if (Gate.locked()) return Field.lockedHtml();
+    if (Gate.locked()) return Stk.backBtn() + Field.lockedHtml();
     var s = Field.store;
     /* kept to one line on purpose: every line here pushes the first product further down the phone */
-    var h = UI.head('', 'Stock — shop aur distributor', 'Yahin se order add karo.');
+    var h = Stk.backBtn() +
+      UI.head('', 'Stock — shop aur distributor', 'Yahin se order add karo.');
     if (!s) return h + '<div class="card">' + UI.empty('', 'Pehle Field tab me store select karo') +
       '<div class="btns"><button class="btn" onclick="Router.go(\'field\')">Field tab kholo</button></div></div>';
 
@@ -10040,7 +10561,12 @@ var Rep = {
       [function (r) { return Rep.ord(r).DbName || ''; }, 'Distributor'],
       [function (r) { return Rep.ord(r).StoreType || ''; }, 'Store type'],
       [function (r) { return Rep.ord(r).State || ''; }, 'State'],
-      ['Sku', 'SKU code'], ['SkuName', 'Product'], ['Brand', 'Brand'],
+      ['Sku', 'SKU code'], ['SkuName', 'Product'],
+      /* MOU - what one unit IS. Stored on the line at order time; older lines have none, so the
+         product master is asked as a fallback rather than leaving the column blank. */
+      [function (r) { return r.Mou || DB.mou(DB.products().filter(function (x) {
+          return String(x.Code) === String(r.Sku); })[0]); }, 'MOU'],
+      ['Brand', 'Brand'],
       ['Category', 'Category'], ['SubCategory', 'Sub-category'],
       [function (r) { return Rep.msl(r.MslStatus); }, 'MSL'],
       ['Mrp', 'MRP', 'm'], ['Units', 'Units', 'n'], ['Value', 'MRP value', 'm'],
@@ -10133,7 +10659,10 @@ var Rep = {
       ['CompetitorMargin', '13 Competitor margin / scheme', 'm'],
       ['BaCost', '14 Approx. BA cost', 'm'],
       ['TotalCost', '15 Total cost', 'm'],
+      ['Interested', 'Interested?'], ['Gst', 'GST number'],
       ['InterestedFor', '16 Brand'],
+      [function (r) { try { return (JSON.parse(r.BrandsJson || '[]') || []).join(', '); }
+                      catch (e) { return r.InterestedFor || ''; } }, '16 Brands (all)'],
       ['OutletClass', '17 Outlet class'],
       ['BeauticianAvailable', '18 Beauty Advisor/Promoter available'],
       ['BeauticianBrands', '18 Beauty Advisor/Promoter brands'],
@@ -10167,7 +10696,8 @@ var Rep = {
       [function (r) { return Rep.store(r).State || ''; }, 'State'],
       [function (r) { return Rep.store(r).DbCode || ''; }, 'Distributor code'],
       [function (r) { return Rep.store(r).DbName || ''; }, 'Distributor'],
-      ['PosmStatus', 'POSM there'], ['Element', 'Element'], ['PosmType', 'Type'],
+      ['PosmStatus', 'POSM there'], ['NoWallPosm', 'No wall POSM'],
+      ['Element', 'Element'], ['PosmType', 'Type'],
       ['Location', 'Location'], ['Brand', 'Brand'], ['AssetType', 'Asset type'],
       ['Period', 'Install period', 'd'], ['Dominance', 'Dominance'],
       ['Condition', 'Condition'], ['Visibility', 'Visibility'], ['Action', 'Action'],
@@ -10443,6 +10973,120 @@ var Rep = {
         return out.sort(function (a, b) {
           return String(a.Date).localeCompare(String(b.Date)) ||
                  String(a.EmpCode).localeCompare(String(b.EmpCode)); });
+      } },
+
+    /* ══════════ HR ATTENDANCE SHEET ══════════
+       The same facts as the Attendance sheet above, in the shape HR actually keeps them: one row per
+       EMPLOYEE and one column per DAY, over the payroll cycle rather than a calendar month.
+
+       Two things make it its own sheet rather than a column list:
+         · the cycle runs the 19th of one month to the 18th of the next, because that is when payroll
+           is cut. A calendar month would split every cycle across two files.
+         · it is a PIVOT with a two-row header (the date, and the day-of-week under it), Sundays
+           picked out, and a fixed block of employee columns frozen on the left. None of that can be
+           expressed as a `cols` list, so it builds its own sheet through the `sheet` hook.
+
+       A day is one letter, the way a muster roll is written:
+         P present · A absent (rostered to a beat and never started) · WO weekly off
+         L leave · H holiday · M meeting/activity · blank = outside this person's service dates. */
+    HrAttendance:{ t:'HR attendance sheet', line:false, cols:[],
+      /* one letter per day type. 'A' is not in Rep.ATT because only this sheet distinguishes a
+         rostered day that never started from one that was never rostered at all. */
+      CODE:{ F:'P', L:'L', O:'WO', H:'H', M:'M' },
+      src: function (want, from, to) {
+        var cy = Rep.hrCycle(from);
+        /* built from the SAME source as the day-wise Attendance sheet, so the two can never disagree
+           about whether somebody was present */
+        var att = Rep.ANY.Attendance.src(want, cy.from, cy.to);
+        var byDay = {}, codes = {};
+        att.forEach(function (a) {
+          byDay[a.EmpCode + '|' + a.Date] = a;
+          codes[a.EmpCode] = 1;
+        });
+        /* everybody the filter asked for appears, whether or not they recorded anything - an empty
+           row IS the finding on an attendance sheet, and a rep who never opened the app must not
+           quietly vanish from payroll's copy */
+        (DB.m.Master_Employees || []).forEach(function (e) {
+          var c = String(e.Code || '').trim().toUpperCase();
+          if (!c || !Rep.wants(want, c)) return;
+          if (DB.isTestCode(c) && !DB.meIsTest()) return;
+          codes[c] = 1;
+        });
+        var CODE = Rep.ANY.HrAttendance.CODE;
+        return Object.keys(codes).map(function (c) {
+          var e = DB.emp(c) || {};
+          var lc = (DB.m.LoginConfig || []).filter(function (x) {
+            return String(x.Code || '').trim().toUpperCase() === c; })[0] || {};
+          var doj = toISO(e.DateofJoining || lc.DateofJoining || '');
+          var dol = toISO(e.DateOfLeaving || e.DOL || e.LastWorkingDay || lc.DateOfLeaving || '');
+          var days = {};
+          cy.dates.forEach(function (d) {
+            /* outside their service dates the cell is BLANK, not absent: somebody who had not
+               joined yet cannot have missed a day */
+            if (doj && d < doj) return;
+            if (dol && d > dol) return;
+            if (d > today()) return;                    /* the future is not attendance */
+            var a = byDay[c + '|' + d];
+            if (!a) return;
+            days[d] = a.Attendance === 'Absent' ? 'A'
+                    : (CODE[Team.KIND(a.WorkingWith)] || 'P');
+          });
+          var n = function (ch) { return cy.dates.filter(function (d) { return days[d] === ch; }).length; };
+          return { Zone:e.Zone || lc.Zone || '', Manager:e.HodName || '',
+                   EmpCode:c, EmpName:e.Name || lc.Name || '',
+                   Designation:e.Designation || lc.Designation || '',
+                   Location:e.HQ || lc.HQ || '', DOJ:doj, DOL:dol,
+                   Status:lc.Status || e.Status || 'Active',
+                   days:days, P:n('P'), A:n('A'), WO:n('WO'), L:n('L'), H:n('H'), M:n('M') };
+        }).sort(function (a, b) {
+          return String(a.Zone).localeCompare(String(b.Zone)) ||
+                 String(a.EmpName).localeCompare(String(b.EmpName)); });
+      },
+      /* builds the whole sheet itself - see the note above on why */
+      sheet: function (rows, sub, from) {
+        var cy = Rep.hrCycle(from || Rep.hrFrom || today());
+        var FIX = [['Zone', 8], ['Manager', 18], ['Employee Code', 14], ['Employee Name', 22],
+                   ['Designation', 14], ['Location', 12], ['DOJ', 11], ['DOL', 11], ['Status', 9]];
+        var TOT = [['P', 5], ['A', 5], ['WO', 6], ['L', 5], ['H', 5], ['M', 5]];
+        var nFix = FIX.length, nDay = cy.dates.length;
+        var last = Xl.col(nFix + nDay + TOT.length - 1);
+
+        /* row 4: the date. row 5: day-of-month + weekday, Sundays yellow. */
+        var rTop = [], rHead = [];
+        for (var i = 0; i < nFix; i++) { rTop.push(Xl.t('')); rHead.push(Xl.t(FIX[i][0], Xl.S.hrHead)); }
+        cy.dates.forEach(function (d) {
+          var dt = new Date(d + 'T00:00:00'), sun = dt.getDay() === 0;
+          rTop.push({ v:(dt.getMonth() + 1) + '/' + dt.getDate() + '/' + dt.getFullYear(),
+                      k:'s', s:Xl.S.hrTop });
+          rHead.push(Xl.t(dt.getDate() + '-' + Rep.DAYNAME[dt.getDay()].slice(0, 3),
+                          sun ? Xl.S.hrSun : Xl.S.hrDay));
+        });
+        TOT.forEach(function (t) { rTop.push(Xl.t('')); rHead.push(Xl.t(t[0], Xl.S.hrHead)); });
+
+        var body = rows.map(function (r) {
+          var cells = [Xl.t(r.Zone || '', Xl.S.hrCell), Xl.t(r.Manager || '', Xl.S.hrCell),
+            Xl.t(r.EmpCode, Xl.S.hrCell), Xl.t(r.EmpName || '', Xl.S.hrCell),
+            Xl.t(r.Designation || '', Xl.S.hrCell), Xl.t(r.Location || '', Xl.S.hrCell),
+            r.DOJ ? Xl.dt(r.DOJ) : Xl.t('', Xl.S.hrCell),
+            r.DOL ? Xl.dt(r.DOL) : Xl.t('', Xl.S.hrCell),
+            Xl.t(r.Status || '', Xl.S.hrCell)];
+          cy.dates.forEach(function (d) { cells.push(Xl.t(r.days[d] || '', Xl.S.hrCell)); });
+          TOT.forEach(function (t) { cells.push(Xl.n(r[t[0]], Xl.S.hrCell)); });
+          return cells;
+        });
+
+        var out = [[Xl.t(I18n.s('HR attendance sheet'), Xl.S.T)],
+                   [Xl.t(sub || cy.label, Xl.S.sub)], [], rTop, rHead];
+        body.forEach(function (b) { out.push(b); });
+        if (!rows.length) out.push([Xl.t(I18n.s('Is cycle me koi employee nahi mila'))]);
+
+        return { name:'HR attendance', tab:'FF00B0F0',
+          rows:out, freeze:5,
+          cols:FIX.map(function (f) { return f[1]; })
+                  .concat(cy.dates.map(function () { return 7; }))
+                  .concat(TOT.map(function (t) { return t[1]; })),
+          rowH:{ 1:22, 2:16, 3:6, 4:18, 5:22 },
+          merges:['A1:' + last + '1', 'A2:' + last + '2'] };
       } },
 
     /* ══════════ BEAT COVERAGE — one row per PLANNED DAY ══════════
@@ -10804,6 +11448,28 @@ var Rep = {
     return isNaN(d.getTime()) ? -1 : d.getHours() * 60 + d.getMinutes();
   },
   DAYNAME:['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+  /* ── the payroll cycle: the 19th of one month to the 18th of the next ──
+     Any date inside a cycle names it, so the admin's date filter does not have to land on the 19th.
+     19 Sep–18 Oct is "Sep-Oct 2026"; a date on the 18th or earlier belongs to the cycle that started
+     the PREVIOUS month. */
+  HR_START:19,
+  hrFrom:'',
+  hrCycle: function (anchor) {
+    var a = toISO(anchor) || today();
+    var y = +a.slice(0, 4), m = +a.slice(5, 7), dd = +a.slice(8, 10);
+    if (dd < Rep.HR_START) { m -= 1; if (m < 1) { m = 12; y -= 1; } }
+    var p2s = function (n) { return ('0' + n).slice(-2); };
+    var from = y + '-' + p2s(m) + '-' + p2s(Rep.HR_START);
+    var ey = y, em = m + 1; if (em > 12) { em = 1; ey += 1; }
+    var to = ey + '-' + p2s(em) + '-' + p2s(Rep.HR_START - 1);
+    var dates = [], d = new Date(from + 'T00:00:00'), end = new Date(to + 'T00:00:00');
+    while (d <= end) {
+      dates.push(d.getFullYear() + '-' + p2s(d.getMonth() + 1) + '-' + p2s(d.getDate()));
+      d.setDate(d.getDate() + 1);
+    }
+    return { from:from, to:to, dates:dates,
+             label:dmy(from) + ' \u2013 ' + dmy(to) + '  \u00b7  ' + dates.length + ' din' };
+  },
   dayName: function (iso) {
     var d = /^\d{4}-\d{2}-\d{2}$/.test(String(iso)) ? new Date(iso + 'T00:00:00') : null;
     return d && !isNaN(d.getTime()) ? Rep.DAYNAME[d.getDay()] : '';
@@ -11023,7 +11689,12 @@ var Rep = {
     /* `over` = an explicit column map for a tab that is deliberately NOT in Rep.ANY (Master_PJP: it is
        a master, and putting it in ANY would drop it into every "all reports" workbook)
        `sub`  = the line under the title: who and which days this sheet covers */
-    var def = over || Rep.ANY[kind] || { t:kind, cols:[] };
+    /* `over` must be a column map; anything else (a stray subtitle in the wrong argument slot) would
+       otherwise be used as the definition and fail deep inside the builder */
+    var def = (over && typeof over === 'object' ? over : null) || Rep.ANY[kind] || { t:kind, cols:[] };
+    /* a sheet whose SHAPE is not a column list builds itself — the HR attendance grid is a pivot
+       with a two-row header, so there is nothing here for the generic builder to do */
+    if (def.sheet) return def.sheet(rows, sub);
     var cols = def.cols.length ? def.cols
       : (rows.length ? Object.keys(rows[0]).filter(function (c) { return c !== 'LastSync'; })
           .map(function (c) { return [c, c]; }) : [['—', '—']]);
@@ -11102,6 +11773,11 @@ var Rep = {
   },
   any: function (kind, code, from, to) {
     if (!Rep.mayHave(kind)) { toast('Ye master report sirf Admin / HOD ke liye hai', 4000); return null; }
+    /* the HR sheet's period is the payroll cycle, not whatever range was picked: the picked date
+       only says WHICH cycle. Snapping here means the About tab and the grid agree. */
+    if (kind === 'HrAttendance') {
+      var cy = Rep.hrCycle(from); Rep.hrFrom = from; from = cy.from; to = cy.to;
+    }
     var rows = Rep.anyRows(kind, code, from, to);
     var def = Rep.ANY[kind] || { t:kind };
     var ttl = Rep.ttl('GARUDA — ' + def.t, Rep.who(code) + '  ·  ' + dmy(from) + ' – ' + dmy(to) +
@@ -11217,7 +11893,7 @@ var Rep = {
 /* ═══════════════ DFR (day timeline) ═══════════════ */
 var Dfr = {
   push: function () {
-    var t = today(), code = DB.me.code;
+    var t = wday(), code = DB.me.code;
     var acts = [];
     DB.mine('SecOrders').filter(function (r) { return toISO(r.Date) === t; }).forEach(function (o) {
       acts.push({ ts:o.Ts, type:'Order', store:o.StoreName, detail:o.Status + ' · ' + inr(o.TotValue) }); });
@@ -11397,7 +12073,8 @@ var Sec = {
       (lines.length ? lines.map(function (l, i) {
         return '<div class="oline"><div class="oline-h"><div class="m">' +
           '<div class="t">' + esc(l.SkuName) + '</div>' +
-          '<div class="hint">' + esc(l.Brand || '') + ' · MRP ' + inr(l.Mrp) + '</div></div>' +
+          '<div class="hint">' + esc(l.Brand || '') +
+            (l.Mou ? ' · ' + esc(l.Mou) : '') + ' · MRP ' + inr(l.Mrp) + '</div></div>' +
           '<button class="oline-x" onclick="Sec.delLine(\'' + po + '\',' + i + ')">Remove</button></div>' +
           '<div class="oline-n">' +
             '<span class="lbl">Units</span>' +
@@ -11568,7 +12245,7 @@ var Sec = {
     var ex = lines.filter(function (l) { return String(l.Sku) === String(p.Code); })[0];
     if (ex) { ex.Units = num(ex.Units) + 1; ex.Value = num(ex.Units) * num(ex.Mrp || p.MRP); }
     else lines.push({ Sku:String(p.Code), SkuName:p.Name, Brand:p.Brand, Category:p.Category,
-      SubCategory:p.SubCategory, Mrp:num(p.MRP), Units:1, Value:num(p.MRP), MslStatus:p.MslStatus || '' });
+      SubCategory:p.SubCategory, Mou:DB.mou(p), Mrp:num(p.MRP), Units:1, Value:num(p.MRP), MslStatus:p.MslStatus || '' });
     Sec.commit(o, lines, '' + p.Name).then(function () { Sec.addList(); });
   },
   setStatus: function (po, s) {
@@ -11873,7 +12550,7 @@ var Posm = {
   store:null, ans:null,
   date:'',                                  /* which beat this entry belongs to (default today) */
   need:'Yes',                               /* requirement Yes/No — decides which photo is compulsory */
-  day: function () { return Posm.date || today(); },
+  day: function () { return Posm.date || wday(); },
   /* today -> camera only, always. A back-date -> camera only UNLESS an admin has granted this
      person Bypass (round 80) — gallery for an old visit is no longer free for the asking. */
   live: function () { return Cam.live(Posm.day()) || !Bypass.on(); },
@@ -11883,9 +12560,19 @@ var Posm = {
              recordId:(DB.me.code || '') + '_' + Posm.day() + '_' + String(s.CompanyCode || s.ClientId || 'NA'),
              date:Posm.day() };
   },
+  /* ── how far back a POSM entry may be dated ──
+     Without a bypass: today only, because a date nobody can check is a date nobody should be able
+     to type. With a LIVE bypass (issue 3): any past day inside the window an admin granted - that
+     is the whole point of granting it, and the rep was previously allowed the older date but still
+     blocked on the photo, which is half a permission. Never the future, bypass or not: there is no
+     legitimate reason to record work that has not happened. */
+  minDay: function () { return Bypass.on() ? '' : today(); },
   setDay: function (v) {
     var d = toISO(v);
     if (d > today()) { toast('Aage ki date nahi chal sakti'); return render(); }
+    if (!Bypass.on() && d < today()) {
+      toast('Purani date ke liye admin se bypass maango', 4000); return render();
+    }
     Posm.date = d; render();
     toast(Cam.live(d) ? 'Aaj ka beat — live camera'
       : (Bypass.on() ? 'Purana beat — gallery se upload allowed (bypass ON)'
@@ -11895,7 +12582,9 @@ var Posm = {
   dayHtml: function () {
     var d = Posm.day(), today_ = Cam.live(d), lv = Posm.live();
     return '<div class="card"><h3><span class="ic"></span>Kis din ka POSM?</h3>' +
-      '<input class="in" type="date" max="' + today() + '" value="' + d + '" onchange="Posm.setDay(this.value)">' +
+      '<input class="in" type="date" max="' + today() + '"' +
+        (Posm.minDay() ? ' min="' + Posm.minDay() + '"' : '') +
+        ' value="' + d + '" onchange="Posm.setDay(this.value)">' +
       '<div class="' + (lv ? 'hint' : 'banner w') + '" style="margin-top:8px">' +
       (today_ ? 'Aaj ka beat hai — photo <b>live camera</b> se hi lena hoga.'
         : (lv ? '<b>Purana beat (' + dmy(d) + ')</b> — gallery ke liye <b>admin approval (bypass)</b> chahiye. ' +
@@ -12024,6 +12713,11 @@ var Posm = {
     var s = Posm.store, id = uid('SA');
     var row = { Id:id, Date:Posm.day(), ClientId:String(s.ClientId || ''), CompanyCode:String(s.CompanyCode || ''),
       StoreName:s.StoreName, StoreType:s.StoreType || '', City:s.City || '', PosmStatus:'Installed',
+      /* "Is store me POSM laga hai?" was only ever recorded when the answer was YES - a No sent the
+         rep down the requirement branch and left no audit row at all, so the report could only ever
+         show one of the two answers. Now BOTH branches write it, on their own row, and neither is
+         ever blank. Here the answer was Yes, so there IS wall POSM. */
+      NoWallPosm:'No',
       Element:val('pa_el'), PosmType:val('pa_ty'), Location:val('pa_lo'), Brand:val('pa_br'), AssetType:val('pa_as'),
       Period:toISO(val('pa_pd')), Dominance:val('pa_do'), Condition:val('pa_cn'), Visibility:val('pa_vi'), Action:val('pa_ac'),
       InstalledBy:val('pa_ib'), VerifiedBy:val('pa_vb'), VerifyDate:toISO(val('pa_vd')), NextReview:toISO(val('pa_nr')),
@@ -12095,8 +12789,11 @@ var Posm = {
       if (!val('pr_br')) return toast('Honasa brand select karo');
     }
     var s = Posm.store, id = uid('REQ'), yes = Posm.need !== 'No';
+    /* the other half of issue 17: the rep reached this screen by answering NO to "is POSM
+       installed", so that is what this row records */
     var row = { Id:id, Date:Posm.day(), ClientId:String(s.ClientId || ''), CompanyCode:String(s.CompanyCode || ''),
       StoreName:s.StoreName, StoreType:s.StoreType || '', City:s.City || '', Requirement:val('pr_need'),
+      NoWallPosm:'Yes',
       /* nothing was asked when nothing is needed, so nothing is recorded for it */
       Element:yes ? val('pr_el') : '', PosmType:yes ? val('pr_ty') : '', Location:yes ? val('pr_lo') : '',
       Brand:yes ? val('pr_br') : '', AssetType:yes ? val('pr_as') : '', Dominance:yes ? val('pr_do') : '',
@@ -13887,25 +14584,71 @@ var Tada = {
     return n;
   },
 
+  /* Date/Station were coming out blank on every autosave: Date was never mentioned at all (a claim
+     spans a month, so it never had ONE day to put there), and Station was written as '' outright on
+     every single save — not left alone, an explicit blank that overwrote anything a prior save (or
+     Send) had put there. Both now resolve to the LAST claimable day in the month being edited (today,
+     for the current month; the month's last day, once it is in the past) and that day's own station —
+     a real, sortable value in the sheet instead of a column that only ever looked broken. */
   flush: function () {
     if (!Tada._dirty) return null;
     Tada._dirty = false;
     var t = Tada.total(), r = Tada.row();
+    var ds = Tada.dates(), lastD = ds.length ? ds[ds.length - 1] : Tada.mon() + '-01';
     return DB.save('TaDa', { Id:Tada.key(), EmpCode:DB.me.code, EmpName:DB.me.name, Month:Tada.mon(),
       Designation:(DB.emp(DB.me.code) || {}).Designation || DB.me.desig || '',
-      Station:'', Status:/pending|approved|return/i.test(r.Status || '') ? r.Status : 'Draft',
+      Date:lastD, Station:Tada.stLbl((Tada.days[lastD] || {}).st || 'hq'),
+      Status:/pending|approved|return/i.test(r.Status || '') ? r.Status : 'Draft',
       DaysJson:JSON.stringify(Tada.days), DaAmount:t.da, FoodAmount:0, TravelAmount:t.ta,
       LodgeAmount:t.lodge, MeetAmount:t.meet, MeetCity:r.MeetCity || '', OtherAmount:0,
       Nights:t.nights, DeductJson:r.DeductJson || '', DeductTotal:t.deduct, NetTotal:t.net,
       Total:t.grand, UpdatedAt:Date.now() }, { quiet:true });
   },
+  /* ── auto-save today's TA/DA the moment the daily Plan is saved ──
+     Station and city are already the plan's, not the rep's — Tada.load()/fromPlan() derive them off
+     DayPlan/Master_PJP on their own — so there is no reason a day's TA/DA should wait for the rep to
+     separately remember the TA/DA tab. Called from Plan.save()'s own success handler, quiet and
+     idempotent: it only ever seeds/refreshes TODAY inside whichever month that falls in, keeps
+     anything the rep already typed for that day (a real fare, a note), and leaves every other day
+     and the TA/DA screen's own in-memory state (if a DIFFERENT month happens to be open there)
+     untouched. He can still edit and re-save any figure any time, and Send is still his own call. */
+  autoSaveToday: function () {
+    if (Auth.isAdmin()) return Promise.resolve();
+    var t = today(), mon = t.slice(0, 7);
+    var wasMonth = Tada.month, wasDays = Tada.days, wasFor = Tada._for, sameMonth = wasMonth === mon;
+    var restore = function () { if (!sameMonth) { Tada.month = wasMonth; Tada.days = wasDays; Tada._for = wasFor; } };
+    Tada.month = mon; Tada.days = null;
+    if (/approved/i.test((Tada.row() || {}).Status || '')) { restore(); return Promise.resolve(); }
+    Tada.load();
+    Tada._dirty = true;
+    var p = Tada.flush() || Promise.resolve();
+    restore();
+    return p;
+  },
+  /* ── leaving the post-EOD TA/DA popup lands on the Summary (issue 16) ──
+     The day has just been closed. Dismissing this popup used to leave the rep staring at the EOD
+     screen he had already finished with; the Summary is what he actually wants to see at the end of
+     a day, and it is where every other "you are done" path goes. Only the post-EOD popup does this
+     - the TA/DA tab's own inline editor closes in place, as before. */
+  inReview:false,
+  exitReview: function () {
+    Tada.inReview = false;
+    UI.close();
+    Router.go('home');
+  },
   saveDay: function (d, el) {
     Tada._dirty = true;
+    var fromReview = Tada.inReview;
     return Busy.run('tdday_' + d, el, 'Save…', function () {
       var p = Tada.flush() || Promise.resolve();
       /* UI.close() dismisses the reviewToday() popup when this Save came from there; on the Tada tab's
          own inline editor #sheet is already empty, so this is a harmless no-op */
-      return p.then(function () { Tada.open = ''; UI.close(); render(); toast(dmy(d) + ' save ho gaya'); });
+      return p.then(function () {
+        Tada.open = ''; UI.close();
+        if (fromReview) { Tada.inReview = false; Router.go('home'); }
+        else render();
+        toast(dmy(d) + ' save ho gaya');
+      });
     });
   },
   setMeet: function (v) {
@@ -14133,7 +14876,8 @@ var Tada = {
     var row = Tada.days[t] || Tada.seed(t), c = Tada.calc(t), S = Tada.slab();
     var body = '<div class="hint" style="margin-bottom:10px">Din close ho gaya — aaj (' + dmy(t) +
       ') ka TA/DA bhi check karke save kar lo. Baad me TA/DA tab se bhi ho sakta hai.</div>' +
-      Tada.dayEdit(t, row, c, S, 'UI.close()');
+      Tada.dayEdit(t, row, c, S, 'Tada.exitReview()');
+    Tada.inReview = true;
     UI.sheet('Aaj ka TA/DA', body);
   },
   setMonth: function (m) { Tada.flush(); Tada.month = m; Tada.days = null; Tada.open = ''; render(); },
@@ -14768,7 +15512,15 @@ var Appr = {
        HOD who needs to see order/billing history still has it in Tracker's PO vs Invoice screen and
        the Admin Data tab's Data Lookup (Orders category) — just not as something to decide. */
 
-    pick('TaDa').forEach(function (r) {
+    /* ── only a SUBMITTED TA/DA is an approval ──
+       A claim is built up over the whole month and autosaved as it goes, so an unsent draft was
+       appearing in the HOD's queue from the first day of the month - a row nobody could act on and
+       that pushed the real requests down. A claim enters this feed when the rep sends it: a
+       SubmittedAt stamp, or a status that is anything other than Draft. It is filtered for the REP
+       too, so the two sides always show the same list. */
+    pick('TaDa').filter(function (r) {
+      return !!String(r.SubmittedAt || '').trim() && Appr.norm(r.Status) !== 'draft';
+    }).forEach(function (r) {
       out.push({ id:'tada_' + Appr.jid(r.Id), icon:'', kind:'TA/DA', go:'home', status:Appr.norm(r.Status),
         title:'TA/DA — ' + (monthName(r.Month) || r.Month || dmy(r.Date)),
         emp:r.EmpName || '',
@@ -15597,7 +16349,12 @@ var Admin = {
         '<div class="dr-h"><div class="m"><div class="t">' + esc(x.Name || x.Code) +
           ' <span class="pill ' + (/admin|hod/i.test(x.Rights || '') ? 'p-blue' : 'p-grey') + '">' +
           esc(x.Rights || 'Employee') + '</span>' +
-          (b ? ' <span class="pill p-warn">Bypass ON</span>' : '') +
+          /* the label and the date are separate pills on purpose: a date spliced into the label
+             makes the whole run untranslatable, and the date needs no translating */
+          (b ? ' <span class="pill p-warn">Bypass ON</span>' +
+               (x.BypassTill ? ' <span class="pill p-grey">' + esc(dmy(x.BypassTill)) + '</span>' : '') : '') +
+          (Admin.bypassLapsed(x) ? ' <span class="pill p-grey">Bypass khatam</span>' +
+               ' <span class="pill p-grey">' + esc(dmy(x.BypassTill)) + '</span>' : '') +
           (pj === 'Yes' ? ' <span class="pill p-ok">PJP khula</span>' : '') +
           (pj === 'No' ? ' <span class="pill p-bad">PJP band</span>' : '') +
           (act ? '' : ' <span class="pill p-bad">Inactive</span>') + '</div>' +
@@ -15754,6 +16511,8 @@ var Admin = {
       'The morning plan per day, in depth — attendance, working-with, station, town/beat, focus, what the approved PJP said for that same day, the off-PJP flag and adherence, targets, and what the day actually produced against them.'],
     ['Attendance', 'Attendance (day-wise)',
       'One row per employee per day — Present / Absent / Leave / Weekly off / Holiday / Meeting, with the times and what the day produced. A rostered field day that never started counts as Absent. Days with no saved plan come from the published PJP.'],
+    ['HrAttendance', 'HR attendance sheet',
+      'The payroll muster roll — one row per employee, one column per day, from the 19th of one month to the 18th of the next. P / A / WO / L / H / M per day, Sundays picked out, with the cycle totals on the right. The period is the payroll cycle, so the date you pick only chooses WHICH cycle.'],
     ['FailedVisits', 'Failed visits',
       'Every shop visit that produced no order — zero units booked or cancelled outright — with the reason given and the beat it happened on.'],
     ['BeatCoverage', 'Beat coverage (day-wise)',
@@ -15809,8 +16568,8 @@ var Admin = {
   DELKINDS: function () {
     return Admin.KINDS.filter(function (k) {
       return k[0] !== 'PJP' && !/^Master_/.test(k[0]) &&
-             ['Attendance', 'FailedVisits', 'BeatCoverage', 'BeatSummary', 'TaDaDays',
-              'PrimaryOrder'].indexOf(k[0]) < 0;
+             ['Attendance', 'HrAttendance', 'FailedVisits', 'BeatCoverage', 'BeatSummary',
+              'TaDaDays', 'PrimaryOrder'].indexOf(k[0]) < 0;
     });
   },
   kindLbl: function (k) {
@@ -15887,7 +16646,12 @@ var Admin = {
       '</span></div></div>';
   },
   /* every employee, for the pickers — searchable once there are more than ten */
-  emps: function () {
+  /* The team, for every console screen that counts or compares people. The test user is left out
+     for the same reason his rows are (see DB.rows): a headcount and a per-employee league table
+     that include a demo account are both wrong. empsAll() keeps him reachable where an admin is
+     deliberately picking one person. */
+  emps: function () { return Admin.empsAll().filter(function (e) { return !DB.isTestCode(e.code); }); },
+  empsAll: function () {
     var seen = {}, out = [];
     (DB.m.Master_Employees || []).forEach(function (e) {
       var c = String(e.Code || '').toUpperCase(); if (!c || seen[c]) return;
@@ -15901,8 +16665,8 @@ var Admin = {
     return out.sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
   },
   /* a picker that is a plain select when short, and a searchable one when it is not */
-  empPick: function (id, cur, handler) {
-    var e = Admin.emps();
+  empPick: function (id, cur, handler, all) {
+    var e = all ? Admin.empsAll() : Admin.emps();
     if (e.length <= 10) {
       return '<select class="in" id="' + id + '" onchange="' + handler + '">' +
         '<option value="">Sab employee</option>' +
@@ -16139,9 +16903,11 @@ var Admin = {
     var h = '<div class="card"><label class="f">Employee</label>' +
       '<select class="in" onchange="Admin.lkPickEmp(this.value)">' +
       '<option value="">Select…</option>' +
-      Admin.empItems().map(function (e) {
-        return '<option value="' + esc(e[0]) + '"' + (e[0] === Admin.lkEmp ? ' selected' : '') + '>' +
-          esc(e[1]) + ' (' + esc(e[0]) + ')</option>'; }).join('') + '</select>' +
+      /* empsAll, not empItems: this screen exists to look ONE named person up, so the test user has
+         to be reachable here even though he is kept out of every count and league table */
+      Admin.empsAll().map(function (e) {
+        return '<option value="' + esc(e.code) + '"' + (e.code === Admin.lkEmp ? ' selected' : '') + '>' +
+          esc(e.name) + ' (' + esc(e.code) + ')</option>'; }).join('') + '</select>' +
       '<div class="tnav fit" style="margin-top:10px">' + Admin.LK_CATS.map(function (c) {
         return '<button class="' + (Admin.lkCat === c[0] ? 'on' : '') + '"' +
           (Admin.lkCat === c[0] ? ' data-on="1"' : '') + ' onclick="Admin.lkPick(\'' + c[0] + '\')">' +
@@ -16173,7 +16939,9 @@ var Admin = {
       return back + Admin.lkEditHtml(tab, Admin.lkKey);
     }
 
-    var rows = DB.rows(tab).filter(function (r) { return DB.same(r.EmpCode, Admin.lkEmp); })
+    /* rowsAll, not rows: the admin has named an employee, and if that employee is the test user
+       they are asking for exactly those rows on purpose */
+    var rows = DB.rowsAll(tab).filter(function (r) { return DB.same(r.EmpCode, Admin.lkEmp); })
       .filter(function (r) {
         var d = String(r.Date || (r.Month ? r.Month + '-01' : ''));
         if (Admin.lkFrom && d < Admin.lkFrom) return false;
@@ -17253,37 +18021,69 @@ var Admin = {
     });
   },
 
-  isBypass: function (x) { return /^(yes|true|1)$/i.test(String((x && x.Bypass) || '')); },
+  /* Must match isBypass_() in backend.gs exactly: Yes AND (no end date, or the end date has not
+     passed). A console that still showed "Bypass ON" for a lapsed one would be reporting a
+     permission the server has already stopped honouring. */
+  isBypass: function (x) {
+    if (!/^(yes|true|1)$/i.test(String((x && x.Bypass) || ''))) return false;
+    var till = toISO((x && x.BypassTill) || '');
+    return !till || till >= today();
+  },
+  /* was it granted with an end date, and has that date gone? - for the label on the row */
+  bypassLapsed: function (x) {
+    if (!/^(yes|true|1)$/i.test(String((x && x.Bypass) || ''))) return false;
+    var till = toISO((x && x.BypassTill) || '');
+    return !!till && till < today();
+  },
 
   /* Turning it ON asks for a reason (it lands in the sheet next to who granted it, so a relaxed rule
      is never anonymous); turning it OFF just confirms. The row is updated locally so the switch
      flips immediately, then the sheet is the record. */
+  /* a fortnight, as the suggested default - long enough to be useful, short enough that nobody
+     has to remember to turn it off. The admin can clear it or change it in the box. */
+  bypassDefTill: function () {
+    var d = new Date(); d.setDate(d.getDate() + 14);
+    return toISO(d);
+  },
   bypass: function (code, on, el) {
     var row = (DB.m.LoginConfig || []).filter(function (x) { return String(x.Code) === String(code); })[0] || {};
     var who = esc(row.Name || code);
     var ask = on
       ? UI.prompt({ icon:'', title:'Bypass ON karein?',
           msg:'<b>' + who + '</b> ke liye ye restrictions hat jayengi:<br>• ' + Bypass.WAIVES.join('<br>• ') +
-              '<br><br>Sirf inhi par lagu hoga, baaki team par nahi.',
+              '<br><br>Sirf inhi par lagu hoga, baaki team par nahi.' +
+              '<br><br><b>Kab tak chalega?</b><br>' +
+              'Khali chhoda to hamesha ke liye chalega — tareekh daalna behtar hai.' +
+              '<br><input class="in" type="date" id="byp_till" min="' + today() + '" value="' +
+              Admin.bypassDefTill() + '">',
           label:'Reason (sheet me save hoga)', placeholder:'e.g. camera kharab hai, mid-month joining',
           multiline:true, required:true, requiredMsg:'Reason likhna zaroori hai', ok:'Haan, ON karo' })
       : UI.confirm({ icon:'', title:'Bypass OFF karein?', danger:true,
           msg:'<b>' + who + '</b> par app ki poori restrictions wapas lag jayengi — photo compulsory, ' +
               'tab ka order, poora PJP.', ok:'Haan, OFF karo', cancel:'Nahi' });
+    /* read the date BEFORE the dialog is torn down, or the input is already gone */
+    var tillEl = null;
+    var grabTill = function () { var e = $('byp_till'); if (e) tillEl = e.value; };
+    if (on) setTimeout(grabTill, 0);
     return ask.then(function (r) {
+      grabTill();
       if (!r) return;
+      var till = on ? toISO(tillEl || '') : '';
       return Busy.run('bypass_' + code, el, on ? 'ON kar rahe hain…' : 'OFF kar rahe hain…', function () {
         return Api.post({ action:'admin', email:Auth.session().email, op:'setBypass',
-                          code:code, on:!!on, note:(on ? String(r) : '') }).then(function (res) {
+                          code:code, on:!!on, till:till, note:(on ? String(r) : '') }).then(function (res) {
           if (!res || !res.ok) return UI.alert({ icon:'!', title:'Nahi ho paya',
             msg:esc((res && res.error) || 'Server se jawab nahi aaya') + '<br><br>Backend purana ho to ' +
                 '<b>backend.gs</b> dobara paste karke deploy karo.' });
           /* keep the on-screen list in step with what the sheet now holds */
           row.Bypass = on ? 'Yes' : 'No';
           row.BypassBy = res.by || ''; row.BypassAt = res.at || ''; row.BypassNote = on ? String(r) : '';
+          row.BypassTill = res.till || '';
           DB.cache();
-          Log.add('Bypass', on ? 'ON' : 'OFF', code, on ? String(r) : '');
-          render(); toast(on ? 'Bypass ON —' + (row.Name || code) : 'Bypass OFF —' + (row.Name || code), 3200);
+          Log.add('Bypass', on ? 'ON' : 'OFF', code, (on ? String(r) : '') + (till ? ' · till ' + till : ''));
+          render(); toast(on
+            ? 'Bypass ON —' + (row.Name || code) + (till ? ' · ' + dmy(till) + ' tak' : ' · bina end date')
+            : 'Bypass OFF —' + (row.Name || code), 3600);
         });
       });
     });
@@ -17439,14 +18239,31 @@ var Admin = {
 /* ═══════════════ BOOT ═══════════════ */
 (function () {
   I18n.boot();                     /* before the first paint, or the first screen renders Hinglish */
-  DB.boot();
-  Sync.init();
-  var s = Auth.session();
-  if (s) { DB.me = DB.me || { code:s.code, name:s.name, rights:s.rights, hq:s.hq, zone:s.zone, desig:s.desig, doj:s.doj }; Auth.start(); }
-  else Auth.showGate();
-  if (API_URL.indexOf('PASTE_') === 0)
-    setTimeout(function () { toast('! API_URL set karo (index.html me) — backend se connect nahi hoga', 6000); }, 800);
-  var gp = $('gate_pwd'); if (gp) gp.addEventListener('keydown', function (e) { if (e.key === 'Enter') Auth.login(); });
+  /* DB.boot() reads the mirror out of IndexedDB, so it is asynchronous now. Nothing that depends on
+     cached data may run before it settles, or a rep opening the app with no signal gets the login
+     gate instead of their day. Big.open() times itself out, so this can never hang the splash. */
+  DB.boot().then(function () {
+    Work.boot();
+    Sync.init();
+    var s = Auth.session();
+    if (s) { DB.me = DB.me || { code:s.code, name:s.name, rights:s.rights, hq:s.hq, zone:s.zone, desig:s.desig, doj:s.doj }; Auth.start();
+      /* a preview that was open when the app closed is re-entered, once the masters are in memory */
+      var pv = Store.get(K.prev, null);
+      if (pv && pv.code && Auth.isAdmin() && DB.emp(pv.code)) {
+        try { Preview.start(pv.code); } catch (e) { Store.del(K.prev); }
+      }
+    }
+    else Auth.showGate();
+    if (API_URL.indexOf('PASTE_') === 0)
+      setTimeout(function () { toast('! API_URL set karo (index.html me) — backend se connect nahi hoga', 6000); }, 800);
+    var gp = $('gate_pwd'); if (gp) gp.addEventListener('keydown', function (e) { if (e.key === 'Enter') Auth.login(); });
+  });
+  /* the last debounced write must not be lost when the app is swiped away or backgrounded */
+  var flushCache = function () { if (DB.cacheT) DB.cache(true); };
+  window.addEventListener('pagehide', flushCache);
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') flushCache();
+  });
 })();
 </script>
 </body>
