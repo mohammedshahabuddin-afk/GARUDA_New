@@ -2963,6 +2963,14 @@ I18n.D.en = I18n.EN = {
     'Just a record — no approval needed. If something looks off, cross-check directly with the rep or on the PO vs Invoice screen.',
   'Order tab kholo':'Open the order tab',
 
+  /* ── the Change-PJP decision notification ── */
+  'Plan change approve ho gaya':'Plan change approved',
+  'Plan change reject ho gaya':'Plan change rejected',
+  'Ab aapka beat:':'Your beat is now:',
+  'Plan tab kholo aur save karo.':'Open the Plan tab and save it.',
+  'Wajah:':'Reason:',
+  'Plan tab me dusra beat chuno.':'Pick a different beat in the Plan tab.',
+
   /* ── the work-date and no-WhatsApp bypass, and the HR attendance sheet ── */
   'Us din ka PJP: ':'That day’s PJP: ',
   'Us din ka PJP master me nahi mila':'That day’s PJP was not found in the master',
@@ -7124,7 +7132,10 @@ var Plan = {
   ww: function () {
     Plan.sync();
     if (Plan.wwSel) return Plan.wwSel;
-    var r = Plan.row(), pjp = DB.pjpFor(DB.me.code, today());
+    /* an approved change to the working-with is the plan now */
+    var ok = Plan.devApproved();
+    if (ok && ok.NewWw) return Pjp.ww(ok.NewWw);
+    var r = Plan.row(), pjp = DB.pjpFor(DB.me.code, wday());
     return Pjp.ww(r.WorkingWith || (pjp ? pjp.Ww : '') || 'Self Working');
   },
   setWw: function (v) { Plan.sync(); Plan.wwSel = v; render(); },
@@ -7206,6 +7217,13 @@ var Plan = {
        what the rep already saved today -> what the MASTER says for today's beat -> the store master
        -> and if this rep only ever works in one state, that one. */
   stateFor: function (r, pjp, town) {
+    /* an approved change moves the town, so the state has to be the one that town is in - not the
+       state the master still holds for the beat that was abandoned */
+    var ok = Plan.devApproved();
+    if (ok && ok.NewTown) {
+      var ns = Plan.stateOf(ok.NewTown);
+      if (ns) return ns;
+    }
     var v = (r && r.State) || (pjp && (pjp.State || pjp.ChangedState)) || '';
     v = String(v || '').trim();
     if (v) return v;
@@ -7358,8 +7376,13 @@ var Plan = {
       (dev && num(dev.TryCount) ? ' Aaj ' + num(dev.TryCount) + '/' + Plan.MAXCHG + ' change ho chuke hain' +
         (left ? ' — ' + left + ' bacha hai.' : ' — limit poori.') : '') + '</div>';
 
-    var shTown = (r.OffPjp && r.Town) || (pjp ? pjp.Town : '') || '';
-    var shBeat = (r.OffPjp && r.Beat) || (pjp ? pjp.Beat : '') || '';
+    /* An APPROVED change first — it is the newest decision about this day, and it outranks both the
+       published master row and whatever the DayPlan held before the change was requested.
+       These two readonly inputs are also what Plan.save() reads back, so getting them right is what
+       makes the approved beat reach the sheet instead of the old one. */
+    var okDev = Plan.devApproved();
+    var shTown = (okDev && okDev.NewTown) || (r.OffPjp && r.Town) || (pjp ? pjp.Town : '') || '';
+    var shBeat = (okDev && okDev.NewBeat) || (r.OffPjp && r.Beat) || (pjp ? pjp.Beat : '') || '';
     /* Town / State / Beat only mean anything on a FIELD day — a Meeting / Leave / Off / Holiday day
        has no beat, so showing these (with whatever the master happens to hold in those columns for a
        non-field day, which is sometimes garbage left over from an old row) only confused the screen
@@ -7621,7 +7644,9 @@ var Plan = {
   /* A day can be re-planned TWICE. The first version refused a second change once the first was
      approved, which is wrong: a market can shut after the rep has already moved. The cap is on the
      number of requests (TryCount), not on the outcome of the first one. */
-  MAXCHG:2,
+  /* A day can be re-planned up to ten times. The cap is on the number of REQUESTS, not on the
+     outcome of any of them — a market can shut, reopen, and shut again. */
+  MAXCHG:10,
   left: function (dev) { return Math.max(0, Plan.MAXCHG - num(dev && dev.TryCount)); },
 
   /* ── Change PJP: a popup, not a second form on the page ── */
@@ -7660,13 +7685,23 @@ var Plan = {
       Plan.sendDev(null, reason);
     });
   },
+  /* ── the approved Change PJP for the day being planned, or null ──
+     This is the whole point of the feature: once the HOD says yes, the request IS the plan. It beats
+     the published Master_PJP row, and it beats whatever the DayPlan happened to hold before the
+     change was asked for. Everything that describes the day — working-with, town, beat, state and
+     station — goes through here, so they can never again disagree about whether an approval
+     happened (which is exactly what went wrong: Station honoured it, nothing else did). */
+  devApproved: function () {
+    var d = Plan.dev();
+    return (d && /approved/i.test(String(d.Status || ''))) ? d : null;
+  },
   /* ── today's station ──
      An approved Change PJP wins (that is the whole point of it), then whatever the plan itself says:
      the day row already saved on DayPlan, the published Master_PJP row, or the rep's own draft for the
      month. HQ only when nothing says otherwise. */
   station: function () {
-    var t = wday(), r = Plan.row(), dev = Plan.dev();
-    if (dev && /approved/i.test(String(dev.Status || '')) && dev.NewStation) return Pjp.stn(dev.NewStation);
+    var t = wday(), r = Plan.row(), dev = Plan.devApproved();
+    if (dev && dev.NewStation) return Pjp.stn(dev.NewStation);
     if (r && r.Station) return Pjp.stn(r.Station);
     var m = DB.pjpFor(DB.me.code, t);
     if (m && m.Station) return Pjp.stn(m.Station);
@@ -18015,6 +18050,21 @@ var Admin = {
           RejectedJson:JSON.stringify(rej), UpdatedAt:Date.now() }))
         .then(function () {
           Log.add('Deviation', ok ? 'Approved' : 'Rejected', id, (d.NewTown || '') + '/' + (d.NewBeat || '') + ' ' + rem);
+          /* ── the rep has to be TOLD ──
+             Every other decision in this console writes a Notify row; this one did not, so a rep who
+             was not sitting on the Plan screen had no way of learning the answer at all. */
+          return DB.save('Notify', { Id:uid('NT'), Ts:new Date().toISOString(),
+            EmpCode:d.EmpCode, EmpName:d.EmpName || '', Kind:'Plan change',
+            /* each fragment is its OWN run - a date or a beat spliced into a sentence makes the
+               whole sentence untranslatable, and neither of them needs translating */
+            Title:(ok ? 'Plan change approve ho gaya' : 'Plan change reject ho gaya') +
+                  ' \u2014 ' + dmy(d.Date),
+            Detail:ok ? 'Ab aapka beat:' + '\n' + ((d.NewTown || '\u2014') + ' / ' + (d.NewBeat || '\u2014')) +
+                        '\n' + 'Plan tab kholo aur save karo.'
+                      : 'Wajah:' + '\n' + (rem || '\u2014') + '\n' + 'Plan tab me dusra beat chuno.',
+            Ref:id, Status:'Open', By:DB.me.name }, { quiet:true });
+        })
+        .then(function () {
           render(); toast(ok ? ' Approved' : ' Rejected \u2014 rep ko dusra beat chunna padega');
         });
     });
